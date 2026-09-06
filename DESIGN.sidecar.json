@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-07T00:45:00Z",
+  "title": "Design System: Miri Cleaner",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Miri Coral",
+        "canonical": "#FF9D9D",
+        "tonalRamp": ["#FFF5F5", "#FFEBEB", "#FFD6D6", "#FFB8B8", "#FF9D9D", "#FF7B7B", "#F05252", "#D62828"]
+      },
+      "success-mint": {
+        "role": "success",
+        "displayName": "Duolingo Mint",
+        "canonical": "#58CC02",
+        "tonalRamp": ["#F2FCE8", "#DCF7BF", "#B9F080", "#94E840", "#58CC02", "#45A500", "#338000", "#215C00"]
+      },
+      "danger-red": {
+        "role": "danger",
+        "displayName": "Alert Crimson",
+        "canonical": "#FF4B4B",
+        "tonalRamp": ["#FFF0F0", "#FFD9D9", "#FFB3B3", "#FF8080", "#FF4B4B", "#E02E2E", "#BD1515", "#8F0808"]
+      },
+      "warning-amber": {
+        "role": "warning",
+        "displayName": "Sparkle Yellow",
+        "canonical": "#FFC800",
+        "tonalRamp": ["#FFFBEB", "#FFF3C4", "#FFE594", "#FFD666", "#FFC800", "#E6B400", "#B38C00", "#806400"]
+      },
+      "info-blue": {
+        "role": "info",
+        "displayName": "Deep Sky Blue",
+        "canonical": "#1CB0F6",
+        "tonalRamp": ["#EAF7FE", "#C7ECFD", "#94DBFB", "#57C4F9", "#1CB0F6", "#0D8FCB", "#0A6D9C", "#07506F"]
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "Cream Ground",
+        "canonical": "#FFF9F8",
+        "tonalRamp": ["#FFFFFF", "#FFFDFC", "#FFF9F8", "#FFF0ED", "#FFE5E0", "#F5D4CD", "#C8B1AA", "#2D2327"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero titles and health gauge headlines only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Card headers and modal titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Descriptive target copy and system instructions; crisp modern readability."
+      },
+      "label": {
+        "displayName": "Label / Pixel",
+        "purpose": "Version tags, risk indicators, and metric units only -- never body text, path strings, or warning descriptions (The Legibility-First Rule)."
+      }
+    },
+    "shadows": [
+      { "name": "duo", "value": "0 4px 0 0 rgba(0,0,0,0.12)", "purpose": "Tactile 3D bottom-border press feel on primary buttons." },
+      { "name": "duo-sm", "value": "0 2px 0 0 rgba(0,0,0,0.12)", "purpose": "Lighter tactile shadow for secondary/compact buttons." },
+      { "name": "duo-press", "value": "0 1px 0 0 rgba(0,0,0,0.12)", "purpose": "Active/pressed state -- shadow collapses as the button translates down." },
+      { "name": "pixel", "value": "4px 4px 0 0 #2D2327", "purpose": "Sharp retro contrast on larger pixel-art elements." },
+      { "name": "pixel-sm", "value": "2px 2px 0 0 #2D2327", "purpose": "Sharp retro contrast on pixel badges and mini tags." }
+    ],
+    "motion": [
+      { "name": "feedback", "value": "100-300ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Button presses, state changes, confetti, mascot breathe/waddle." },
+      { "name": "transition", "value": "750ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "animate-mode-switch: Casual <-> Advanced main-stage fade + slight scale/slide, applied without remounting views so in-flight data survives the switch." },
+      { "name": "brand-moment", "value": "1450ms (1000ms hold + 450ms exit)", "purpose": "animate-mascot-waddle + animate-splash-exit: the first-paint splash screen only." },
+      { "name": "reduced-motion-policy", "value": "opacity-only fallback, spatial movement dropped", "purpose": "Position, scale, and stepped-sweep motion are removed under prefers-reduced-motion; opacity-based feedback is preserved so state changes stay legible." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Tactile Button - Primary",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Chunky coral 3D button with a bottom-border shadow that collapses on press. The default call-to-action button everywhere in the app.",
+      "html": "<button class=\"ds-btn-primary\">Prune 3.48 GB Now</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: Nunito, system-ui, sans-serif; font-weight: 800; font-size: 14px; color: #0f172a; background: #FF9D9D; padding: 10px 20px; border: none; border-radius: 16px; box-shadow: 0 4px 0 0 #E05B5B; cursor: pointer; transition: background 0.12s ease, transform 0.12s cubic-bezier(0.16,1,0.3,1), box-shadow 0.12s cubic-bezier(0.16,1,0.3,1); } .ds-btn-primary:hover { background: #FF7B7B; } .ds-btn-primary:active { transform: translateY(4px); box-shadow: 0 1px 0 0 #E05B5B; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 4px 0 0 #E05B5B, 0 0 0 4px rgba(255,157,157,0.6); } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Tactile Button - Secondary",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "White ghost variant with a slate bottom-border shadow, used for non-primary actions (Scan, Retry, Cancel).",
+      "html": "<button class=\"ds-btn-secondary\">Retry Scan</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: Nunito, system-ui, sans-serif; font-weight: 800; font-size: 14px; color: #334155; background: #FFFFFF; padding: 9px 19px; border: 1px solid #E2E8F0; border-radius: 16px; box-shadow: 0 3px 0 0 #CBD5E1; cursor: pointer; transition: background 0.12s ease, transform 0.12s cubic-bezier(0.16,1,0.3,1), box-shadow 0.12s cubic-bezier(0.16,1,0.3,1); } .ds-btn-secondary:hover { background: #F8FAFC; } .ds-btn-secondary:active { transform: translateY(3px); box-shadow: 0 1px 0 0 #CBD5E1; } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 3px 0 0 #CBD5E1, 0 0 0 4px rgba(148,163,184,0.6); }"
+    },
+    {
+      "name": "Tactile Button - Danger",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Red variant reserved exclusively for destructive confirmations inside the danger modal.",
+      "html": "<button class=\"ds-btn-danger\">Confirm & Proceed</button>",
+      "css": ".ds-btn-danger { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: Nunito, system-ui, sans-serif; font-weight: 800; font-size: 14px; color: #FFFFFF; background: #EF4444; padding: 9px 19px; border: none; border-radius: 16px; box-shadow: 0 4px 0 0 #B91C1C; cursor: pointer; transition: background 0.12s ease, transform 0.12s cubic-bezier(0.16,1,0.3,1), box-shadow 0.12s cubic-bezier(0.16,1,0.3,1); } .ds-btn-danger:hover { background: #DC2626; } .ds-btn-danger:active { transform: translateY(4px); box-shadow: 0 1px 0 0 #B91C1C; } .ds-btn-danger:focus-visible { outline: none; box-shadow: 0 4px 0 0 #B91C1C, 0 0 0 4px rgba(248,113,113,0.6); }"
+    },
+    {
+      "name": "Card (card-duo)",
+      "kind": "card",
+      "refersTo": "card-duo",
+      "description": "The base floating surface used for every panel, banner, and grouped control in the app: crisp white over the cream canvas, chunky rounded corners, a flat tonal shadow instead of a blurred realistic one.",
+      "html": "<div class=\"ds-card\"><h4 class=\"ds-card-title\">Storage Intelligence</h4><p class=\"ds-card-body\">Visualize where your disk space goes with interactive treemaps.</p></div>",
+      "css": ".ds-card { background: #FFFFFF; border-radius: 24px; padding: 24px; border: 2px solid #F1E4E2; box-shadow: 0 4px 0 0 rgba(0,0,0,0.06); transition: border-color 0.15s ease; } .ds-card:hover { border-color: #FFD6D6; } .ds-card-title { margin: 0 0 4px; font-family: Nunito, system-ui, sans-serif; font-weight: 900; font-size: 18px; color: #0f172a; } .ds-card-body { margin: 0; font-family: Nunito, system-ui, sans-serif; font-weight: 600; font-size: 14px; color: #475569; line-height: 1.5; }"
+    },
+    {
+      "name": "Pixel Badge",
+      "kind": "chip",
+      "refersTo": "pixel-tag",
+      "description": "Retro Press-Start-2P status chip with a sharp pixel drop-shadow, confined to badges, score counters, and mascot emotes per The Legibility-First Rule -- never used for body copy.",
+      "html": "<span class=\"ds-pixel-badge\">SAFE</span>",
+      "css": ".ds-pixel-badge { display: inline-block; font-family: 'Press Start 2P', monospace; font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; background: #DCF7BF; color: #338000; border: 1px solid #94E840; box-shadow: 2px 2px 0 0 #2D2327; }"
+    },
+    {
+      "name": "Skeleton Loading Bar",
+      "kind": "custom",
+      "refersTo": "skeleton-pixel",
+      "description": "Pixel-art themed loading placeholder: a coral-tinted shimmer with a stepped (not smooth) sweep cadence, evoking retro motion without literally jagged shapes. Card-level instances add two static corner-dust squares, restrained to one per loading screen.",
+      "html": "<div class=\"ds-skeleton-card\"><span class=\"ds-skeleton-bar\" style=\"width:75%;height:16px;\"></span><span class=\"ds-skeleton-bar\" style=\"width:50%;height:12px;margin-top:8px;\"></span></div>",
+      "css": ".ds-skeleton-card { position: relative; background: #FFFFFF; border-radius: 24px; padding: 24px; border: 2px solid #F1E4E2; } .ds-skeleton-card::before, .ds-skeleton-card::after { content: ''; position: absolute; width: 6px; height: 6px; border-radius: 1px; opacity: 0.4; } .ds-skeleton-card::before { top: 12px; right: 14px; background: #FFC800; } .ds-skeleton-card::after { bottom: 12px; left: 14px; background: #58CC02; } .ds-skeleton-bar { display: block; border-radius: 8px; background-color: rgba(226,232,240,0.7); background-image: linear-gradient(90deg, rgba(255,157,157,0.16) 0%, rgba(255,157,157,0.4) 50%, rgba(255,157,157,0.16) 100%); background-size: 250% 100%; animation: ds-pixel-shimmer 1.6s steps(10, jump-end) infinite; } @keyframes ds-pixel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } } @media (prefers-reduced-motion: reduce) { .ds-skeleton-bar { animation: none; background-image: none; } }"
+    },
+    {
+      "name": "Error Banner",
+      "kind": "custom",
+      "refersTo": "error-banner",
+      "description": "The visible half of every failed native-bridge call: an icon chip, a one-line failure message, an optional Retry action, and a dismiss control. Every view that talks to the bridge renders one of these on catch -- the activity log alone is not user-facing feedback.",
+      "html": "<div class=\"ds-error-banner\" role=\"alert\"><div class=\"ds-error-icon\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#dc2626\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z\"/><line x1=\"12\" y1=\"9\" x2=\"12\" y2=\"13\"/><line x1=\"12\" y1=\"17\" x2=\"12.01\" y2=\"17\"/></svg></div><div class=\"ds-error-body\"><h4>Operation Notice</h4><p>Scan inspection failed: connection timed out.</p><div class=\"ds-error-actions\"><button class=\"ds-btn-secondary\">Retry</button><button class=\"ds-error-dismiss-link\">Dismiss Notice</button></div></div></div>",
+      "css": ".ds-error-banner { display: flex; align-items: flex-start; gap: 14px; background: #FEF2F2; border: 2px solid #FECACA; border-radius: 24px; padding: 20px; } .ds-error-icon { width: 40px; height: 40px; border-radius: 16px; background: #FEE2E2; border: 1px solid #FCA5A5; display: flex; align-items: center; justify-content: center; flex-shrink: 0; } .ds-error-body h4 { margin: 0; font-family: Nunito, system-ui, sans-serif; font-weight: 900; font-size: 14px; color: #7f1d1d; } .ds-error-body p { margin: 2px 0 0; font-family: Nunito, system-ui, sans-serif; font-weight: 600; font-size: 12px; color: #b91c1c; line-height: 1.5; } .ds-error-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; } .ds-error-dismiss-link { background: none; border: none; padding: 0; font-family: Nunito, system-ui, sans-serif; font-weight: 700; font-size: 12px; color: #991b1b; text-decoration: underline; cursor: pointer; } .ds-error-dismiss-link:hover { color: #7f1d1d; }"
+    },
+    {
+      "name": "Mascot (Miri)",
+      "kind": "custom",
+      "refersTo": "mascot",
+      "description": "The signature illustrated character: a soft-coral rounded robot with a white visor face. Mood (happy / scanning / cleaning / celebrate / alert) drives eye shape, antenna color, and accessories (broom for cleaning, sparkles for happy/celebrate). Idle moods get a gentle breathing loop; alert/scanning stay still so their own eye/antenna cues read clearly.",
+      "html": "<svg class=\"ds-mascot\" viewBox=\"0 0 100 100\" width=\"96\" height=\"96\" fill=\"none\"><rect x=\"47\" y=\"12\" width=\"6\" height=\"12\" fill=\"#FF7B7B\" rx=\"3\"/><circle cx=\"50\" cy=\"10\" r=\"6\" fill=\"#FFC800\"/><rect x=\"18\" y=\"24\" width=\"64\" height=\"60\" rx=\"22\" fill=\"#FF9D9D\" stroke=\"#E05B5B\" stroke-width=\"4\"/><rect x=\"26\" y=\"32\" width=\"48\" height=\"34\" rx=\"12\" fill=\"#FFFFFF\" stroke=\"#FFD6D6\" stroke-width=\"3\"/><path d=\"M34 46 Q39 40 44 46\" stroke=\"#2D2327\" stroke-width=\"4\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M56 46 Q61 40 66 46\" stroke=\"#2D2327\" stroke-width=\"4\" stroke-linecap=\"round\" fill=\"none\"/><rect x=\"29\" y=\"52\" width=\"6\" height=\"3\" fill=\"#FFA5A5\" rx=\"1.5\"/><rect x=\"65\" y=\"52\" width=\"6\" height=\"3\" fill=\"#FFA5A5\" rx=\"1.5\"/><path d=\"M45 54 Q50 59 55 54\" stroke=\"#2D2327\" stroke-width=\"3\" stroke-linecap=\"round\"/></svg>",
+      "css": ".ds-mascot { display: block; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.15)); animation: ds-mascot-breathe 3.2s cubic-bezier(0.45,0,0.55,1) infinite; } @keyframes ds-mascot-breathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.015); } } @media (prefers-reduced-motion: reduce) { .ds-mascot { animation: none; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Friendly Robo-Gardener",
+    "overview": "Miri Cleaner reimagines system maintenance not as a grim, anxiety-ridden diagnostic suite, but as a joyful, reassuring morning routine. Inspired by Duolingo's tactile gamification and warm playfulness, the visual world balances welcoming curves and 3D-pressed buttons with serious zero-trust safety mechanisms.\n\nSubtle retro pixel-art badges (broom, sparkles, shields, and dust mascots) introduce playful character without compromising typography, contrast, or information density. Casual users are greeted with high-level clarity and immediate reassurance; power users can seamlessly toggle the view to inspect every byte, command line, and process lock.",
+    "keyCharacteristics": [
+      "Warm coral pink `#FF9D9D` anchor with cream-paper background `#FFF9F8`.",
+      "Duolingo-styled 3D tactile buttons that physically sink on press with thick bottom borders (`shadow-[0_4px_0_0_#E05B5B]`).",
+      "Reassuring safety status pills and explicit confirmation modals for dangerous tasks.",
+      "Restrained pixel-art accents strictly confined to status badges, score counters, and mascots.",
+      "Coherent, consistent iconography strictly powered by Lucide icons across all views."
+    ],
+    "rules": [
+      { "name": "The Green-Means-Guaranteed Rule", "body": "The mint color is used solely when a target has been verified non-destructive and backed by an active snapshot (Snapper / VSS). Never use green for unverified states.", "section": "colors" },
+      { "name": "The Contrast Floor Rule", "body": "Never use gray or muted text on colored backgrounds. Colored badges must use high-contrast tint pairings (e.g. bg-indigo-100 text-indigo-900 or bg-slate-200 text-slate-900).", "section": "colors" },
+      { "name": "The Legibility-First Rule", "body": "Retro pixel fonts are strictly prohibited for body text, path strings, and warning descriptions. Pixel styling is only permitted on mini-badges, units, and mascot emotes.", "section": "typography" },
+      { "name": "The Dynamic-Unit Rule", "body": "Every on-screen byte count renders through the shared formatBytes() utility (lib/formatters.ts), which auto-selects B/KB/MB/GB/TB/PB and scales decimal precision to the unit. Never hand-roll (bytes / (1024*1024)).toFixed(1) + \" MB\" -- a 107MB package cache and a 35.8GB toolchain store sitting side by side each need the unit that actually fits their scale.", "section": "typography" },
+      { "name": "The Bounded-Width Rule", "body": "Any flex row nested inside a flex-col/md:flex-row responsive container gets an explicit w-full md:w-auto min-w-0 so text truncation and wrapping have a real width to measure against; omitting it lets content silently overflow past the viewport instead of degrading gracefully.", "section": "layout" },
+      { "name": "The Physical-Press Rule", "body": "Every tactile button has an active state that reduces its bottom shadow and translates the container downward, simulating a mechanical keypress.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do show active process locks and dry-run file counts before prompting for action.",
+      "Do celebrate successful cleanups with cheerful mascot animations and exact freed megabytes, scaled to the actual amount freed (confetti tier: modest / solid / major).",
+      "Do provide 1-click rollback access for system tweaks and Windows Update policies.",
+      "Do use Lucide icons consistently across all UI elements.",
+      "Do render an ErrorBanner in every view that calls the native bridge, on every catch block -- never rely on the activity log alone."
+    ],
+    "donts": [
+      "Don't use generic dark-mode neon glows that contradict the cheerful daylight aesthetic.",
+      "Don't hide consequences of destructive actions; always display affected path trees.",
+      "Don't run the GUI with elevated root or administrator privileges.",
+      "Don't pair gray text with colored background containers.",
+      "Don't let a failed action fail silently. addLog() alone is not user-facing feedback -- the terminal drawer defaults to closed."
+    ]
+  }
+}
