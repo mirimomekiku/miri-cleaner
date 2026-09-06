@@ -1,0 +1,33 @@
+!include "MUI2.nsh"
+
+Name "Miri Cleaner"
+OutFile "MiriCleaner-Setup-0.1.0.exe"
+InstallDir "$LOCALAPPDATA\Programs\MiriCleaner"
+RequestExecutionLevel user
+
+!define MUI_ABORTWARNING
+!define MUI_ICON "..\..\packages\miri-gui\src-tauri\icons\icon.ico"
+
+!insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_DIRECTORY
+!insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_PAGE_FINISH
+
+!insertmacro MUI_LANGUAGE "English"
+
+Section "Miri Cleaner Core" SecCore
+    SetOutPath "$INSTDIR"
+    File /r "..\..\target\release\miri-cleaner.exe"
+    
+    CreateDirectory "$SMPROGRAMS\Miri Cleaner"
+    CreateShortCut "$SMPROGRAMS\Miri Cleaner\Miri Cleaner.lnk" "$INSTDIR\miri-cleaner.exe"
+    WriteUninstaller "$INSTDIR\uninstall.exe"
+SectionEnd
+
+Section "Uninstall"
+    Delete "$INSTDIR\miri-cleaner.exe"
+    Delete "$INSTDIR\uninstall.exe"
+    RMDir /r "$INSTDIR"
+    Delete "$SMPROGRAMS\Miri Cleaner\Miri Cleaner.lnk"
+    RMDir "$SMPROGRAMS\Miri Cleaner"
+SectionEnd

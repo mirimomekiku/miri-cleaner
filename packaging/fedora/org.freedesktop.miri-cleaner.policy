@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>Miri Cleaner</vendor>
+  <vendor_url>https://github.com/miri-cleaner/miri-cleaner</vendor_url>
+  <icon_name>miri-cleaner</icon_name>
+
+  <action id="org.freedesktop.miri-cleaner.system-maintenance">
+    <description>Perform system package cache and journal maintenance</description>
+    <message>Authentication is required to prune system package caches and journal logs safely.</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/miri-cleaner</annotate>
+    <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
+  </action>
+</policyconfig>

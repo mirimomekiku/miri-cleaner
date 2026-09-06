@@ -1,0 +1,36 @@
+# Rust
+/target
+**/target/
+Cargo.lock.bak
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Tauri
+packages/miri-gui/src-tauri/target/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local-only AI tooling config (machine-specific paths, not shared)
+.claude/
+.cursor/
+.impeccable/*.local.json
+.impeccable/design.json
+.impeccable/critique/
+
+# Env
+.env
+.env.*
+!.env.example

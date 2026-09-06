@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Miri Cleaner
+GenericName=System Cleaner & Optimizer
+Comment=Sparkling Clean & Ultra-Safe System Optimizer (•◡•)
+Exec=miri-cleaner
+Icon=miri-cleaner
+Terminal=false
+Type=Application
+Categories=System;Utility;Filesystem;
+Keywords=cleaner;optimizer;dnf;journal;cache;btrfs;snapper;
+StartupNotify=true

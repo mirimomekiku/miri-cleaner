@@ -1,0 +1,32 @@
+pub mod apps;
+pub mod audit;
+pub mod autostart;
+pub mod dev_cache;
+pub mod duplicates;
+pub mod elevation;
+pub mod executor;
+pub mod leftovers;
+pub mod models;
+pub mod rules;
+pub mod scanner;
+pub mod snapshot;
+pub mod tweaks;
+pub mod vitals;
+pub mod xray;
+
+pub use apps::AppManager;
+pub use audit::AuditJournal;
+pub use autostart::{AutostartItem, AutostartManager};
+pub use dev_cache::DevCacheCleaner;
+pub use duplicates::{DuplicateFinder, DuplicateGroup, DuplicateItem};
+pub use elevation::ElevationManager;
+pub use executor::Executor;
+pub use leftovers::{AppLeftover, LeftoversScanner};
+pub use models::*;
+pub use rules::RuleEngine;
+pub use scanner::Scanner;
+pub use snapshot::SnapshotManager;
+pub use tweaks::{LinuxTweaks, WindowsTweaks, detect_system_dns, set_system_dns};
+pub use vitals::{DiskHealthSummary, SnapshotCompactorInfo, SystemVitals, SystemVitalsReport};
+pub use xray::{SpaceXRay, XRayFileItem, XRayFolderNode, XRayReport};
+

@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/miri-core",
+    "crates/miri-cli",
+]
+exclude = [
+    "packages/miri-gui/src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Miri Cleaner Contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/miri-cleaner/miri-cleaner"
