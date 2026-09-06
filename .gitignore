@@ -29,6 +29,7 @@ Thumbs.db
 .impeccable/*.local.json
 .impeccable/design.json
 .impeccable/critique/
+**/.impeccable/hook.cache.json
 
 # Env
 .env

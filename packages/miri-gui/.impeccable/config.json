@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "animate-bounce",
+        "createdAt": "2026-09-06T15:26:30.823Z",
+        "reason": "false positive: line only disables Tailwind's built-in animate-bounce under prefers-reduced-motion, never applies or defines bounce/elastic easing"
+      }
+    ]
+  }
+}
