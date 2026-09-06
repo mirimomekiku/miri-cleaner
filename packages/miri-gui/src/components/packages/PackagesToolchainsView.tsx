@@ -1,0 +1,778 @@
+import React, { useState } from "react";
+import { useCleanerStore } from "../../store/useCleanerStore";
+import { Mascot } from "../ui/Mascot";
+import { TactileButton } from "../ui/TactileButton";
+import { PixelBadge } from "../ui/PixelBadge";
+import { PixelCheckbox } from "../ui/PixelCheckbox";
+import { RiskPill } from "../ui/RiskPill";
+import {
+  Boxes,
+  Package,
+  Cpu,
+  Sparkles,
+  Trash2,
+  ShieldCheck,
+  CheckCircle2,
+  Info,
+  Terminal,
+  CheckCircle,
+  Laptop,
+} from "lucide-react";
+import { bridge } from "../../lib/bridge";
+import { CardSkeleton } from "../ui/Skeleton";
+import { formatBytes } from "../../lib/formatters";
+import { ErrorBanner } from "../ui/ErrorBanner";
+import { useAsyncAction } from "../../lib/useAsyncAction";
+
+export const PackagesToolchainsView: React.FC = () => {
+  const {
+    viewMode,
+    scanResult,
+    setScanResult,
+    selectedTargetIds,
+    toggleTarget,
+    selectAll,
+    deselectAll,
+    isScanning,
+    setIsScanning,
+    isCleaning,
+    setIsCleaning,
+    addLog,
+    openDangerModal,
+    setLastCleanResult,
+  } = useCleanerStore();
+
+  const currentOs =
+    scanResult?.system_info.os ||
+    (typeof navigator !== "undefined" && navigator.userAgent.includes("Windows")
+      ? "windows"
+      : "linux");
+  const isLinux = currentOs === "linux";
+  const isWindows = currentOs === "windows";
+
+  const [dryRun, setDryRun] = useState(false);
+  const [successCelebration, setSuccessCelebration] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<"all" | "packages" | "toolchains">("all");
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+  const errorAction = useAsyncAction();
+
+  // Targets in package_managers and dev_caches categories
+  const allMergedTargets =
+    scanResult?.targets.filter(
+      (t) => t.category === "package_managers" || t.category === "dev_caches"
+    ) || [];
+
+  const packageTargets = allMergedTargets.filter((t) => t.category === "package_managers");
+  const devTargets = allMergedTargets.filter((t) => t.category === "dev_caches");
+
+  const displayedTargets =
+    activeFilter === "all"
+      ? allMergedTargets
+      : activeFilter === "packages"
+      ? packageTargets
+      : devTargets;
+
+  const selectedTargets = displayedTargets.filter((t) =>
+    selectedTargetIds.includes(t.id)
+  );
+
+  const selectedBytes = selectedTargets.reduce((acc, t) => acc + t.estimated_bytes, 0);
+  const selectedFormatted = formatBytes(selectedBytes);
+
+  const packageBytes = packageTargets.reduce((acc, t) => acc + t.estimated_bytes, 0);
+  const packageFormatted = formatBytes(packageBytes);
+
+  const devBytes = devTargets.reduce((acc, t) => acc + t.estimated_bytes, 0);
+  const devFormatted = formatBytes(devBytes);
+
+  const handleScan = async () => {
+    setIsScanning(true);
+    addLog("Scanning system package managers and developer toolchains...");
+    await errorAction.run(
+      async () => {
+        const res = await bridge.scanAll();
+        setScanResult(res);
+        addLog("Packages & Toolchains scan completed.");
+      },
+      {
+        formatError: (e) => {
+          addLog(`Scan error: ${e}`);
+          return `Scan failed: ${e instanceof Error ? e.message : String(e)}`;
+        },
+      }
+    );
+    setIsScanning(false);
+  };
+
+  const handleCleanSelected = () => {
+    if (selectedTargets.length === 0) return;
+
+    const hasDangerous = selectedTargets.some(
+      (t) => t.risk_level === "dangerous" || t.risk_level === "aggressive"
+    );
+    const hasElevation = selectedTargets.some((t) => t.requires_elevation);
+
+    openDangerModal({
+      title: "Clean Packages & Toolchains",
+      description: `You are about to clean ${selectedTargets.length} selected target(s) (${selectedFormatted.formatted}). Caches will repopulate when packages or compilers run.`,
+      requiresElevation: hasElevation,
+      riskLevel: hasDangerous ? "dangerous" : "safe",
+      onConfirm: async () => {
+        setIsCleaning(true);
+        addLog(
+          `Cleaning selected items: dry_run=${dryRun}, targets=${selectedTargets.map((t) => t.id).join(", ")}`
+        );
+        await errorAction.run(
+          async () => {
+            const result = await bridge.executeClean({
+              target_ids: selectedTargets.map((t) => t.id),
+              dry_run: dryRun,
+              create_snapshot: true,
+            });
+            setLastCleanResult(result);
+            addLog(
+              `Cleanup finished: ${formatBytes(result.freed_bytes).formatted} freed across ${result.deleted_files} files.`
+            );
+            setSuccessCelebration(true);
+            setTimeout(() => setSuccessCelebration(false), 5000);
+            const refreshed = await bridge.scanAll();
+            setScanResult(refreshed);
+          },
+          {
+            formatError: (e) => {
+              addLog(`Error cleaning targets: ${e}`);
+              return `Cleaning targets failed: ${e instanceof Error ? e.message : String(e)}`;
+            },
+          }
+        );
+        setIsCleaning(false);
+      },
+    });
+  };
+
+  const handleIndividualPrune = (
+    actionKey: string,
+    label: string,
+    commandName: string,
+    requiresElev: boolean = false
+  ) => {
+    openDangerModal({
+      title: `Prune ${label}`,
+      description: `Purges cached files for ${label}. Safe for all active projects.`,
+      requiresElevation: requiresElev,
+      riskLevel: "safe",
+      onConfirm: async () => {
+        setActionInProgress(actionKey);
+        addLog(`Executing: ${label} (${commandName})`);
+        await errorAction.run(
+          async () => {
+            const res = await bridge.executeLinuxTweak(commandName);
+            addLog(`Result: ${res}`);
+            const refreshed = await bridge.scanAll();
+            setScanResult(refreshed);
+          },
+          {
+            formatError: (e) => {
+              addLog(`Action error: ${e}`);
+              return `Action failed: ${e instanceof Error ? e.message : String(e)}`;
+            },
+          }
+        );
+        setActionInProgress(null);
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto select-none">
+      {errorAction.error && (
+        <ErrorBanner message={errorAction.error} onDismiss={errorAction.dismiss} onRetry={errorAction.retry} />
+      )}
+
+      {/* Top Hero Banner */}
+      <div className="bg-white rounded-3xl p-8 border-2 border-slate-100 shadow-duo flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-6 w-full md:w-auto min-w-0">
+          <Mascot
+            mood={
+              successCelebration
+                ? "celebrate"
+                : isScanning
+                ? "scanning"
+                : isCleaning
+                ? "cleaning"
+                : "happy"
+            }
+            size="lg"
+          />
+          <div>
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <PixelBadge label="Packages & Toolchains" variant="blue" />
+              <span className="text-xs font-bold text-slate-500">
+                DNF5 • Flatpak • WinGet • Python • JS • Podman • C/C++/Rust • JVM • Go
+              </span>
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+              Packages & Developer Toolchains
+            </h2>
+            <p className="text-sm font-semibold text-slate-500 mt-1 max-w-lg">
+              Safely sweep package repositories, compiler artifact caches, and container
+              layers without touching active projects, configs, or git repositories.
+            </p>
+          </div>
+        </div>
+
+        {/* Dual Metric Display */}
+        <div className="flex items-center gap-3">
+          <div className="bg-white rounded-2xl p-4 border-2 border-slate-100 shadow-duo-sm text-center min-w-[120px]">
+            <div className="text-2xl font-black text-slate-800">
+              {packageFormatted.value}{" "}
+              <span className="text-xs font-bold text-slate-400">{packageFormatted.unit}</span>
+            </div>
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+              Package Caches
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border-2 border-slate-100 shadow-duo-sm text-center min-w-[120px]">
+            <div className="text-2xl font-black text-slate-800">
+              {devFormatted.value}{" "}
+              <span className="text-xs font-bold text-slate-400">{devFormatted.unit}</span>
+            </div>
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+              Toolchains Stored
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Segmented Filter Bar */}
+      <div className="bg-white rounded-2xl p-3 border-2 border-slate-100 shadow-duo-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-2 p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto">
+          <button
+            onClick={() => setActiveFilter("all")}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
+              activeFilter === "all"
+                ? "bg-white text-slate-900 shadow-duo-sm"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Boxes className="w-4 h-4 text-indigo-500" />
+            <span>All Items ({allMergedTargets.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveFilter("packages")}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
+              activeFilter === "packages"
+                ? "bg-white text-slate-900 shadow-duo-sm"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Package className="w-4 h-4 text-pink-500" />
+            <span>System Packages ({packageTargets.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveFilter("toolchains")}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
+              activeFilter === "toolchains"
+                ? "bg-white text-slate-900 shadow-duo-sm"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Cpu className="w-4 h-4 text-emerald-500" />
+            <span>Dev Toolchains ({devTargets.length})</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          <label className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100">
+            <PixelCheckbox
+              checked={dryRun}
+              onChange={setDryRun}
+              label="Toggle dry run mode"
+            />
+            <span>Dry-Run Mode</span>
+          </label>
+
+          <TactileButton
+            variant="secondary"
+            size="sm"
+            onClick={handleScan}
+            disabled={isScanning}
+          >
+            <Sparkles className={`w-4 h-4 ${isScanning ? "animate-spin" : ""}`} />
+            <span>{isScanning ? "Scanning..." : "Scan All"}</span>
+          </TactileButton>
+
+          <TactileButton
+            variant="primary"
+            size="sm"
+            onClick={handleCleanSelected}
+            disabled={isCleaning || selectedTargets.length === 0}
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>
+              {isCleaning
+                ? "Cleaning..."
+                : dryRun
+                ? `Simulate (${selectedFormatted.formatted})`
+                : `Clean (${selectedFormatted.formatted})`}
+            </span>
+          </TactileButton>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* CASUAL VIEW MODE */}
+      {/* ========================================================================= */}
+      {isScanning || !scanResult ? (
+        <CardSkeleton count={6} />
+      ) : viewMode === "casual" ? (
+        <div className="space-y-6">
+          {/* SECTION 1: SYSTEM PACKAGE MANAGERS */}
+          {(activeFilter === "all" || activeFilter === "packages") && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <Package className="w-5 h-5 text-indigo-500" />
+                  <h3 className="text-lg font-black text-slate-900">
+                    System Package Managers
+                  </h3>
+                </div>
+                <span className="text-xs font-bold text-slate-400">
+                  {packageTargets.length} Stores Available
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* DNF / DNF5 Cache */}
+                <div
+                  className={`bg-white rounded-2xl p-5 border-2 transition-all flex flex-col justify-between ${
+                    !isLinux
+                      ? "opacity-50 grayscale-[40%] border-dashed border-slate-300"
+                      : "border-slate-100 shadow-duo-sm hover:border-indigo-200"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        Fedora / RPM
+                      </span>
+                      {isLinux ? (
+                        <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3 text-emerald-600" /> Active
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                          <Laptop className="w-3 h-3" /> Linux Only
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="text-base font-black text-slate-900">DNF / DNF5 Cache</h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Removes cached RPM metadata, repodata archives, and incomplete package downloads.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-slate-600">/var/cache/dnf</span>
+                    <TactileButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleIndividualPrune("dnf", "DNF / DNF5 Package Cache", "dnf-cache", true)}
+                      disabled={!isLinux || actionInProgress === "dnf"}
+                    >
+                      {actionInProgress === "dnf" ? "Purging..." : "Prune DNF"}
+                    </TactileButton>
+                  </div>
+                </div>
+
+                {/* Flatpak Unused Runtimes */}
+                <div
+                  className={`bg-white rounded-2xl p-5 border-2 transition-all flex flex-col justify-between ${
+                    !isLinux
+                      ? "opacity-50 grayscale-[40%] border-dashed border-slate-300"
+                      : "border-slate-100 shadow-duo-sm hover:border-indigo-200"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100">
+                        Flatpak Sandbox
+                      </span>
+                      {isLinux ? (
+                        <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3 text-emerald-600" /> Active
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                          <Laptop className="w-3 h-3" /> Linux Only
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="text-base font-black text-slate-900">Flatpak Unused Runtimes</h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Uninstalls orphaned GNOME/KDE runtime layers and sweeps application caches.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-slate-600">~/.var/app</span>
+                    <TactileButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleIndividualPrune("flatpak", "Flatpak Unused Runtimes", "flatpak", false)}
+                      disabled={!isLinux || actionInProgress === "flatpak"}
+                    >
+                      {actionInProgress === "flatpak" ? "Purging..." : "Prune Flatpak"}
+                    </TactileButton>
+                  </div>
+                </div>
+
+                {/* WinGet / AppX Stores */}
+                <div
+                  className={`bg-white rounded-2xl p-5 border-2 transition-all flex flex-col justify-between ${
+                    !isWindows
+                      ? "opacity-50 grayscale-[40%] border-dashed border-slate-300"
+                      : "border-slate-100 shadow-duo-sm hover:border-indigo-200"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-100">
+                        Windows 10/11
+                      </span>
+                      {isWindows ? (
+                        <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3 text-emerald-600" /> Active
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                          <Laptop className="w-3 h-3" /> Windows Only
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="text-base font-black text-slate-900">WinGet Installer Cache</h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Clears downloaded installer payloads and cached MSStore package files in %LOCALAPPDATA%.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-slate-600">%TEMP%\WinGet</span>
+                    <TactileButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleIndividualPrune("winget", "WinGet Cache", "winget-cache", false)}
+                      disabled={!isWindows || actionInProgress === "winget"}
+                    >
+                      {actionInProgress === "winget" ? "Purging..." : "Prune WinGet"}
+                    </TactileButton>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 2: DEVELOPER TOOLCHAINS & RUNTIMES */}
+          {(activeFilter === "all" || activeFilter === "toolchains") && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <Cpu className="w-5 h-5 text-emerald-500" />
+                  <h3 className="text-lg font-black text-slate-900">
+                    Developer Toolchains & Runtimes
+                  </h3>
+                </div>
+                <span className="text-xs font-bold text-slate-400">
+                  {devTargets.length} Toolchain Suites
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* 1. Python Ecosystem */}
+                <div className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
+                        Python Ecosystem
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-700">Safe Cache</span>
+                    </div>
+                    <h4 className="text-base font-black text-slate-900">pip, uv, Poetry & Conda</h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Purges downloaded wheel packages (~/.cache/pip), uv virtualenv archives, Poetry build cache, and conda package tarballs.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-slate-600">~/.cache/pip</span>
+                    <TactileButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleIndividualPrune("python", "Python Ecosystem Caches", "python-cache", false)}
+                      disabled={actionInProgress === "python"}
+                    >
+                      {actionInProgress === "python" ? "Pruning..." : "Prune Python"}
+                    </TactileButton>
+                  </div>
+                </div>
+
+                {/* 2. Modern JS Ecosystem */}
+                <div className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
+                        Modern JS Ecosystem
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-700">Fast Re-fetch</span>
+                    </div>
+                    <h4 className="text-base font-black text-slate-900">npm, pnpm, Yarn, Bun & Deno</h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Prunes ~/.npm/_cacache, pnpm global store (~/.local/share/pnpm/store), Bun installer tarballs, and Deno HTTP cache.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-slate-600">~/.npm/_cacache</span>
+                    <TactileButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleIndividualPrune("js", "Modern JS Stores", "pnpm-cache", false)}
+                      disabled={actionInProgress === "js"}
+                    >
+                      {actionInProgress === "js" ? "Pruning..." : "Prune JS Stores"}
+                    </TactileButton>
+                  </div>
+                </div>
+
+                {/* 3. Containers & Podman */}
+                <div className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-purple-50 text-purple-800 border border-purple-200">
+                        Containers & Podman
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-700">Storage Prune</span>
+                    </div>
+                    <h4 className="text-base font-black text-slate-900">Podman & Docker Runtimes</h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Runs podman/docker system prune to free dangling container layers, stopped images, and temporary rootless storage overlays.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-slate-600">podman system</span>
+                    <TactileButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleIndividualPrune("podman", "Podman & Container Caches", "podman-prune", false)}
+                      disabled={actionInProgress === "podman"}
+                    >
+                      {actionInProgress === "podman" ? "Pruning..." : "Prune Containers"}
+                    </TactileButton>
+                  </div>
+                </div>
+
+                {/* 4. C / C++ / Rust Compilers */}
+                <div className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-orange-50 text-orange-800 border border-orange-200">
+                        C / C++ / Rust
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-700">Rebuilds Fresh</span>
+                    </div>
+                    <h4 className="text-base font-black text-slate-900">ccache, sccache, Cargo & Rustup</h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Clears compilation object caches (ccache -C / sccache), Rust Cargo crate tarballs, git checkouts, and Rustup temp toolchains.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-slate-600">~/.cargo/cache</span>
+                    <TactileButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleIndividualPrune("compiler", "C/C++/Rust Compiler Cache", "ccache", false)}
+                      disabled={actionInProgress === "compiler"}
+                    >
+                      {actionInProgress === "compiler" ? "Clearing..." : "Clear Compilers"}
+                    </TactileButton>
+                  </div>
+                </div>
+
+                {/* 5. JVM Build Systems */}
+                <div className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-rose-50 text-rose-800 border border-rose-200">
+                        JVM Ecosystem
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-700">Massive Savings</span>
+                    </div>
+                    <h4 className="text-base font-black text-slate-900">Maven, Gradle & sbt</h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Sweeps downloaded jar dependencies in ~/.m2/repository, Gradle build-cache payloads (~/.gradle/caches), daemons, and Coursier caches.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-slate-600">~/.m2/repository</span>
+                    <TactileButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleIndividualPrune("jvm", "JVM Maven & Gradle Caches", "jvm-cache", false)}
+                      disabled={actionInProgress === "jvm"}
+                    >
+                      {actionInProgress === "jvm" ? "Cleaning..." : "Clean JVM"}
+                    </TactileButton>
+                  </div>
+                </div>
+
+                {/* 6. Go Toolchain */}
+                <div className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-cyan-50 text-cyan-800 border border-cyan-200">
+                        Go Toolchain
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-700">Quick Clean</span>
+                    </div>
+                    <h4 className="text-base font-black text-slate-900">Go Build & Module Cache</h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Executes go clean -cache and purges cached module zip packages in ~/go/pkg/mod/cache.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-slate-600">go clean -cache</span>
+                    <TactileButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleIndividualPrune("go", "Go Module & Build Cache", "go-cache", false)}
+                      disabled={actionInProgress === "go"}
+                    >
+                      {actionInProgress === "go" ? "Cleaning..." : "Clean Go"}
+                    </TactileButton>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Safety & Non-Destructive Explainer */}
+          <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo-sm space-y-3">
+            <div className="flex items-center gap-2.5 text-slate-800 font-extrabold text-sm">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>Zero-Trust Developer & Package Safety Guarantee</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600 leading-relaxed">
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
+                <div className="font-black text-slate-800 mb-1 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  Source Code & Git Untouched
+                </div>
+                <p>
+                  Only global artifact stores, downloaded archives, and compilation cache directories
+                  are touched. Your local code repositories and git history remain completely intact.
+                </p>
+              </div>
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
+                <div className="font-black text-slate-800 mb-1 flex items-center gap-1.5">
+                  <Terminal className="w-3.5 h-3.5 text-emerald-600" />
+                  Auto-Regenerated by Runtimes
+                </div>
+                <p>
+                  Package managers and compilers will automatically download and rebuild needed files
+                  the next time you compile or run your projects.
+                </p>
+              </div>
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
+                <div className="font-black text-slate-800 mb-1 flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5 text-emerald-600" />
+                  Dry-Run Verification
+                </div>
+                <p>
+                  Every clean operation simulates file locks, verifies system path blocklists,
+                  and computes exact reclaimable space before performing destructive I/O.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* ========================================================================= */
+        /* ADVANCED VIEW MODE */
+        /* ========================================================================= */
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-bold text-slate-500">
+              Select granular targets for dry-run simulation or execution ({displayedTargets.length} items):
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={selectAll}
+                className="text-xs font-bold px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
+              >
+                Select All
+              </button>
+              <button
+                onClick={deselectAll}
+                className="text-xs font-bold px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
+              >
+                Deselect All
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {displayedTargets.map((target) => {
+              const isSelected = selectedTargetIds.includes(target.id);
+              const targetFormatted = formatBytes(target.estimated_bytes).formatted;
+              const isPkg = target.category === "package_managers";
+
+              return (
+                <div
+                  key={target.id}
+                  className={`bg-white rounded-2xl p-4 border-2 transition-all flex items-center justify-between gap-4 ${
+                    isSelected ? "border-indigo-400 shadow-duo-sm" : "border-slate-100 hover:border-slate-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <PixelCheckbox
+                      checked={isSelected}
+                      onChange={() => toggleTarget(target.id)}
+                      label={`Select ${target.name}`}
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-black text-slate-800 text-sm">{target.name}</h4>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${
+                            isPkg
+                              ? "bg-pink-50 text-pink-700 border-pink-200"
+                              : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          }`}
+                        >
+                          {isPkg ? "Package Manager" : "Dev Toolchain"}
+                        </span>
+                        <RiskPill level={target.risk_level} />
+                        {target.requires_elevation && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                            Requires Root/UAC
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">{target.description}</p>
+                      <div className="flex items-center gap-3 text-xs font-mono text-slate-400 mt-1 flex-wrap">
+                        <span>Paths: {target.paths.join(", ")}</span>
+                        <span>•</span>
+                        <span>Locks: {target.locked_count}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <div className="font-pixel text-xs text-slate-800 font-bold">{targetFormatted}</div>
+                    <div className="text-xs text-slate-400">{target.file_count} files</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+export default PackagesToolchainsView;
