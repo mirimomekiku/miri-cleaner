@@ -1,0 +1,106 @@
+import React, { useEffect, useRef, useState } from "react";
+import { useCleanerStore } from "./store/useCleanerStore";
+import { Header } from "./components/layout/Header";
+import { Sidebar } from "./components/layout/Sidebar";
+import { SplashScreen } from "./components/layout/SplashScreen";
+import { OnboardingFlow, hasCompletedOnboarding } from "./components/layout/OnboardingFlow";
+import { CasualView } from "./components/casual/CasualView";
+import { PowerView } from "./components/power/PowerView";
+import { AppsView } from "./components/apps/AppsView";
+import { StorageView } from "./components/storage/StorageView";
+import { PackagesView } from "./components/packages/PackagesView";
+import { TweaksView } from "./components/tweaks/TweaksView";
+import { DevCacheView } from "./components/devcache/DevCacheView";
+import { SnapshotsView } from "./components/snapshots/SnapshotsView";
+import { LogDrawer } from "./components/layout/LogDrawer";
+import { DangerConfirmationModal } from "./components/layout/DangerConfirmationModal";
+import { bridge } from "./lib/bridge";
+import { formatBytes } from "./lib/formatters";
+
+export const App: React.FC = () => {
+  const { viewMode, activeTab, setScanResult, setIsScanning, addLog } = useCleanerStore();
+
+  const [showSplash, setShowSplash] = useState(true);
+  // Only ever computed once: reading localStorage on the initial render
+  // avoids a flash where onboarding briefly mounts then immediately closes
+  // for a returning user.
+  const [showOnboarding, setShowOnboarding] = useState(() => !hasCompletedOnboarding());
+
+  // Briefly animate the main stage whenever Casual/Advanced mode changes, so
+  // the switch reads as a deliberate transition rather than an abrupt swap.
+  const [isModeTransitioning, setIsModeTransitioning] = useState(false);
+  const prevViewModeRef = useRef(viewMode);
+  useEffect(() => {
+    if (prevViewModeRef.current === viewMode) return;
+    prevViewModeRef.current = viewMode;
+    setIsModeTransitioning(true);
+    const timer = setTimeout(() => setIsModeTransitioning(false), 750);
+    return () => clearTimeout(timer);
+  }, [viewMode]);
+
+  useEffect(() => {
+    // Initial silent non-destructive scan
+    setIsScanning(true);
+    bridge
+      .scanAll()
+      .then((res) => {
+        setScanResult(res);
+        addLog(
+          `Initial non-destructive inspection ready: ${
+            formatBytes(res.total_reclaimable_bytes).formatted
+          } discovered across ${res.targets.length} targets.`
+        );
+      })
+      .catch((err) => {
+        addLog(`Scan failed: ${err}`);
+      })
+      .finally(() => {
+        setIsScanning(false);
+      });
+  }, [setScanResult, setIsScanning, addLog]);
+
+  return (
+    <>
+      {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
+      {/* Let the splash's brand moment finish before the first-run
+          orientation appears -- never stack two full-screen moments. */}
+      {!showSplash && showOnboarding && (
+        <OnboardingFlow onDone={() => setShowOnboarding(false)} />
+      )}
+
+      <div className="h-screen w-screen flex flex-col bg-miri-bg text-slate-800 overflow-hidden select-none">
+        {/* Top Header */}
+        <Header />
+
+        {/* Main Workspace Layout */}
+        <div className="flex-1 flex min-h-0 overflow-hidden">
+          {/* Left Navigation Rail */}
+          <Sidebar />
+
+          {/* Scrollable Stage */}
+          <main
+            className={`flex-1 min-h-0 overflow-y-auto p-6 md:p-8 ${
+              isModeTransitioning ? "animate-mode-switch" : ""
+            }`}
+          >
+            {activeTab === "dashboard" &&
+              (viewMode === "casual" ? <CasualView /> : <PowerView />)}
+            {activeTab === "storage" && <StorageView />}
+            {activeTab === "apps" && <AppsView />}
+            {(activeTab === "packages" || activeTab === "devcache") && <PackagesView />}
+            {activeTab === "tweaks" && <TweaksView />}
+            {activeTab === "snapshots" && <SnapshotsView />}
+          </main>
+        </div>
+
+        {/* Slide-out Terminal Log Drawer - Sticky to bottom of application */}
+        <LogDrawer />
+
+        {/* Hardened Permission & Dangerous Execution Modal */}
+        <DangerConfirmationModal />
+      </div>
+    </>
+  );
+};
+
+export default App;
