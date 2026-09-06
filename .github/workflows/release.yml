@@ -1,0 +1,66 @@
+name: Release
+
+# Builds the Miri Cleaner desktop app for Fedora/Linux (.rpm, .deb, .AppImage)
+# and Windows (.msi, .exe/NSIS) and publishes them as assets on a GitHub
+# Release. Windows Tauri builds cannot be reliably cross-compiled from Linux,
+# so each platform builds natively on its own GitHub-hosted runner.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+          - platform: windows-latest
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            rpm
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: packages/miri-gui/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: packages/miri-gui
+        run: npm ci
+
+      - name: Build and release Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: packages/miri-gui
+          tagName: ${{ github.ref_name }}
+          releaseName: "Miri Cleaner ${{ github.ref_name }}"
+          releaseBody: |
+            Automated build for Fedora/Linux (.rpm, .deb, .AppImage) and
+            Windows (.msi, NSIS .exe). See the commit history for changes.
+          releaseDraft: true
+          prerelease: false
