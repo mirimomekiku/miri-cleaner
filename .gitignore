@@ -30,6 +30,8 @@ Thumbs.db
 .impeccable/design.json
 .impeccable/critique/
 **/.impeccable/hook.cache.json
+.impeccable/review/
+**/.impeccable/review/
 
 # Env
 .env
