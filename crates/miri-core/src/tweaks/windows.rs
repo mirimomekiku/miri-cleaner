@@ -549,6 +549,126 @@ impl WindowsTweaks {
                 is_applicable: Self::is_shutup10_installed(),
                 command: None,
             },
+            WindowsTweakItem {
+                id: "disable_sysmain".to_string(),
+                name: "SysMain (Superfetch) - Disable".to_string(),
+                category: WindowsTweakCategory::AdvancedCaution,
+                description: "Stops the background service that preloads apps into memory; mainly beneficial on SSD systems.".to_string(),
+                min_windows_version: None,
+                requires_admin: true,
+                danger_level: RiskLevel::Moderate,
+                is_enabled: false,
+                is_applicable: true,
+                command: None,
+            },
+            WindowsTweakItem {
+                id: "network_throttling_index".to_string(),
+                name: "Remove Network Throttling Index Cap".to_string(),
+                category: WindowsTweakCategory::AdvancedCaution,
+                description: "Removes Windows' default 10,000 packets/sec MMCSS throttle, useful for gaming/streaming.".to_string(),
+                min_windows_version: None,
+                requires_admin: true,
+                danger_level: RiskLevel::Moderate,
+                is_enabled: false,
+                is_applicable: true,
+                command: None,
+            },
+            WindowsTweakItem {
+                id: "hags_enable".to_string(),
+                name: "Hardware-Accelerated GPU Scheduling - Enable".to_string(),
+                category: WindowsTweakCategory::AdvancedCaution,
+                description: "Moves part of GPU scheduling off the CPU to reduce input latency on modern GPUs. Requires a sign-out or reboot to take effect.".to_string(),
+                min_windows_version: None,
+                requires_admin: true,
+                danger_level: RiskLevel::Moderate,
+                is_enabled: false,
+                is_applicable: true,
+                command: None,
+            },
+            WindowsTweakItem {
+                id: "mouse_acceleration_disable".to_string(),
+                name: "Disable Mouse Acceleration".to_string(),
+                category: WindowsTweakCategory::Essential,
+                description: "Turns off \"Enhance pointer precision\" for consistent 1:1 mouse movement, a standard gaming-precision tweak.".to_string(),
+                min_windows_version: None,
+                requires_admin: true,
+                danger_level: RiskLevel::Safe,
+                is_enabled: false,
+                is_applicable: true,
+                command: None,
+            },
+            WindowsTweakItem {
+                id: "ultimate_performance_plan".to_string(),
+                name: "Enable Ultimate Performance Power Plan".to_string(),
+                category: WindowsTweakCategory::AdvancedCaution,
+                description: "Unlocks Windows' hidden max-performance power scheme. Increases power draw and heat; not recommended for laptops on battery.".to_string(),
+                min_windows_version: None,
+                requires_admin: true,
+                danger_level: RiskLevel::Moderate,
+                is_enabled: false,
+                is_applicable: true,
+                command: None,
+            },
+            WindowsTweakItem {
+                id: "search_indexing_disable".to_string(),
+                name: "Disable Windows Search Indexing".to_string(),
+                category: WindowsTweakCategory::AdvancedCaution,
+                description: "Reduces background CPU/disk I/O at the cost of slower file search.".to_string(),
+                min_windows_version: None,
+                requires_admin: true,
+                danger_level: RiskLevel::Moderate,
+                is_enabled: false,
+                is_applicable: true,
+                command: None,
+            },
+            WindowsTweakItem {
+                id: "fast_startup_disable".to_string(),
+                name: "Disable Fast Startup".to_string(),
+                category: WindowsTweakCategory::Essential,
+                description: "Fast Startup's hybrid-boot hiberfile is a well-known cause of filesystem corruption on dual-boot Fedora/Windows systems. Distinct from the full Hibernation tweak above.".to_string(),
+                min_windows_version: None,
+                requires_admin: true,
+                danger_level: RiskLevel::Safe,
+                is_enabled: false,
+                is_applicable: true,
+                command: None,
+            },
+            WindowsTweakItem {
+                id: "gamebar_disable".to_string(),
+                name: "Xbox Game Bar & Game DVR - Disable".to_string(),
+                category: WindowsTweakCategory::Essential,
+                description: "Removes background recording/overlay overhead from Xbox Game Bar.".to_string(),
+                min_windows_version: None,
+                requires_admin: true,
+                danger_level: RiskLevel::Safe,
+                is_enabled: false,
+                is_applicable: true,
+                command: None,
+            },
+            WindowsTweakItem {
+                id: "start_menu_web_search_disable".to_string(),
+                name: "Disable Bing/Web Results in Start Search".to_string(),
+                category: WindowsTweakCategory::Essential,
+                description: "Turns off the Start-menu search box's web/Bing integration -- distinct from the Store Search Results tweak, which covers in-Store suggestions only.".to_string(),
+                min_windows_version: None,
+                requires_admin: true,
+                danger_level: RiskLevel::Safe,
+                is_enabled: false,
+                is_applicable: true,
+                command: None,
+            },
+            WindowsTweakItem {
+                id: "usb_selective_suspend_disable".to_string(),
+                name: "Disable USB Selective Suspend".to_string(),
+                category: WindowsTweakCategory::AdvancedCaution,
+                description: "Reduces peripheral latency/disconnect issues at a small battery-life cost on laptops.".to_string(),
+                min_windows_version: None,
+                requires_admin: true,
+                danger_level: RiskLevel::Safe,
+                is_enabled: false,
+                is_applicable: true,
+                command: None,
+            },
         ];
 
         for item in &mut items {
@@ -841,6 +961,77 @@ impl WindowsTweaks {
                     }
                 }
                 Write-Output "O&O ShutUp10++ not found in Program Files or Downloads"
+                "#
+            }
+            "disable_sysmain" => {
+                r#"
+                Stop-Service -Name SysMain -Force -ErrorAction SilentlyContinue
+                Set-Service -Name SysMain -StartupType Disabled -ErrorAction SilentlyContinue
+                "#
+            }
+            "network_throttling_index" => {
+                r#"
+                $p = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"
+                if (!(Test-Path $p)) { New-Item -Path $p -Force | Out-Null }
+                Set-ItemProperty -Path $p -Name "NetworkThrottlingIndex" -Value 0xffffffff -Type DWord -Force
+                "#
+            }
+            "hags_enable" => {
+                r#"
+                $p = "HKLM:\SOFTWARE\Microsoft\DirectX\GraphicsSettings"
+                if (!(Test-Path $p)) { New-Item -Path $p -Force | Out-Null }
+                Set-ItemProperty -Path $p -Name "HwSchMode" -Value 2 -Type DWord -Force
+                "#
+            }
+            "mouse_acceleration_disable" => {
+                r#"
+                $p = "HKCU:\Control Panel\Mouse"
+                Set-ItemProperty -Path $p -Name "MouseSpeed" -Value "0" -Force
+                Set-ItemProperty -Path $p -Name "MouseThreshold1" -Value "0" -Force
+                Set-ItemProperty -Path $p -Name "MouseThreshold2" -Value "0" -Force
+                "#
+            }
+            "ultimate_performance_plan" => {
+                r#"
+                powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
+                $guid = (powercfg -list | Select-String "Ultimate Performance").ToString().Split()[3]
+                if ($guid) { powercfg -setactive $guid }
+                "#
+            }
+            "search_indexing_disable" => {
+                r#"
+                Stop-Service -Name WSearch -Force -ErrorAction SilentlyContinue
+                Set-Service -Name WSearch -StartupType Disabled -ErrorAction SilentlyContinue
+                "#
+            }
+            "fast_startup_disable" => {
+                r#"
+                $p = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power"
+                if (!(Test-Path $p)) { New-Item -Path $p -Force | Out-Null }
+                Set-ItemProperty -Path $p -Name "HiberbootEnabled" -Value 0 -Type DWord -Force
+                "#
+            }
+            "gamebar_disable" => {
+                r#"
+                Set-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Type DWord -Force
+                $p = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR"
+                if (!(Test-Path $p)) { New-Item -Path $p -Force | Out-Null }
+                Set-ItemProperty -Path $p -Name "AllowGameDVR" -Value 0 -Type DWord -Force
+                "#
+            }
+            "start_menu_web_search_disable" => {
+                r#"
+                $p = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search"
+                if (!(Test-Path $p)) { New-Item -Path $p -Force | Out-Null }
+                Set-ItemProperty -Path $p -Name "BingSearchEnabled" -Value 0 -Type DWord -Force
+                Set-ItemProperty -Path $p -Name "CortanaConsent" -Value 0 -Type DWord -Force
+                "#
+            }
+            "usb_selective_suspend_disable" => {
+                r#"
+                powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7d0-52a4-46b8-33be-d31cabb63e5e 0
+                powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7d0-52a4-46b8-33be-d31cabb63e5e 0
+                powercfg /setactive SCHEME_CURRENT
                 "#
             }
             _ => return None,

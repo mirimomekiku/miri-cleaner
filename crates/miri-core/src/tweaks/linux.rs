@@ -238,6 +238,61 @@ impl LinuxTweaks {
         }
     }
 
+    fn is_swappiness_tuned() -> bool {
+        fs::read_to_string("/proc/sys/vm/swappiness")
+            .map(|s| s.trim() == "10")
+            .unwrap_or(false)
+    }
+
+    fn is_dirty_ratio_tuned() -> bool {
+        fs::read_to_string("/etc/sysctl.d/99-miri-dirty-ratio.conf")
+            .map(|s| s.contains("dirty_ratio=10"))
+            .unwrap_or(false)
+    }
+
+    fn is_inotify_watches_tuned() -> bool {
+        fs::read_to_string("/proc/sys/fs/inotify/max_user_watches")
+            .ok()
+            .and_then(|s| s.trim().parse::<u64>().ok())
+            .map(|n| n >= 524288)
+            .unwrap_or(false)
+    }
+
+    fn is_systemctl_active(unit: &str) -> bool {
+        Command::new("systemctl")
+            .args(["is-active", unit])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
+
+    fn is_systemctl_enabled(unit: &str) -> bool {
+        Command::new("systemctl")
+            .args(["is-enabled", unit])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
+
+    fn is_systemctl_disabled(unit: &str) -> bool {
+        Command::new("systemctl")
+            .args(["is-enabled", unit])
+            .output()
+            .map(|o| {
+                let s = String::from_utf8_lossy(&o.stdout);
+                s.contains("disabled") || s.contains("masked") || !o.status.success()
+            })
+            .unwrap_or(true)
+    }
+
+    fn is_performance_profile_active() -> bool {
+        Command::new("powerprofilesctl")
+            .arg("get")
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim() == "performance")
+            .unwrap_or(false)
+    }
+
     /// Returns the catalog of all Fedora Post-Install Tweaks with real-time detection
     pub fn get_all_tweaks() -> Vec<LinuxTweakItem> {
         vec![
@@ -538,6 +593,116 @@ impl LinuxTweaks {
                 is_applicable: true,
                 command: "flatpak install -y flathub com.github.tchx84.Flatseal".to_string(),
             },
+            LinuxTweakItem {
+                id: "fedora_swappiness_tune".to_string(),
+                name: "Swappiness Tuning (vm.swappiness=10)".to_string(),
+                category: LinuxTweakCategory::Optimization,
+                description: "Makes the kernel less eager to swap RAM to disk, for a snappier desktop under memory pressure.".to_string(),
+                requires_root: true,
+                danger_level: RiskLevel::Safe,
+                is_applied: Self::is_swappiness_tuned(),
+                is_applicable: true,
+                command: r#"sudo sh -c 'printf "vm.swappiness=10\n" | tee /etc/sysctl.d/99-miri-swappiness.conf && sysctl -w vm.swappiness=10'"#.to_string(),
+            },
+            LinuxTweakItem {
+                id: "fedora_dirty_ratio_tune".to_string(),
+                name: "Write-Back Tuning (dirty_ratio)".to_string(),
+                category: LinuxTweakCategory::Optimization,
+                description: "Flushes dirty pages to disk sooner, reducing multi-second I/O stalls during large file writes.".to_string(),
+                requires_root: true,
+                danger_level: RiskLevel::Moderate,
+                is_applied: Self::is_dirty_ratio_tuned(),
+                is_applicable: true,
+                command: r#"sudo sh -c 'printf "vm.dirty_background_ratio=5\nvm.dirty_ratio=10\n" | tee /etc/sysctl.d/99-miri-dirty-ratio.conf && sysctl -w vm.dirty_background_ratio=5 && sysctl -w vm.dirty_ratio=10'"#.to_string(),
+            },
+            LinuxTweakItem {
+                id: "fedora_inotify_watches".to_string(),
+                name: "Increase Inotify Watch Limit".to_string(),
+                category: LinuxTweakCategory::Optimization,
+                description: "Fixes \"too many open files\" / ENOSPC errors in VS Code and other IDEs watching large repositories.".to_string(),
+                requires_root: true,
+                danger_level: RiskLevel::Safe,
+                is_applied: Self::is_inotify_watches_tuned(),
+                is_applicable: true,
+                command: r#"sudo sh -c 'printf "fs.inotify.max_user_watches=524288\nfs.inotify.max_user_instances=8192\n" | tee /etc/sysctl.d/99-miri-inotify.conf && sysctl -p /etc/sysctl.d/99-miri-inotify.conf'"#.to_string(),
+            },
+            LinuxTweakItem {
+                id: "fedora_earlyoom".to_string(),
+                name: "earlyoom - Responsive Out-of-Memory Handling".to_string(),
+                category: LinuxTweakCategory::Optimization,
+                description: "Replaces the default systemd-oomd (often too conservative on desktops with many browser tabs) with earlyoom for faster, more responsive OOM recovery.".to_string(),
+                requires_root: true,
+                danger_level: RiskLevel::Moderate,
+                is_applied: Self::is_systemctl_active("earlyoom"),
+                is_applicable: true,
+                command: "sudo dnf install -y earlyoom && sudo systemctl disable --now systemd-oomd; sudo systemctl enable --now earlyoom".to_string(),
+            },
+            LinuxTweakItem {
+                id: "fedora_fstrim_timer".to_string(),
+                name: "Periodic SSD TRIM (fstrim.timer)".to_string(),
+                category: LinuxTweakCategory::Optimization,
+                description: "Enables the weekly systemd timer that TRIMs unused SSD blocks, standard modern-distro practice.".to_string(),
+                requires_root: true,
+                danger_level: RiskLevel::Safe,
+                is_applied: Self::is_systemctl_enabled("fstrim.timer"),
+                is_applicable: true,
+                command: "sudo systemctl enable --now fstrim.timer".to_string(),
+            },
+            LinuxTweakItem {
+                id: "fedora_disable_bluetooth".to_string(),
+                name: "Disable Bluetooth Service".to_string(),
+                category: LinuxTweakCategory::Optimization,
+                description: "For systems with no Bluetooth devices -- reduces battery drain and attack surface.".to_string(),
+                requires_root: true,
+                danger_level: RiskLevel::Moderate,
+                is_applied: Self::is_systemctl_disabled("bluetooth.service"),
+                is_applicable: true,
+                command: "sudo systemctl disable --now bluetooth.service".to_string(),
+            },
+            LinuxTweakItem {
+                id: "fedora_disable_cups".to_string(),
+                name: "Disable Printing Service (CUPS)".to_string(),
+                category: LinuxTweakCategory::Optimization,
+                description: "For systems with no printer configured.".to_string(),
+                requires_root: true,
+                danger_level: RiskLevel::Moderate,
+                is_applied: Self::is_systemctl_disabled("cups.service"),
+                is_applicable: true,
+                command: "sudo systemctl disable --now cups.service".to_string(),
+            },
+            LinuxTweakItem {
+                id: "fedora_disable_avahi".to_string(),
+                name: "Disable Network Discovery (Avahi/mDNS)".to_string(),
+                category: LinuxTweakCategory::Optimization,
+                description: "Reduces local-network discovery surface if you don't use AirPrint or LAN service discovery.".to_string(),
+                requires_root: true,
+                danger_level: RiskLevel::Moderate,
+                is_applied: Self::is_systemctl_disabled("avahi-daemon.service"),
+                is_applicable: true,
+                command: "sudo systemctl disable --now avahi-daemon.service avahi-daemon.socket".to_string(),
+            },
+            LinuxTweakItem {
+                id: "fedora_gamemode_install".to_string(),
+                name: "Install Feral GameMode".to_string(),
+                category: LinuxTweakCategory::Optimization,
+                description: "Installs the GameMode daemon so games can request temporary CPU/GPU performance optimizations.".to_string(),
+                requires_root: true,
+                danger_level: RiskLevel::Safe,
+                is_applied: Self::is_rpm_installed("gamemode"),
+                is_applicable: true,
+                command: "sudo dnf install -y gamemode".to_string(),
+            },
+            LinuxTweakItem {
+                id: "fedora_power_profile_performance".to_string(),
+                name: "Switch Power Profile to Performance".to_string(),
+                category: LinuxTweakCategory::Optimization,
+                description: "Switches power-profiles-daemon to the Performance profile for the current session (reversible any time from Safety & Vitals).".to_string(),
+                requires_root: false,
+                danger_level: RiskLevel::Safe,
+                is_applied: Self::is_performance_profile_active(),
+                is_applicable: true,
+                command: "powerprofilesctl set performance".to_string(),
+            },
         ]
     }
 
@@ -783,6 +948,91 @@ impl LinuxTweaks {
                         name: "Flatseal".to_string(),
                         succeeded: ok,
                         details: if ok { "Flatseal installed".to_string() } else { "Failed to install Flatseal".to_string() },
+                    }
+                }
+                "fedora_swappiness_tune" => {
+                    let cmd = r#"printf "vm.swappiness=10\n" | tee /etc/sysctl.d/99-miri-swappiness.conf && sysctl -w vm.swappiness=10"#;
+                    let (ok, _out, err) = ElevationManager::run_elevated_command("sh", &["-c", cmd])?;
+                    TweakActionReport {
+                        name: "Swappiness Tuning".to_string(),
+                        succeeded: ok,
+                        details: if ok { "vm.swappiness set to 10".to_string() } else { err },
+                    }
+                }
+                "fedora_dirty_ratio_tune" => {
+                    let cmd = r#"printf "vm.dirty_background_ratio=5\nvm.dirty_ratio=10\n" | tee /etc/sysctl.d/99-miri-dirty-ratio.conf && sysctl -w vm.dirty_background_ratio=5 && sysctl -w vm.dirty_ratio=10"#;
+                    let (ok, _out, err) = ElevationManager::run_elevated_command("sh", &["-c", cmd])?;
+                    TweakActionReport {
+                        name: "Write-Back Tuning".to_string(),
+                        succeeded: ok,
+                        details: if ok { "dirty_background_ratio=5, dirty_ratio=10 applied".to_string() } else { err },
+                    }
+                }
+                "fedora_inotify_watches" => {
+                    let cmd = r#"printf "fs.inotify.max_user_watches=524288\nfs.inotify.max_user_instances=8192\n" | tee /etc/sysctl.d/99-miri-inotify.conf && sysctl -p /etc/sysctl.d/99-miri-inotify.conf"#;
+                    let (ok, _out, err) = ElevationManager::run_elevated_command("sh", &["-c", cmd])?;
+                    TweakActionReport {
+                        name: "Inotify Watch Limit".to_string(),
+                        succeeded: ok,
+                        details: if ok { "Inotify watch limit raised to 524288".to_string() } else { err },
+                    }
+                }
+                "fedora_earlyoom" => {
+                    let cmd = "dnf install -y earlyoom && systemctl disable --now systemd-oomd 2>/dev/null; systemctl enable --now earlyoom";
+                    let (ok, _out, err) = ElevationManager::run_elevated_command("sh", &["-c", cmd])?;
+                    TweakActionReport {
+                        name: "earlyoom".to_string(),
+                        succeeded: ok,
+                        details: if ok { "earlyoom installed and active; systemd-oomd disabled".to_string() } else { err },
+                    }
+                }
+                "fedora_fstrim_timer" => {
+                    let (ok, _out, err) = ElevationManager::run_elevated_command("systemctl", &["enable", "--now", "fstrim.timer"])?;
+                    TweakActionReport {
+                        name: "Periodic SSD TRIM".to_string(),
+                        succeeded: ok,
+                        details: if ok { "fstrim.timer enabled".to_string() } else { err },
+                    }
+                }
+                "fedora_disable_bluetooth" => {
+                    let (ok, _out, err) = ElevationManager::run_elevated_command("systemctl", &["disable", "--now", "bluetooth.service"])?;
+                    TweakActionReport {
+                        name: "Disable Bluetooth".to_string(),
+                        succeeded: ok,
+                        details: if ok { "Bluetooth service disabled".to_string() } else { err },
+                    }
+                }
+                "fedora_disable_cups" => {
+                    let (ok, _out, err) = ElevationManager::run_elevated_command("systemctl", &["disable", "--now", "cups.service"])?;
+                    TweakActionReport {
+                        name: "Disable CUPS".to_string(),
+                        succeeded: ok,
+                        details: if ok { "CUPS printing service disabled".to_string() } else { err },
+                    }
+                }
+                "fedora_disable_avahi" => {
+                    let (ok, _out, err) = ElevationManager::run_elevated_command("systemctl", &["disable", "--now", "avahi-daemon.service", "avahi-daemon.socket"])?;
+                    TweakActionReport {
+                        name: "Disable Avahi/mDNS".to_string(),
+                        succeeded: ok,
+                        details: if ok { "Avahi network discovery disabled".to_string() } else { err },
+                    }
+                }
+                "fedora_gamemode_install" => {
+                    let (ok, _out, err) = ElevationManager::run_elevated_command("dnf", &["install", "-y", "gamemode"])?;
+                    TweakActionReport {
+                        name: "Feral GameMode".to_string(),
+                        succeeded: ok,
+                        details: if ok { "GameMode installed".to_string() } else { err },
+                    }
+                }
+                "fedora_power_profile_performance" => {
+                    let res = Command::new("powerprofilesctl").args(["set", "performance"]).output();
+                    let ok = res.as_ref().map(|o| o.status.success()).unwrap_or(false);
+                    TweakActionReport {
+                        name: "Performance Power Profile".to_string(),
+                        succeeded: ok,
+                        details: if ok { "Power profile switched to performance".to_string() } else { "Failed to switch power profile".to_string() },
                     }
                 }
 
