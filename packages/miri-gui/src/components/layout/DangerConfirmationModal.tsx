@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useCleanerStore } from "../../store/useCleanerStore";
-import { ShieldAlert, KeyRound, Camera, AlertTriangle, X } from "lucide-react";
+import { ShieldAlert, KeyRound, Camera, AlertTriangle, X, ChevronDown, Lock, FolderOpen } from "lucide-react";
 import { TactileButton } from "../ui/TactileButton";
 import { Mascot } from "../ui/Mascot";
 import { formatBytes } from "../../lib/formatters";
@@ -9,11 +9,13 @@ export const DangerConfirmationModal: React.FC = () => {
   const { dangerModal, closeDangerModal } = useCleanerStore();
   const [confirmInput, setConfirmInput] = useState("");
   const [snapshotChecked, setSnapshotChecked] = useState(true);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!dangerModal.isOpen) return;
+    setPreviewExpanded(false);
 
     // Auto-focus input on open
     const timer = setTimeout(() => inputRef.current?.focus(), 50);
@@ -77,7 +79,7 @@ export const DangerConfirmationModal: React.FC = () => {
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-4 border-red-400 relative"
+        className="animate-pop bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-4 border-red-400 relative"
       >
         {/* Close Button */}
         <button
@@ -119,6 +121,52 @@ export const DangerConfirmationModal: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* What Exactly Will Happen -- per-target change preview */}
+        {dangerModal.targets && dangerModal.targets.length > 0 && (
+          <div className="mb-4 rounded-2xl border border-slate-200 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setPreviewExpanded((v) => !v)}
+              aria-expanded={previewExpanded}
+              className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+            >
+              <span className="text-xs font-bold text-slate-700">
+                What exactly will happen ({dangerModal.targets.length}{" "}
+                {dangerModal.targets.length === 1 ? "target" : "targets"})
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${
+                  previewExpanded ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+            <div className={`collapsible-rows ${previewExpanded ? "is-expanded" : ""}`}>
+              <div className="collapsible-inner">
+                <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
+                  {dangerModal.targets.map((t) => (
+                    <div key={t.id} className="px-4 py-3 text-xs space-y-1.5">
+                      <div className="font-bold text-slate-800">{t.name}</div>
+                      <div className="flex items-start gap-1.5 text-slate-500 font-mono">
+                        <FolderOpen className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
+                        <span className="break-all">{t.paths.join(", ")}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-slate-500">
+                        <span>{formatBytes(t.estimated_bytes).formatted} across {t.file_count} files</span>
+                        {t.locked_count > 0 && (
+                          <span className="inline-flex items-center gap-1 text-amber-700 font-bold">
+                            <Lock className="w-3 h-3" />
+                            {t.locked_count} in use -- will be skipped
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Privilege & Snapshot Guardrails */}
         <div className="space-y-3 mb-6">

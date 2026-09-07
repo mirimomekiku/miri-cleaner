@@ -4,23 +4,20 @@ import { Mascot } from "../ui/Mascot";
 import { TactileButton } from "../ui/TactileButton";
 import { PixelBadge } from "../ui/PixelBadge";
 import {
-  History,
   Shield,
   ShieldCheck,
   RotateCcw,
-  Info,
-  Clock,
-  CheckCircle,
   FileCheck,
-  AlertCircle,
+  ChevronDown,
 } from "lucide-react";
 import { bridge } from "../../lib/bridge";
 import { SnapshotStatus, AuditEntry, SystemVitalsReport } from "../../types";
-import { Battery, Zap, HardDrive, Cpu, Trash2 } from "lucide-react";
 import { VitalsSkeleton } from "../ui/Skeleton";
 import { formatBytes } from "../../lib/formatters";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { useAsyncAction } from "../../lib/useAsyncAction";
+import { BatteryHealthCard } from "./BatteryHealthCard";
+import { BatterySample, getBatteryHistory, recordBatterySample } from "../../lib/batteryHistory";
 
 export const SnapshotsView: React.FC = () => {
   const { viewMode, addLog, openDangerModal } = useCleanerStore();
@@ -31,6 +28,8 @@ export const SnapshotsView: React.FC = () => {
   const [vitals, setVitals] = useState<SystemVitalsReport | null>(null);
   const [isCompacting, setIsCompacting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [batteryHistory, setBatteryHistory] = useState<BatterySample[]>(() => getBatteryHistory());
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const errorAction = useAsyncAction();
 
   const loadAll = async () => {
@@ -39,7 +38,14 @@ export const SnapshotsView: React.FC = () => {
       const results = await Promise.allSettled([
         bridge.getSnapshotStatus().then(setSnapshotStatus),
         bridge.getAuditHistory().then(setAuditEntries),
-        bridge.getVitals().then(setVitals),
+        bridge.getVitals().then((v) => {
+          setVitals(v);
+          if (v.battery && v.battery.health_percentage != null) {
+            setBatteryHistory(
+              recordBatterySample(v.battery.health_percentage, v.battery.cycle_count ?? null)
+            );
+          }
+        }),
       ]);
       const failures = results.filter(
         (r): r is PromiseRejectedResult => r.status === "rejected"
@@ -177,138 +183,131 @@ export const SnapshotsView: React.FC = () => {
         <VitalsSkeleton />
       ) : viewMode === "casual" ? (
         <>
-          {/* Header Card */}
-          <div className="bg-gradient-to-br from-white to-sky-50/40 rounded-3xl p-8 border-2 border-sky-100 shadow-duo flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-6 w-full md:w-auto min-w-0">
-              <Mascot mood="happy" size="lg" />
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <PixelBadge label="Safety & Rollback" variant="blue" />
-                  <span className="text-xs font-bold text-slate-400">
-                    Btrfs Snapper • Windows VSS
-                  </span>
-                </div>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-                  System Safety Checkpoints
-                </h2>
-                <p className="text-sm font-semibold text-slate-500 mt-1 max-w-md">
-                  Automatic safety checkpoints ensure every cleanup is reversible.
-                  Undo any operation anytime with a single tap.
-                </p>
-              </div>
+          {/* ================================================================= */}
+          {/* ONE HERO MODULE -- lesson-screen grammar: a single dominant focal  */}
+          {/* card replacing the old header card + separate history card. The   */}
+          {/* provider status and recent-activity count collapse into a slim    */}
+          {/* stat strip, cleanup history tucks behind an expand toggle, and    */}
+          {/* one big pill action drives the obvious next step.                */}
+          {/* ================================================================= */}
+          <div className="bg-gradient-to-b from-white to-sky-50/60 rounded-[2rem] p-10 sm:p-12 border-2 border-sky-100 shadow-duo text-center space-y-6">
+            <div className="flex justify-center">
+              <Mascot mood={isProcessing ? "cleaning" : "happy"} size="lg" />
             </div>
 
-            {/* Provider Readiness Pill */}
-            <div className="bg-white rounded-2xl p-4 border-2 border-slate-100 shadow-duo-sm text-center min-w-[160px]">
-              <div className="flex items-center justify-center gap-1.5 text-emerald-600 font-black text-sm mb-1">
-                <ShieldCheck className="w-4 h-4" />
-                <span>Protected</span>
-              </div>
-              <div className="text-sm font-black text-slate-800">
-                {snapshotStatus?.provider_name || "Btrfs / VSS Ready"}
-              </div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
-                Snapshot Shield
-              </div>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <PixelBadge label="Safety & Rollback" variant="blue" />
+              <span className="text-xs font-bold text-slate-400">Btrfs Snapper • Windows VSS</span>
             </div>
-          </div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+              System Safety Checkpoints
+            </h2>
+            <p className="text-sm font-semibold text-slate-500 max-w-md mx-auto leading-relaxed">
+              Automatic safety checkpoints ensure every cleanup is reversible.
+              Undo any operation anytime with a single tap.
+            </p>
 
-          {/* Friendly Explanation Card */}
-          <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo-sm space-y-3">
-            <div className="flex items-center gap-2.5 text-slate-800 font-extrabold text-sm">
-              <Info className="w-4 h-4 text-sky-600" />
-              <span>How our zero-trust safety guarantee works</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600 leading-relaxed">
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
-                <div className="font-black text-slate-800 mb-1 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-sky-600" />
-                  Pre-Flight Checkpoints
+            {/* Slim consolidated stat strip -- provider status and history    */}
+            {/* count instead of a separate parallel "readiness pill" card.    */}
+            <div className="flex items-center justify-center flex-wrap gap-x-8 gap-y-3 pt-1">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1.5 text-emerald-600 font-black text-2xl">
+                  <ShieldCheck className="w-5 h-5" />
                 </div>
-                <p>
-                  Before modifying or deleting any files, an automatic system snapshot
-                  is captured so nothing is ever permanently lost.
-                </p>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Protected</div>
               </div>
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
-                <div className="font-black text-slate-800 mb-1 flex items-center gap-1.5">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                  Process Lock Checks
+              <div className="text-center">
+                <div className="text-sm font-black text-slate-800 max-w-[10rem] truncate">
+                  {snapshotStatus?.provider_name || "Btrfs / VSS Ready"}
                 </div>
-                <p>
-                  Running applications are inspected via /proc and Restart Manager.
-                  Active browser caches or files in use are safely skipped.
-                </p>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Snapshot Shield</div>
               </div>
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
-                <div className="font-black text-slate-800 mb-1 flex items-center gap-1.5">
-                  <RotateCcw className="w-3.5 h-3.5 text-indigo-600" />
-                  One-Tap Rollback
-                </div>
-                <p>
-                  Every cleanup transaction is logged to an immutable local audit journal.
-                  Reverting is as simple as clicking "Undo Changes".
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Operations & Quick Undo */}
-          <div className="card-duo space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-black text-slate-900">Recent Cleanup History</h3>
-              <TactileButton
-                variant="secondary"
-                size="sm"
-                onClick={handleCreateSnapshot}
-                disabled={isProcessing}
+              <button
+                type="button"
+                onClick={() => setHistoryExpanded((v) => !v)}
+                aria-expanded={historyExpanded}
+                className="text-center group"
               >
-                <Shield className="w-3.5 h-3.5" />
-                Create Safety Checkpoint Now
-              </TactileButton>
+                <div className="text-2xl font-black text-slate-800 tabular-nums flex items-center gap-1 justify-center">
+                  {auditEntries.length}
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${historyExpanded ? "rotate-180" : ""}`} />
+                </div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-slate-700">
+                  {historyExpanded ? "Hide History" : "Cleanup History"}
+                </div>
+              </button>
             </div>
 
-            {auditEntries.length === 0 ? (
-              <div className="text-center py-8 text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
-                No cleanups have been performed yet. Your system is protected by default snapshots.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {auditEntries.slice(0, 3).map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs"
-                  >
-                    <div>
-                      <div className="font-black text-slate-800 text-sm flex items-center gap-2">
-                        <span>{entry.operation === "system-clean" ? "System Cleanup" : "Dry-Run Simulation"}</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                          Verified Safe
-                        </span>
-                        {entry.is_rolled_back && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
-                            Rolled Back
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-slate-500 mt-1">
-                        Freed: <span className="font-bold text-slate-700">{formatBytes(entry.freed_bytes).formatted}</span> • {new Date(entry.timestamp).toLocaleString()}
-                      </div>
-                    </div>
-
-                    <TactileButton
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleRollback(entry.id)}
-                      disabled={isProcessing || entry.is_rolled_back}
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      {entry.is_rolled_back ? "Already Rolled Back" : "Undo This Clean"}
-                    </TactileButton>
-                  </div>
-                ))}
+            {/* Battery Health Trend (desktops without a battery show nothing here) */}
+            {vitals?.battery && (
+              <div className="text-left pt-2">
+                <BatteryHealthCard battery={vitals.battery} history={batteryHistory} />
               </div>
             )}
+
+            {/* Secondary content tucked behind expansion, per the lesson-screen brief */}
+            <div className={`collapsible-rows ${historyExpanded ? "is-expanded" : ""}`}>
+              <div className="collapsible-inner">
+                <div className="pt-4 text-left">
+                  {auditEntries.length === 0 ? (
+                    <div className="text-center py-8 text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
+                      No cleanups have been performed yet. Your system is protected by default snapshots.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {auditEntries.slice(0, 3).map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                        >
+                          <div>
+                            <div className="font-black text-slate-800 text-sm flex items-center gap-2 flex-wrap">
+                              <span>{entry.operation === "system-clean" ? "System Cleanup" : "Dry-Run Simulation"}</span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                                Verified Safe
+                              </span>
+                              {entry.is_rolled_back && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                                  Rolled Back
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-slate-500 mt-1">
+                              Freed: <span className="font-bold text-slate-700">{formatBytes(entry.freed_bytes).formatted}</span> • {new Date(entry.timestamp).toLocaleString()}
+                            </div>
+                          </div>
+
+                          <TactileButton
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleRollback(entry.id)}
+                            disabled={isProcessing || entry.is_rolled_back}
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            {entry.is_rolled_back ? "Already Rolled Back" : "Undo This Clean"}
+                          </TactileButton>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ONE big pill primary action */}
+            <div className="flex flex-col items-center gap-3 pt-2">
+              <TactileButton
+                variant="primary"
+                size="hero"
+                pill
+                onClick={handleCreateSnapshot}
+                disabled={isProcessing}
+                aria-busy={isProcessing}
+              >
+                <Shield className="w-5 h-5 shrink-0" />
+                {isProcessing ? "Working..." : "Create Safety Checkpoint Now"}
+              </TactileButton>
+            </div>
           </div>
         </>
       ) : (
@@ -317,9 +316,9 @@ export const SnapshotsView: React.FC = () => {
         /* ========================================================================= */
         <>
           {/* Advanced Header */}
-          <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo flex items-center justify-between">
+          <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <PixelBadge label="Advanced" variant="blue" />
                 <span className="text-xs font-bold text-slate-400">
                   Zero-Trust Audit Journal & Subvolume Recovery
@@ -365,7 +364,7 @@ export const SnapshotsView: React.FC = () => {
 
           {/* Audit History Card */}
           <div className="card-duo space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
               <h3 className="text-lg font-black text-slate-900">Immutable Audit Journal (`audit.json`)</h3>
               <span className="text-xs font-mono text-slate-400">{auditEntries.length} entries recorded</span>
             </div>
@@ -374,7 +373,7 @@ export const SnapshotsView: React.FC = () => {
               {auditEntries.map((entry) => (
                 <div
                   key={entry.id}
-                  className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs"
+                  className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 text-xs"
                 >
                   <div>
                     <div className="font-mono font-bold text-slate-800 flex items-center gap-2">

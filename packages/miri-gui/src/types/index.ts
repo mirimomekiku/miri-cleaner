@@ -180,6 +180,19 @@ export const AppDefinitionSchema = z.object({
 });
 export type AppDefinition = z.infer<typeof AppDefinitionSchema>;
 
+// Usage-based uninstall suggestions: installed apps the user hasn't
+// actually launched in a while, distinct from AppDefinition's static
+// catalog entries (which cover the "get apps" installer flow instead).
+export const InstalledAppUsageSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: AppCategorySchema,
+  install_size_bytes: z.number(),
+  last_used_days_ago: z.number(),
+  is_installed: z.boolean(),
+});
+export type InstalledAppUsage = z.infer<typeof InstalledAppUsageSchema>;
+
 // 1. Space X-Ray
 export const XRayFileItemSchema = z.object({
   name: z.string(),

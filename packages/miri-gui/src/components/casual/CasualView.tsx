@@ -17,9 +17,16 @@ import {
   FileText,
   RefreshCw,
   Search,
+  Wand2,
+  Lock,
+  ChevronDown,
+  Flame,
 } from "lucide-react";
 import { CardSkeleton } from "../ui/Skeleton";
 import { ErrorBanner } from "../ui/ErrorBanner";
+import { GardenGrowth } from "./GardenGrowth";
+import { WeeklyDigestCard } from "./WeeklyDigestCard";
+import { SmartCleanWizard } from "./SmartCleanWizard";
 import { bridge } from "../../lib/bridge";
 import { CleanExecutionResult, CleanTarget } from "../../types";
 import { formatBytes, formatNumber, calculateHealthScore } from "../../lib/formatters";
@@ -28,7 +35,7 @@ import { useAsyncAction } from "../../lib/useAsyncAction";
 
 /** Scales the completion celebration to the actual amount freed, so a quick
  * temp-file sweep and a multi-gigabyte prune don't get identical fanfare. */
-function celebrationTier(freedBytes: number): "modest" | "solid" | "major" {
+export function celebrationTier(freedBytes: number): "modest" | "solid" | "major" {
   const gb = freedBytes / (1024 * 1024 * 1024);
   if (gb >= 5) return "major";
   if (gb >= 0.5) return "solid";
@@ -54,6 +61,8 @@ export const CasualView: React.FC = () => {
   } = useCleanerStore();
 
   const [dryRun, setDryRun] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
+  const [gardenExpanded, setGardenExpanded] = useState(false);
   const [successCelebration, setSuccessCelebration] = useState(false);
   const [completionReceipt, setCompletionReceipt] = useState<CleanExecutionResult | null>(null);
   const errorAction = useAsyncAction();
@@ -152,6 +161,7 @@ export const CasualView: React.FC = () => {
       openDangerModal({
         title: "Confirm Protected System Maintenance",
         description: `You are about to prune ${selectedTargets.length} categories (${selectedFormatted.formatted}). A pre-execution safety checkpoint will be verified.`,
+        targets: selectedTargets,
         requiresElevation: hasElevation,
         riskLevel: hasDangerous ? "dangerous" : "moderate",
         onConfirm: () => executeCleanAction(),
@@ -270,94 +280,26 @@ export const CasualView: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* 2. COMPLETION CELEBRATION RECEIPT (PEAK-END REASSURANCE)                  */}
+      {/* WEEKLY DIGEST -- transient, dismissible, shows at most once a week        */}
       {/* ========================================================================= */}
-      {completionReceipt && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="bg-gradient-to-br from-emerald-50 via-white to-teal-50/50 rounded-3xl p-7 border-2 border-emerald-300 shadow-duo flex flex-col md:flex-row items-center justify-between gap-6 animate-slide-down"
-        >
-          <div className="flex items-center gap-5 w-full md:w-auto min-w-0">
-            <div className="relative shrink-0">
-              <Mascot mood="celebrate" size="lg" />
-              {/* Only a real, non-simulated prune earns confetti; a dry run
-                  found the same clutter but didn't actually clear it. */}
-              {!dryRun && (
-                <ConfettiBurst tier={celebrationTier(completionReceipt.freed_bytes)} />
-              )}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1 font-pixel">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600" /> All Trimmed & Fresh
-                </span>
-                <span className="text-xs font-bold text-slate-600">
-                  Gardening Receipt
-                </span>
-              </div>
-              <h3 className="text-2xl font-black text-slate-900 truncate">
-                {dryRun ? "Simulation Complete!" : "Hooray! Freshly Polished!"}
-              </h3>
-              <p className="text-xs text-slate-600 font-semibold mt-1 max-w-md leading-relaxed break-words">
-                {dryRun
-                  ? `Simulated clean finished. In live mode, this would safely reclaim ${
-                      formatBytes(completionReceipt.freed_bytes).formatted
-                    }.`
-                  : `Successfully cleared ${
-                      formatBytes(completionReceipt.freed_bytes).formatted
-                    }. A verified snapshot was registered before pruning.`}
-              </p>
-              <div className="flex items-center gap-3 mt-3 text-xs font-bold text-slate-700 flex-wrap">
-                <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-200 tabular-nums">
-                  🗑️ {formatNumber(animatedDeletedFiles)} files pruned
-                </span>
-                <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-200 tabular-nums">
-                  🔒 {formatNumber(animatedSkippedFiles)} active locks preserved
-                </span>
-                <span className="flex items-center gap-1.5 bg-emerald-100/80 text-emerald-900 px-2.5 py-1 rounded-xl border border-emerald-300">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" /> Snapshot Protected
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 w-full sm:w-auto">
-            <TactileButton
-              variant="secondary"
-              size="sm"
-              onClick={() => setActiveTab("snapshots")}
-              className="w-full sm:w-auto"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-indigo-600" />
-              Undo with Snapshot
-            </TactileButton>
-            <TactileButton
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                setCompletionReceipt(null);
-                setSuccessCelebration(false);
-              }}
-              className="w-full sm:w-auto"
-            >
-              Continue Gardening
-            </TactileButton>
-          </div>
-        </div>
-      )}
+      {!completionReceipt && <WeeklyDigestCard />}
 
       {/* ========================================================================= */}
-      {/* 3. HERO HEALTH BANNER                                                     */}
+      {/* ONE HERO MODULE -- lesson-screen grammar: a single dominant focal card,   */}
+      {/* the mascot as emotional anchor, one big pill primary action. The         */}
+      {/* completion receipt IS the hero when present; otherwise the hero reads    */}
+      {/* the current status (idle / scanning / cleaning / error) and offers the   */}
+      {/* one obvious next step. Health/streak collapse into a slim stat strip     */}
+      {/* instead of stacking as separate parallel cards.                         */}
       {/* ========================================================================= */}
-      <div className="bg-gradient-to-br from-white to-miri-50 rounded-3xl p-8 border-2 border-miri-200 shadow-duo flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-6 w-full md:w-auto min-w-0">
+      <div className="bg-gradient-to-b from-white to-miri-50/60 rounded-[2rem] p-10 sm:p-12 border-2 border-miri-100 shadow-duo text-center space-y-6">
+        <div className="relative flex justify-center">
           <Mascot
             mood={
-              errorAction.error
-                ? "alert"
-                : successCelebration
+              completionReceipt
                 ? "celebrate"
+                : errorAction.error
+                ? "alert"
                 : isScanning
                 ? "scanning"
                 : isCleaning
@@ -366,194 +308,226 @@ export const CasualView: React.FC = () => {
             }
             size="lg"
           />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <PixelBadge
-                label="System Health"
-                variant={healthScore > 80 ? "green" : "pink"}
-              />
-              <span className="text-xs font-bold text-slate-600">
-                Active OS: {hostLabel}
+          {completionReceipt && !dryRun && (
+            <ConfettiBurst tier={celebrationTier(completionReceipt.freed_bytes)} />
+          )}
+        </div>
+
+        {completionReceipt ? (
+          <>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1 font-pixel">
+                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> All Trimmed & Fresh
               </span>
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight truncate">
-              {healthScore >= 95
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+              {dryRun ? "Simulation Complete!" : "Hooray! Freshly Polished!"}
+            </h2>
+            <p className="text-sm font-semibold text-slate-600 max-w-md mx-auto leading-relaxed">
+              {dryRun
+                ? `Simulated clean finished. In live mode, this would safely reclaim ${
+                    formatBytes(completionReceipt.freed_bytes).formatted
+                  }.`
+                : `Successfully cleared ${
+                    formatBytes(completionReceipt.freed_bytes).formatted
+                  }. A verified snapshot was registered before pruning.`}
+            </p>
+            <div className="flex items-center justify-center gap-3 flex-wrap text-xs font-bold text-slate-700">
+              <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-200 tabular-nums">
+                <Trash2 className="w-3.5 h-3.5 text-slate-500" /> {formatNumber(animatedDeletedFiles)} files pruned
+              </span>
+              <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-200 tabular-nums">
+                <Lock className="w-3.5 h-3.5 text-slate-500" /> {formatNumber(animatedSkippedFiles)} active locks preserved
+              </span>
+              <span className="flex items-center gap-1.5 bg-emerald-100/80 text-emerald-900 px-2.5 py-1 rounded-xl border border-emerald-300">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" /> Snapshot Protected
+              </span>
+            </div>
+            <div className="flex flex-col items-center gap-3 pt-2">
+              <TactileButton
+                variant="primary"
+                size="hero"
+                pill
+                onClick={() => {
+                  setCompletionReceipt(null);
+                  setSuccessCelebration(false);
+                }}
+              >
+                Continue Gardening
+              </TactileButton>
+              <button
+                type="button"
+                onClick={() => setActiveTab("snapshots")}
+                className="text-xs font-bold text-slate-500 hover:text-indigo-600 underline decoration-dotted underline-offset-4"
+              >
+                <RotateCcw className="w-3 h-3 inline mr-1" />
+                Undo with Snapshot
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <PixelBadge label="System Health" variant={healthScore > 80 ? "green" : "pink"} />
+              <span className="text-xs font-bold text-slate-600">Active OS: {hostLabel}</span>
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+              {!scanResult
+                ? "Ready for a Garden Inspection?"
+                : healthScore >= 95
                 ? "Your Garden is Sparkling!"
                 : healthScore >= 75
                 ? "A Few Weeds to Prune!"
                 : "Ready for a Fresh Trim!"}
             </h2>
-            <p className="text-sm font-semibold text-slate-600 mt-1 max-w-md leading-relaxed break-words">
-              Miri Cleaner keeps your computer swift, private, and tidy with zero-trust
-              safety guardrails and pre-flight snapshots.
+            <p className="text-sm font-semibold text-slate-600 max-w-md mx-auto leading-relaxed">
+              {!scanResult
+                ? "Run a safe, non-destructive inspection to discover reclaimable temporary files, package caches, and dev toolchain artifacts."
+                : "Miri Cleaner keeps your computer swift, private, and tidy with safety guardrails and pre-flight snapshots."}
             </p>
-          </div>
-        </div>
 
-        {/* Health Score Gauge */}
-        <div className="bg-white rounded-2xl p-4 border-2 border-slate-100 shadow-duo-sm flex items-center gap-4 shrink-0">
-          <div className="text-center min-w-[80px]">
-            <div className="text-3xl font-black text-miri-500 font-pixel tabular-nums">
-              {animatedHealthScore}%
+            {/* Slim consolidated stat strip -- health, ready-to-prune, and streak
+                as one lightweight row instead of three parallel cards. */}
+            <div className="flex items-center justify-center flex-wrap gap-x-8 gap-y-3 pt-1">
+              <div className="text-center">
+                <div className="text-2xl font-black text-miri-500 font-pixel tabular-nums">{animatedHealthScore}%</div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Health</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-black text-slate-800 tabular-nums">
+                  {selectedFormatted.value}
+                  <span className="text-xs font-bold text-slate-500 ml-0.5">{selectedFormatted.unit}</span>
+                </div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ready to Prune</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGardenExpanded((v) => !v)}
+                aria-expanded={gardenExpanded}
+                className="text-center group"
+              >
+                <div className="text-2xl font-black text-amber-600 tabular-nums flex items-center gap-1 justify-center">
+                  <Flame className="w-5 h-5" />
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${gardenExpanded ? "rotate-180" : ""}`} />
+                </div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-slate-700">
+                  {gardenExpanded ? "Hide Garden" : "View Garden"}
+                </div>
+              </button>
             </div>
-            <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wider mt-0.5">
-              Health Index
+
+            {/* Secondary data tucked behind expansion, per the lesson-screen brief */}
+            <div className={`collapsible-rows ${gardenExpanded ? "is-expanded" : ""}`}>
+              <div className="collapsible-inner">
+                <div className="pt-4 text-left">
+                  <GardenGrowth />
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="h-10 w-[2px] bg-slate-200" />
-          <div className="text-center min-w-[90px]">
-            <div className="text-3xl font-black text-slate-800 font-sans">
-              {selectedFormatted.value}
-              <span className="text-xs font-bold text-slate-500 ml-1">
-                {selectedFormatted.unit}
-              </span>
+
+            {/* ONE big pill primary action -- Scan first, then Prune once ready */}
+            <div className="flex flex-col items-center gap-3 pt-2">
+              {!scanResult || scanResult.targets.length === 0 ? (
+                <TactileButton
+                  variant="primary"
+                  size="hero"
+                  pill
+                  onClick={handleScan}
+                  disabled={isScanning}
+                  aria-busy={isScanning}
+                >
+                  <Sparkles className={`w-5 h-5 shrink-0 ${isScanning ? "animate-spin" : ""}`} />
+                  {isScanning ? "Scanning..." : "Scan Garden"}
+                </TactileButton>
+              ) : (
+                <TactileButton
+                  variant="primary"
+                  size="hero"
+                  pill
+                  onClick={handleCleanTrigger}
+                  disabled={isCleaning || isScanning || selectedTargetIds.length === 0}
+                  aria-busy={isCleaning}
+                >
+                  <Trash2 className="w-5 h-5 shrink-0" />
+                  {isCleaning
+                    ? "Pruning Safely..."
+                    : dryRun
+                    ? `Simulate Trim (${selectedFormatted.formatted})`
+                    : `Prune ${selectedFormatted.formatted} Now`}
+                </TactileButton>
+              )}
+
+              {/* Secondary actions -- visually subordinate to the one primary CTA */}
+              <div className="flex items-center gap-4 flex-wrap justify-center text-xs font-bold">
+                {scanResult && scanResult.targets.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleScan}
+                    disabled={isScanning || isCleaning}
+                    className="text-slate-500 hover:text-slate-800 underline decoration-dotted underline-offset-4 disabled:opacity-50"
+                  >
+                    Re-scan
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowWizard(true)}
+                  disabled={isScanning || isCleaning}
+                  className="inline-flex items-center gap-1.5 text-sky-700 hover:text-sky-900 underline decoration-dotted underline-offset-4 disabled:opacity-50"
+                >
+                  <Wand2 className="w-3.5 h-3.5" /> Smart Clean
+                </button>
+                <label className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-800 cursor-pointer">
+                  <PixelCheckbox checked={dryRun} onChange={setDryRun} label="Toggle simulation dry run mode" />
+                  Simulation mode only
+                </label>
+              </div>
+
+              {isCleaning && (
+                <div className="w-full max-w-xs bg-slate-100 h-2 rounded-full overflow-hidden animate-slide-down">
+                  <div className="h-full bg-gradient-to-r from-miri-400 via-miri-300 to-miri-500 w-1/2 rounded-full animate-sweep" />
+                </div>
+              )}
             </div>
-            <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wider mt-0.5">
-              Ready to Prune
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. MAIN ACTION BAR & PRESETS                                              */}
+      {/* SCAN RESULTS -- quick selection controls, then the checklist              */}
       {/* ========================================================================= */}
-      <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      {!completionReceipt && scanResult && scanResult.targets.length > 0 && !isScanning && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2 text-xs">
           <div className="flex items-center gap-2 flex-wrap">
-            <label className="flex items-center gap-2.5 text-xs font-bold text-slate-800 bg-slate-50 px-3.5 py-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors">
-              <PixelCheckbox
-                checked={dryRun}
-                onChange={setDryRun}
-                label="Toggle simulation dry run mode"
-              />
-              <span>Simulation Mode (Test run without deleting files)</span>
-            </label>
+            <span className="font-bold text-slate-500">Quick Selection:</span>
+            <button type="button" onClick={selectAll} className="chip-press px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold transition-colors">
+              Select All
+            </button>
+            <button type="button" onClick={handleSelectSafeOnly} className="chip-press px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold transition-colors">
+              Gentle Trim (Safe Only)
+            </button>
+            <button type="button" onClick={deselectAll} disabled={selectedTargetIds.length === 0} className="chip-press px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold transition-colors disabled:opacity-50">
+              Clear Selection
+            </button>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            <TactileButton
-              variant="secondary"
-              onClick={handleScan}
-              disabled={isScanning || isCleaning}
-              aria-busy={isScanning}
-              className="flex-1 sm:flex-none min-w-0"
-            >
-              <Sparkles className={`w-4 h-4 shrink-0 ${isScanning ? "animate-spin" : ""}`} />
-              <span className="truncate">{isScanning ? "Scanning..." : "Scan Garden"}</span>
-            </TactileButton>
-
-            <TactileButton
-              variant="primary"
-              onClick={handleCleanTrigger}
-              disabled={isCleaning || isScanning || selectedTargetIds.length === 0}
-              aria-busy={isCleaning}
-              size="lg"
-              className="flex-1 sm:flex-none min-w-0"
-            >
-              <Trash2 className="w-5 h-5 shrink-0" />
-              <span className="truncate">
-                {isCleaning
-                  ? "Pruning Safely..."
-                  : dryRun
-                  ? `Simulate Trim (${selectedFormatted.formatted})`
-                  : `Prune ${selectedFormatted.formatted} Now`}
-              </span>
-            </TactileButton>
-          </div>
-        </div>
-
-        {/* Cleaning Progress Bar (Active Sweeping Indicator) */}
-        {isCleaning && (
-          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden animate-slide-down">
-            <div className="h-full bg-gradient-to-r from-miri-400 via-miri-300 to-miri-500 w-1/2 rounded-full animate-sweep" />
-          </div>
-        )}
-
-        {/* Preset Filters Row */}
-        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-slate-700">Quick Selection:</span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                type="button"
-                onClick={selectAll}
-                disabled={!scanResult || scanResult.targets.length === 0}
-                className="chip-press px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold transition-colors disabled:opacity-50 disabled:pointer-events-none"
-              >
-                Select All
-              </button>
-              <button
-                type="button"
-                onClick={handleSelectSafeOnly}
-                disabled={!scanResult || scanResult.targets.length === 0}
-                className="chip-press px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold transition-colors disabled:opacity-50 disabled:pointer-events-none"
-              >
-                Gentle Trim (Safe Only)
-              </button>
-              <button
-                type="button"
-                onClick={deselectAll}
-                disabled={selectedTargetIds.length === 0}
-                className="chip-press px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold transition-colors disabled:opacity-50 disabled:pointer-events-none"
-              >
-                Clear Selection
-              </button>
-            </div>
-          </div>
-          <span className="text-slate-500 font-semibold">
-            {selectedTargetIds.length} of {scanResult?.targets.length || 0} categories selected
+          <span className="text-slate-400 font-semibold">
+            {selectedTargetIds.length} of {scanResult.targets.length} categories selected
           </span>
         </div>
-      </div>
+      )}
 
-      {/* ========================================================================= */}
-      {/* 5. QUICK CATEGORY CARDS GRID / SKELETON / EMPTY STATES                    */}
-      {/* ========================================================================= */}
       {isScanning ? (
         <CardSkeleton count={6} />
-      ) : !scanResult ? (
-        /* Initial Ready State (Scan not yet triggered or needs scan) */
-        <div className="bg-white rounded-3xl p-10 border-2 border-slate-100 shadow-duo text-center space-y-4 animate-fade-in">
-          <div className="flex justify-center">
-            <Mascot mood="happy" size="lg" />
-          </div>
-          <h3 className="text-xl font-black text-slate-900">
-            Garden Inspection Ready
-          </h3>
-          <p className="text-sm font-semibold text-slate-600 max-w-md mx-auto leading-relaxed">
-            Run a safe, non-destructive inspection to discover reclaimable temporary files, package caches, and dev toolchain artifacts.
-          </p>
-          <div className="pt-2 flex justify-center">
-            <TactileButton variant="primary" onClick={handleScan}>
-              <Search className="w-4 h-4" />
-              Start System Scan
-            </TactileButton>
-          </div>
-        </div>
-      ) : scanResult.targets.length === 0 ? (
+      ) : completionReceipt ? null : !scanResult ? null : scanResult.targets.length === 0 ? (
         /* Sparkling Clean Empty State */
-        <div className="bg-white rounded-3xl p-10 border-2 border-emerald-200 shadow-duo text-center space-y-4 animate-fade-in">
-          <div className="relative flex justify-center">
-            <Mascot mood="celebrate" size="lg" />
-            <ConfettiBurst tier="solid" />
-          </div>
-          <h3 className="text-xl font-black text-slate-900">
-            Your Garden is 100% Sparkling Clean!
-          </h3>
-          <p className="text-sm font-semibold text-slate-600 max-w-md mx-auto leading-relaxed">
+        <div className="text-center space-y-3 py-6 animate-fade-in">
+          <p className="text-sm font-semibold text-slate-500 max-w-md mx-auto leading-relaxed">
             No leftover junk, orphaned caches, or temporary clutter were detected across your system paths.
           </p>
-          <div className="pt-2 flex justify-center">
-            <TactileButton variant="secondary" onClick={handleScan}>
-              <RefreshCw className="w-4 h-4" />
-              Check Again
-            </TactileButton>
-          </div>
         </div>
       ) : (
-        /* Populated Target Grid with Tactile Motion */
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        /* Simplified scannable checklist -- lighter borders, more breathing room */
+        <div className="space-y-3">
           {scanResult.targets.map((target, index) => {
             const isSelected = selectedTargetIds.includes(target.id);
             const targetFormatted = formatBytes(target.estimated_bytes);
@@ -573,67 +547,44 @@ export const CasualView: React.FC = () => {
                     toggleTarget(target.id);
                   }
                 }}
-                // Reveal as a considered list, not a flat block: stagger
-                // capped at 300ms total so a long scan result doesn't make
-                // the last cards feel delayed.
                 style={{ animationDelay: `${Math.min(index, 12) * 25}ms` }}
-                className={`card-duo cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 ease-out animate-slide-up focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-miri-400/60 ${
+                className={`cursor-pointer flex items-center justify-between gap-4 rounded-2xl px-5 py-4 transition-all duration-150 ease-out animate-slide-up focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-miri-400/60 ${
                   isSelected
-                    ? "border-miri-400 bg-miri-50/40 shadow-duo"
-                    : "hover:border-slate-300 opacity-95"
+                    ? "bg-miri-50/60 border-2 border-miri-300"
+                    : "bg-white border-2 border-transparent hover:border-slate-200"
                 }`}
               >
                 <div className="flex items-center gap-3.5 min-w-0">
-                  {/* Presentational Checkbox with Pop Animation */}
-                  <PixelCheckbox
-                    checked={isSelected}
-                    presentational={true}
-                  />
-
+                  <PixelCheckbox checked={isSelected} presentational={true} />
                   <div
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border-2 transition-all duration-150 ${
-                      isSelected
-                        ? "bg-white border-miri-400 shadow-duo-sm"
-                        : theme.bg
+                    className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-150 ${
+                      isSelected ? "bg-white border-2 border-miri-300" : theme.bg + " border-2"
                     }`}
                   >
                     {theme.icon}
                   </div>
-
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-black text-slate-900 text-sm md:text-base truncate">
-                        {target.name}
-                      </h4>
+                      <h4 className="font-black text-slate-900 text-sm md:text-base truncate">{target.name}</h4>
                       {target.requires_elevation ? (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 shrink-0">
-                          Admin
-                        </span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 shrink-0">Admin</span>
                       ) : (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 shrink-0">
-                          {theme.pill}
-                        </span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 shrink-0">{theme.pill}</span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-600 font-semibold line-clamp-1 mt-0.5">
-                      {target.description}
+                    <p className="text-xs text-slate-500 font-semibold line-clamp-1 mt-0.5">
+                      {target.description} &middot; {formatNumber(target.file_count)} files
                     </p>
-                    <div className="text-xs font-bold text-slate-500 mt-0.5">
-                      {formatNumber(target.file_count)} files inspected
-                    </div>
                   </div>
                 </div>
-
-                <div className="text-right shrink-0">
-                  <div className="font-pixel text-xs text-slate-900 font-bold">
-                    {targetFormatted.formatted}
-                  </div>
-                </div>
+                <div className="font-pixel text-xs text-slate-900 font-bold shrink-0">{targetFormatted.formatted}</div>
               </div>
             );
           })}
         </div>
       )}
+
+      {showWizard && <SmartCleanWizard onClose={() => setShowWizard(false)} />}
     </div>
   );
 };

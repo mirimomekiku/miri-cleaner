@@ -22,7 +22,7 @@ export const PowerView: React.FC = () => {
   return (
     <div className="space-y-6 max-w-5xl mx-auto select-none">
       {/* Advanced Header */}
-      <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo flex items-center justify-between">
+      <div className="bg-white rounded-3xl p-7 border-2 border-slate-100 shadow-duo flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <PixelBadge label="Advanced" variant="blue" />
@@ -76,7 +76,7 @@ export const PowerView: React.FC = () => {
               return (
                 <div
                   key={target.id}
-                  className={`bg-white rounded-2xl p-4 border-2 transition-all flex items-center justify-between gap-4 ${
+                  className={`bg-white rounded-2xl p-4 border-2 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${
                     isSelected ? "border-miri-400 shadow-duo-sm" : "border-slate-100 hover:border-slate-200"
                   }`}
                 >
@@ -87,11 +87,11 @@ export const PowerView: React.FC = () => {
                       label={`Select ${target.name}`}
                     />
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="font-black text-slate-800 text-sm">{target.name}</h4>
                         <RiskPill level={target.risk_level} />
                         {target.requires_elevation && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 shrink-0">
                             Requires Root/UAC
                           </span>
                         )}
@@ -100,7 +100,7 @@ export const PowerView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 pl-8 sm:pl-0">
                     <div className="font-pixel text-xs text-slate-800 font-bold">{sizeFormatted}</div>
                     <div className="text-xs text-slate-400">{target.file_count} files</div>
                   </div>

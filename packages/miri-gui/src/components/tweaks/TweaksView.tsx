@@ -26,11 +26,13 @@ import {
   Copy,
   Check,
   Puzzle,
+  ChevronDown,
 } from "lucide-react";
 import { bridge } from "../../lib/bridge";
 import { ListSkeleton, TweaksSkeleton } from "../ui/Skeleton";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { useAsyncAction } from "../../lib/useAsyncAction";
+import { useCountUp } from "../../lib/useCountUp";
 import {
   WindowsUpdateState,
   WindowsTweakItem,
@@ -80,6 +82,14 @@ export const TweaksView: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const errorAction = useAsyncAction();
   const [isLoading, setIsLoading] = useState(true);
+  const [autostartItems, setAutostartItems] = useState<AutostartItem[]>([]);
+  const [togglingAutostartId, setTogglingAutostartId] = useState<string | null>(null);
+  // Casual-mode lesson-screen disclosure state: boot-impact detail and the
+  // "more options" bundle (extensions/update profiles/DNS/update shield) are
+  // tucked behind these toggles so the hero module stays the one dominant
+  // focal point, mirroring CasualView's `gardenExpanded` pattern.
+  const [bootExpanded, setBootExpanded] = useState(false);
+  const [moreExpanded, setMoreExpanded] = useState(false);
 
   // Load data on mount
   useEffect(() => {
@@ -119,10 +129,48 @@ export const TweaksView: React.FC = () => {
       }
     }).catch(() => {});
 
-    Promise.allSettled([p1, p2, p3]).finally(() => {
+    const p4 = bridge.getAutostart().then(setAutostartItems).catch(() => {});
+
+    Promise.allSettled([p1, p2, p3, p4]).finally(() => {
       setIsLoading(false);
     });
   }, [isLinux, isWindows]);
+
+  // Illustrative estimates only -- not measured boot telemetry. Meant to
+  // give the impact badge a concrete, comparable number rather than just a
+  // severity label.
+  const BOOT_IMPACT_SECONDS: Record<AutostartItem["impact"], number> = {
+    high: 4.0,
+    medium: 1.5,
+    low: 0.4,
+  };
+  const enabledAutostartItems = autostartItems.filter((a) => a.enabled);
+  const estimatedBootSeconds = enabledAutostartItems.reduce(
+    (acc, a) => acc + BOOT_IMPACT_SECONDS[a.impact],
+    0
+  );
+  const animatedBootSeconds = useCountUp(estimatedBootSeconds);
+
+  const handleToggleAutostart = async (item: AutostartItem) => {
+    const nextEnabled = !item.enabled;
+    setTogglingAutostartId(item.id);
+    await errorAction.run(
+      async () => {
+        const res = await bridge.toggleAutostart(item.file_path, nextEnabled);
+        addLog(`[Autostart] ${item.name}: ${res.details}`);
+        setAutostartItems((prev) =>
+          prev.map((a) => (a.id === item.id ? { ...a, enabled: nextEnabled } : a))
+        );
+      },
+      {
+        formatError: (e) => {
+          addLog(`[Autostart] Error toggling ${item.name}: ${e}`);
+          return `Toggling ${item.name} failed: ${e instanceof Error ? e.message : String(e)}`;
+        },
+      }
+    );
+    setTogglingAutostartId(null);
+  };
 
   // Windows lists
   const winEssentialTweaks = useMemo(
@@ -391,79 +439,185 @@ export const TweaksView: React.FC = () => {
           <TweaksSkeleton />
         ) : (
         <div className="space-y-6">
-          {/* Header Card */}
-          <div className="card-duo flex flex-col md:flex-row md:items-center justify-between gap-4 border-2 border-slate-100 shadow-duo">
-            <div className="flex items-center gap-4">
-              <Mascot mood="happy" size="md" />
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <PixelBadge label={isLinux ? "Fedora Linux" : "Windows 10/11"} variant="pink" />
-                  <span className="text-xs font-bold text-slate-400">
-                    System Tweaks & Privacy Shield
-                  </span>
-                </div>
-                <h2 className="text-2xl font-black text-slate-900">
-                  {isLinux ? "Fedora System Optimizations" : "Windows 10/11 Presets & Tweaks"}
-                </h2>
-                <p className="text-xs text-slate-500 max-w-xl mt-0.5">
-                  {isLinux
-                    ? "Safe 1-click post-install enhancements: faster DNF, multimedia codecs, Flathub, and boot speedups."
-                    : "Tune Windows performance, stop telemetry, eliminate search bloat, and protect your privacy."}
-                </p>
-              </div>
+          {/* ============================================================= */}
+          {/* ONE HERO MODULE -- lesson-screen grammar: a single dominant   */}
+          {/* focal card, the mascot as emotional anchor, one big pill      */}
+          {/* primary action. Essentials-applied / active-DNS / boot-impact */}
+          {/* collapse into a slim stat strip instead of stacking as        */}
+          {/* separate parallel cards.                                     */}
+          {/* ============================================================= */}
+          <div className="bg-gradient-to-b from-white to-miri-50/60 rounded-[2rem] p-10 sm:p-12 border-2 border-miri-100 shadow-duo text-center space-y-6">
+            <div className="flex justify-center">
+              <Mascot mood={errorAction.error ? "alert" : isProcessing ? "cleaning" : "happy"} size="lg" />
             </div>
 
-            {/* Host Auto-Detection Badge */}
-            <div className="bg-white rounded-2xl p-4 border-2 border-slate-100 shadow-duo-sm text-center min-w-[180px]">
-              <div className="flex items-center justify-center gap-1.5 text-emerald-600 font-black text-xs mb-1">
-                <CheckCircle className="w-4 h-4" />
-                <span>Auto-Detected Host</span>
-              </div>
-              <div className="text-sm font-black text-slate-900">
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <PixelBadge label={isLinux ? "Fedora Linux" : "Windows 10/11"} variant="pink" />
+              <span className="text-xs font-bold text-slate-600">
                 {isLinux
                   ? (scanResult?.system_info.os_name || "Fedora Linux 43")
                   : (winVersionInfo?.display_name || "Windows 10/11")}
+              </span>
+            </div>
+
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+              {isLinux ? "Fedora System Optimizations" : "Windows 10/11 Presets & Tweaks"}
+            </h2>
+            <p className="text-sm font-semibold text-slate-600 max-w-md mx-auto leading-relaxed">
+              {isLinux
+                ? "Safe 1-click post-install enhancements: faster DNF, multimedia codecs, Flathub, and boot speedups."
+                : "Tune Windows performance, stop telemetry, eliminate search bloat, and protect your privacy."}
+            </p>
+
+            {/* Slim consolidated stat strip -- essentials applied, active DNS,
+                and boot impact as one lightweight row instead of three parallel cards. */}
+            <div className="flex items-center justify-center flex-wrap gap-x-8 gap-y-3 pt-1">
+              <div className="text-center">
+                <div className="text-2xl font-black text-miri-500 font-pixel tabular-nums">
+                  {isLinux ? linuxAppliedEssentialCount : winTweaks.filter((t) => t.is_enabled).length}
+                  <span className="text-slate-400">/{isLinux ? linuxEssentialTweaks.length : winEssentialTweaks.length}</span>
+                </div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Essentials Applied</div>
+              </div>
+
+              {dnsInfo && (
+                <div className="text-center">
+                  <div className="text-2xl font-black text-slate-800 truncate max-w-[10rem]">
+                    {dnsInfo.display_name}
+                  </div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Active DNS</div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setBootExpanded((v) => !v)}
+                aria-expanded={bootExpanded}
+                className="text-center group"
+              >
+                <div className="text-2xl font-black text-amber-600 tabular-nums flex items-center gap-1 justify-center">
+                  ~{animatedBootSeconds.toFixed(1)}s
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${bootExpanded ? "rotate-180" : ""}`} />
+                </div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-slate-700">
+                  {bootExpanded ? "Hide Boot Impact" : `Boot Impact (${enabledAutostartItems.length} apps)`}
+                </div>
+              </button>
+            </div>
+
+            {/* Boot impact detail tucked behind expansion, per the lesson-screen brief */}
+            <div className={`collapsible-rows ${bootExpanded ? "is-expanded" : ""}`}>
+              <div className="collapsible-inner">
+                <div className="pt-4 text-left space-y-2">
+                  <p className="text-xs text-slate-500 max-w-md">
+                    Apps that launch automatically when you sign in. Seconds shown are
+                    illustrative estimates, not measured boot telemetry.
+                  </p>
+                  {autostartItems.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
+                      No startup applications detected.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {autostartItems.map((item) => {
+                        const impactStyle =
+                          item.impact === "high"
+                            ? "bg-amber-100 text-amber-800 border-amber-200"
+                            : item.impact === "medium"
+                            ? "bg-sky-100 text-sky-800 border-sky-200"
+                            : "bg-slate-100 text-slate-600 border-slate-200";
+                        return (
+                          <div
+                            key={item.id}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <PixelCheckbox
+                                checked={item.enabled}
+                                onChange={() => handleToggleAutostart(item)}
+                                label={`Toggle ${item.name} at startup`}
+                                disabled={togglingAutostartId === item.id}
+                              />
+                              <div className="min-w-0">
+                                <div className="font-bold text-slate-800 text-sm truncate">{item.name}</div>
+                                <div className="text-[11px] text-slate-400 font-mono truncate">{item.command}</div>
+                              </div>
+                            </div>
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${impactStyle}`}
+                            >
+                              +{BOOT_IMPACT_SECONDS[item.impact].toFixed(1)}s
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ONE big pill primary action */}
+            <div className="flex flex-col items-center gap-3 pt-2">
+              <TactileButton
+                variant="primary"
+                size="hero"
+                pill
+                onClick={handleApplyTweaks}
+                disabled={isProcessing || selectedTweakIds.size === 0}
+                aria-busy={isProcessing}
+              >
+                <Sparkles className={`w-5 h-5 shrink-0 ${isProcessing ? "animate-spin" : ""}`} />
+                {isProcessing ? "Applying..." : `Apply Selected Tweaks (${selectedTweakIds.size})`}
+              </TactileButton>
+
+              {/* Secondary actions -- visually subordinate to the one primary CTA */}
+              <div className="flex items-center gap-4 flex-wrap justify-center text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={handleSelectAllEssential}
+                  className="text-slate-500 hover:text-slate-800 underline decoration-dotted underline-offset-4"
+                >
+                  Select Essential
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  disabled={selectedTweakIds.size === 0}
+                  className="text-slate-500 hover:text-slate-800 underline decoration-dotted underline-offset-4 disabled:opacity-50"
+                >
+                  Clear Selection
+                </button>
+                {isWindows && (
+                  <label className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-800 cursor-pointer">
+                    <PixelCheckbox
+                      checked={createRestorePoint}
+                      onChange={setCreateRestorePoint}
+                      label="Create System Restore Point"
+                    />
+                    Create Restore Point first
+                  </label>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Linux Essential & GNOME Extensions Preset Cards */}
+          {/* ============================================================= */}
+          {/* PRIMARY CHECKLIST -- essential tweaks status, always visible  */}
+          {/* (mirrors the always-shown scan checklist in Casual View).     */}
+          {/* ============================================================= */}
           {isLinux ? (
-            <div className="space-y-6">
-              <div className="card-duo space-y-4 border-2 border-slate-100 shadow-duo bg-white">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-black text-slate-900">
-                      Fedora Post-Install Essential Preset
-                    </h3>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                      <Shield className="w-3 h-3 text-emerald-600" /> Recommended Setup
-                    </span>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
-                      {linuxAppliedEssentialCount} of {linuxEssentialTweaks.length} Applied
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1 max-w-xl">
-                    Applies the 5 core post-install optimizations: enables RPM Fusion (Free & Non-Free), speeds up DNF with parallel downloads & fastest mirror, configures Flathub, and installs full FFmpeg & multimedia codecs.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3 shrink-0">
-                  <TactileButton
-                    variant="primary"
-                    size="md"
-                    onClick={handleApplyTweaks}
-                    disabled={isProcessing || selectedTweakIds.size === 0}
-                  >
-                    <Sparkles className="w-4 h-4 text-slate-900" />
-                    Apply Essential Tweaks ({selectedTweakIds.size})
-                  </TactileButton>
-                </div>
+            <div className="card-duo space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-black text-slate-900">Essential Repos &amp; Codecs</h3>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  {linuxAppliedEssentialCount} of {linuxEssentialTweaks.length} Applied
+                </span>
               </div>
-
-              {/* Status checklist */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100">
+              <p className="text-xs text-slate-500 max-w-xl">
+                Applies the 5 core post-install optimizations: enables RPM Fusion (Free &amp; Non-Free), speeds up DNF with parallel downloads &amp; fastest mirror, configures Flathub, and installs full FFmpeg &amp; multimedia codecs.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
                 {linuxEssentialTweaks.map((t) => (
                   <div
                     key={t.id}
@@ -483,440 +637,430 @@ export const TweaksView: React.FC = () => {
                 ))}
               </div>
             </div>
-
-            {/* GNOME Shell Extensions Suite Card (Casual Mode) */}
-            <div className="card-duo space-y-4 border-2 border-slate-100 shadow-duo bg-white">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-black text-slate-900">
-                      GNOME Shell Extensions Suite
-                    </h3>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-pink-100 text-pink-800 border border-pink-200 flex items-center gap-1">
-                      <Puzzle className="w-3 h-3 text-pink-600" /> Recommended Setup
-                    </span>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
-                      {linuxAppliedExtCount} of {linuxExtensions.length} Active
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1 max-w-xl">
-                    Curated desktop enhancements for Fedora GNOME Shell: AppIndicator system tray icons, Dash to Dock, Blur My Shell frosted glass, Vitals telemetry, Caffeine sleep inhibitor, Pop Shell auto-tiling, Just Perfection, and native Extension Manager.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3 shrink-0">
-                  <TactileButton
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedTweakIds((prev) => {
-                        const next = new Set(prev);
-                        linuxExtensions.filter((t) => !t.is_applied).forEach((t) => next.add(t.id));
-                        return next;
-                      });
-                    }}
-                  >
-                    Select Uninstalled
-                  </TactileButton>
-                  <TactileButton
-                    variant="primary"
-                    size="md"
-                    onClick={handleApplyTweaks}
-                    disabled={isProcessing || !linuxExtensions.some((t) => selectedTweakIds.has(t.id))}
-                  >
-                    <Sparkles className="w-4 h-4 text-slate-900" />
-                    Install Selected Extensions ({linuxExtensions.filter((t) => selectedTweakIds.has(t.id)).length})
-                  </TactileButton>
-                </div>
+          ) : (
+            <div className="card-duo space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-black text-slate-900">Windows 10/11 Essential Tweaks Preset</h3>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                  <Shield className="w-3 h-3 text-emerald-600" /> Recommended &amp; Safe
+                </span>
               </div>
+              <p className="text-xs text-slate-500 max-w-xl">
+                Applies the 17 essential tweaks: turns off telemetry and timeline tracking,
+                disables Bing search results in Start Menu, stops sponsored OEM apps, and speeds up File Explorer.
+              </p>
+            </div>
+          )}
 
-              {/* Status checklist */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100">
-                {linuxExtensions.map((t) => {
-                  const isChecked = selectedTweakIds.has(t.id);
-                  return (
-                    <div
-                      key={t.id}
-                      onClick={() => toggleTweak(t.id)}
-                      className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
-                        isChecked
-                          ? "bg-pink-50/70 border-pink-300"
-                          : "bg-slate-50 hover:bg-slate-100 border-slate-200"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                        <PixelCheckbox
-                          checked={isChecked}
-                          onChange={() => toggleTweak(t.id)}
-                          label={t.name}
-                        />
-                        <span className="font-bold text-slate-800 truncate text-xs">
-                          {t.name.replace("GNOME Extension - ", "")}
-                        </span>
+          {/* ============================================================= */}
+          {/* MORE OPTIONS -- secondary content tucked behind one toggle:   */}
+          {/* extensions/update profiles, DNS switcher, update shield, and  */}
+          {/* platform-unavailable notices. Nothing is removed here, only   */}
+          {/* deferred behind a disclosure so the hero stays dominant.      */}
+          {/* ============================================================= */}
+          <div className="px-2">
+            <button
+              type="button"
+              onClick={() => setMoreExpanded((v) => !v)}
+              aria-expanded={moreExpanded}
+              className="w-full flex items-center justify-between gap-2 text-xs font-black text-slate-500 hover:text-slate-800 py-1"
+            >
+              <span>{moreExpanded ? "Hide More Options" : "More Options & Advanced Presets"}</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${moreExpanded ? "rotate-180" : ""}`} />
+            </button>
+          </div>
+
+          <div className={`collapsible-rows ${moreExpanded ? "is-expanded" : ""}`}>
+            <div className="collapsible-inner">
+              <div className="space-y-6 pt-1">
+                {isLinux ? (
+                  <>
+                    {/* GNOME Shell Extensions Suite Card (Casual Mode) */}
+                    <div className="card-duo space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-lg font-black text-slate-900">
+                              GNOME Shell Extensions Suite
+                            </h3>
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-pink-100 text-pink-800 border border-pink-200 flex items-center gap-1">
+                              <Puzzle className="w-3 h-3 text-pink-600" /> Recommended Setup
+                            </span>
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              {linuxAppliedExtCount} of {linuxExtensions.length} Active
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1 max-w-xl">
+                            Curated desktop enhancements for Fedora GNOME Shell: AppIndicator system tray icons, Dash to Dock, Blur My Shell frosted glass, Vitals telemetry, Caffeine sleep inhibitor, Pop Shell auto-tiling, Just Perfection, and native Extension Manager.
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          <TactileButton
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedTweakIds((prev) => {
+                                const next = new Set(prev);
+                                linuxExtensions.filter((t) => !t.is_applied).forEach((t) => next.add(t.id));
+                                return next;
+                              });
+                            }}
+                          >
+                            Select Uninstalled
+                          </TactileButton>
+                          <TactileButton
+                            variant="primary"
+                            size="md"
+                            onClick={handleApplyTweaks}
+                            disabled={isProcessing || !linuxExtensions.some((t) => selectedTweakIds.has(t.id))}
+                          >
+                            <Sparkles className="w-4 h-4 text-slate-900" />
+                            Install Selected Extensions ({linuxExtensions.filter((t) => selectedTweakIds.has(t.id)).length})
+                          </TactileButton>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <span
-                          className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${
-                            t.is_applied
-                              ? "bg-pink-100 text-pink-800 border border-pink-200"
-                              : "bg-slate-200 text-slate-700"
-                          }`}
-                        >
-                          {t.is_applied ? "Active ✓" : "Available"}
-                        </span>
+
+                      {/* Status checklist */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100">
+                        {linuxExtensions.map((t) => {
+                          const isChecked = selectedTweakIds.has(t.id);
+                          return (
+                            <div
+                              key={t.id}
+                              onClick={() => toggleTweak(t.id)}
+                              className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
+                                isChecked
+                                  ? "bg-pink-50/70 border-pink-300"
+                                  : "bg-slate-50 hover:bg-slate-100 border-slate-200"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                <PixelCheckbox
+                                  checked={isChecked}
+                                  onChange={() => toggleTweak(t.id)}
+                                  label={t.name}
+                                />
+                                <span className="font-bold text-slate-800 truncate text-xs">
+                                  {t.name.replace("GNOME Extension - ", "")}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span
+                                  className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${
+                                    t.is_applied
+                                      ? "bg-pink-100 text-pink-800 border border-pink-200"
+                                      : "bg-slate-200 text-slate-700"
+                                  }`}
+                                >
+                                  {t.is_applied ? "Active ✓" : "Available"}
+                                </span>
+                                <button
+                                  type="button"
+                                  aria-label={`Details for ${t.name}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveInfoModal({
+                                      id: t.id,
+                                      name: t.name,
+                                      category: "GNOME Shell Extension",
+                                      description: t.description,
+                                      danger_level: t.danger_level,
+                                      requiresElevation: t.requires_root,
+                                      is_applied: t.is_applied,
+                                      is_applicable: t.is_applicable,
+                                      command: t.command,
+                                    });
+                                  }}
+                                  className="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-200 shrink-0"
+                                >
+                                  <HelpCircle className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Windows Preset Card (Greyed out if running on Fedora) */}
+                    <div className="card-duo space-y-3 border-2 border-slate-200/60 bg-slate-50/50 opacity-60 rounded-3xl p-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-base font-black text-slate-700">
+                              Windows 10/11 Essential Tweaks Preset
+                            </h3>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-200 text-slate-600">
+                              Windows Only
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
+                            Essential telemetry, Bing search, and privacy suite. Unavailable because current host is Fedora Linux.
+                          </p>
+                        </div>
                         <button
-                          type="button"
-                          aria-label={`Details for ${t.name}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveInfoModal({
-                              id: t.id,
-                              name: t.name,
-                              category: "GNOME Shell Extension",
-                              description: t.description,
-                              danger_level: t.danger_level,
-                              requiresElevation: t.requires_root,
-                              is_applied: t.is_applied,
-                              is_applicable: t.is_applicable,
-                              command: t.command,
-                            });
-                          }}
-                          className="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-200 shrink-0"
+                          disabled
+                          className="px-3 py-2 rounded-xl text-xs font-black bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300 shrink-0"
                         >
-                          <HelpCircle className="w-3.5 h-3.5" />
+                          Unavailable on Fedora
                         </button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Windows Essential Presets Card (Active on Windows) */}
-            <div className="card-duo space-y-4 border-2 border-slate-100 shadow-duo bg-white">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-black text-slate-900">
-                      Windows 10/11 Essential Tweaks Preset
-                    </h3>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                      <Shield className="w-3 h-3 text-emerald-600" /> Recommended & Safe
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1 max-w-xl">
-                    Applies the 17 essential tweaks: turns off telemetry and timeline tracking,
-                    disables Bing search results in Start Menu, stops sponsored OEM apps, and speeds up File Explorer.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3 shrink-0">
-                  <TactileButton
-                    variant="primary"
-                    size="md"
-                    onClick={handleApplyTweaks}
-                    disabled={isProcessing}
-                  >
-                    <Sparkles className="w-4 h-4 text-slate-900" />
-                    Apply Essential Tweaks ({selectedTweakIds.size})
-                  </TactileButton>
-                </div>
-              </div>
-
-              {/* Restore Point Checkbox */}
-              <div className="flex items-center gap-4 pt-2 border-t border-slate-100 flex-wrap text-xs font-semibold text-slate-600">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <PixelCheckbox
-                    checked={createRestorePoint}
-                    onChange={setCreateRestorePoint}
-                    label="Create System Restore Point"
-                  />
-                  <span className="font-bold text-slate-800">
-                    Create Windows System Restore checkpoint before applying
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Windows Update Profiles Suite (Matches Screenshot) */}
-            <div className="card-duo space-y-4 border-2 border-slate-100 shadow-duo bg-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-xl font-black text-slate-900 tracking-tight">
-                      Windows Update Profiles
-                    </h3>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
-                      Windows 10/11
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Choose how Windows receives updates. Each profile replaces the Windows Update settings.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-sans">
-                {/* Profile 1: Recommended */}
-                <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${
-                  winUpdateState?.active_profile === "recommended"
-                    ? "border-emerald-500 bg-emerald-50/30 shadow-md ring-2 ring-emerald-500/20"
-                    : "border-emerald-200/80 bg-white hover:border-emerald-400"
-                }`}>
-                  <div className="space-y-3">
+                  </>
+                ) : (
+                  /* Windows Update Profiles Suite (Matches Screenshot) */
+                  <div className="card-duo space-y-4">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-base font-black text-slate-900">Recommended</h4>
-                      {winUpdateState?.active_profile === "recommended" && (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                          Active ✓
-                        </span>
-                      )}
+                      <div>
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                            Windows Update Profiles
+                          </h3>
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            Windows 10/11
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          Choose how Windows receives updates. Each profile replaces the Windows Update settings.
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs font-semibold text-slate-600">
-                      Balanced security and stability
-                    </p>
 
-                    <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4 leading-relaxed">
-                      <li>Defers feature updates for 365 days</li>
-                      <li>Defers quality updates for 4 days</li>
-                      <li>Excludes drivers from quality updates</li>
-                      <li>Prevents automatic restarts while a user is signed in</li>
-                    </ul>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-sans">
+                      {/* Profile 1: Recommended */}
+                      <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${
+                        winUpdateState?.active_profile === "recommended"
+                          ? "border-emerald-500 bg-emerald-50/30 shadow-md ring-2 ring-emerald-500/20"
+                          : "border-emerald-200/80 bg-white hover:border-emerald-400"
+                      }`}>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-base font-black text-slate-900">Recommended</h4>
+                            {winUpdateState?.active_profile === "recommended" && (
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                Active ✓
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs font-semibold text-slate-600">
+                            Balanced security and stability
+                          </p>
 
-                    <p className="text-[11px] italic text-slate-500 pt-1">
-                      Available on Windows Pro, Enterprise, and Education editions.
-                    </p>
+                          <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4 leading-relaxed">
+                            <li>Defers feature updates for 365 days</li>
+                            <li>Defers quality updates for 4 days</li>
+                            <li>Excludes drivers from quality updates</li>
+                            <li>Prevents automatic restarts while a user is signed in</li>
+                          </ul>
+
+                          <p className="text-[11px] italic text-slate-500 pt-1">
+                            Available on Windows Pro, Enterprise, and Education editions.
+                          </p>
+                        </div>
+
+                        <div className="pt-4">
+                          <TactileButton
+                            variant="primary"
+                            size="sm"
+                            className="w-full justify-center font-black"
+                            onClick={() => handleApplyUpdateProfile("recommended")}
+                            disabled={isProcessing || !isWindows}
+                          >
+                            Apply Recommended
+                          </TactileButton>
+                        </div>
+                      </div>
+
+                      {/* Profile 2: Windows Default */}
+                      <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${
+                        winUpdateState?.active_profile === "default" || (!winUpdateState?.active_profile && !winUpdateState?.fully_disabled)
+                          ? "border-indigo-400 bg-indigo-50/30 shadow-md ring-2 ring-indigo-400/20"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                      }`}>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-base font-black text-slate-900">Windows Default</h4>
+                            {(winUpdateState?.active_profile === "default" || (!winUpdateState?.active_profile && !winUpdateState?.fully_disabled)) && (
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
+                                Active ✓
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs font-semibold text-slate-600">
+                            Return control to Windows
+                          </p>
+
+                          <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4 leading-relaxed">
+                            <li>Removes Windows Update policies applied previously</li>
+                            <li>Restores update service startup settings</li>
+                            <li>Re-enables update scheduled tasks</li>
+                          </ul>
+
+                          <p className="text-[11px] italic text-slate-500 pt-1">
+                            Use this to undo the Recommended or Disable profile.
+                          </p>
+                        </div>
+
+                        <div className="pt-4">
+                          <TactileButton
+                            variant="secondary"
+                            size="sm"
+                            className="w-full justify-center font-black"
+                            onClick={() => handleApplyUpdateProfile("default")}
+                            disabled={isProcessing || !isWindows}
+                          >
+                            Restore Defaults
+                          </TactileButton>
+                        </div>
+                      </div>
+
+                      {/* Profile 3: Disable Updates */}
+                      <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${
+                        winUpdateState?.active_profile === "disable" || winUpdateState?.fully_disabled
+                          ? "border-red-500 bg-red-50/30 shadow-md ring-2 ring-red-500/20"
+                          : "border-red-200 bg-white hover:border-red-400"
+                      }`}>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-base font-black text-red-600">Disable Updates</h4>
+                            {(winUpdateState?.active_profile === "disable" || winUpdateState?.fully_disabled) && (
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300">
+                                Active ✓
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs font-bold text-red-500">
+                            Advanced use only
+                          </p>
+
+                          <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4 leading-relaxed">
+                            <li>Disables automatic update policy</li>
+                            <li>Stops update services and scheduled tasks</li>
+                            <li>Clears downloaded update files</li>
+                          </ul>
+
+                          <p className="text-[11px] italic font-semibold text-red-500 pt-1">
+                            Security updates will not be installed while this profile is active.
+                          </p>
+                        </div>
+
+                        <div className="pt-4">
+                          <TactileButton
+                            variant="danger"
+                            size="sm"
+                            className="w-full justify-center font-black"
+                            onClick={() => handleApplyUpdateProfile("disable")}
+                            disabled={isProcessing || !isWindows}
+                          >
+                            Disable Updates
+                          </TactileButton>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Notification Banner */}
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs font-semibold text-slate-600">
+                      Changes apply system-wide. Restart Windows after switching profiles. Use Restore Defaults to undo update policies.
+                    </div>
+                  </div>
+                )}
+
+                {/* Secure DNS Preset Card with Auto-Detection (shared) */}
+                <div className="card-duo flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold shrink-0">
+                      <Globe className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm font-black text-slate-900">Secure DNS Switcher</h4>
+                        {dnsInfo && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3 text-indigo-500" />
+                            Active: {dnsInfo.display_name}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Speed up DNS queries and block ads with encrypted, privacy-first DNS resolvers.
+                        {dnsInfo?.servers && dnsInfo.servers.length > 0 && ` (${dnsInfo.servers.join(", ")})`}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="pt-4">
-                    <TactileButton
-                      variant="primary"
-                      size="sm"
-                      className="w-full justify-center font-black"
-                      onClick={() => handleApplyUpdateProfile("recommended")}
-                      disabled={isProcessing || !isWindows}
+                  <div className="flex items-center gap-3 shrink-0 flex-wrap">
+                    <select
+                      value={selectedDns}
+                      onChange={(e) => setSelectedDns(e.target.value)}
+                      className="text-xs font-bold text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-400 cursor-pointer"
                     >
-                      Apply Recommended
-                    </TactileButton>
-                  </div>
-                </div>
+                      <option value="default">Default (ISP / DHCP Assigned)</option>
+                      <option value="cloudflare">Cloudflare (1.1.1.1 — Fast & Private)</option>
+                      <option value="google">Google Public (8.8.8.8)</option>
+                      <option value="quad9">Quad9 (9.9.9.9 — Malware Shield)</option>
+                      <option value="adguard">AdGuard (Ad-Blocking DNS)</option>
+                    </select>
 
-                {/* Profile 2: Windows Default */}
-                <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${
-                  winUpdateState?.active_profile === "default" || (!winUpdateState?.active_profile && !winUpdateState?.fully_disabled)
-                    ? "border-indigo-400 bg-indigo-50/30 shadow-md ring-2 ring-indigo-400/20"
-                    : "border-slate-200 bg-white hover:border-slate-300"
-                }`}>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-base font-black text-slate-900">Windows Default</h4>
-                      {(winUpdateState?.active_profile === "default" || (!winUpdateState?.active_profile && !winUpdateState?.fully_disabled)) && (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
-                          Active ✓
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs font-semibold text-slate-600">
-                      Return control to Windows
-                    </p>
-
-                    <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4 leading-relaxed">
-                      <li>Removes Windows Update policies applied previously</li>
-                      <li>Restores update service startup settings</li>
-                      <li>Re-enables update scheduled tasks</li>
-                    </ul>
-
-                    <p className="text-[11px] italic text-slate-500 pt-1">
-                      Use this to undo the Recommended or Disable profile.
-                    </p>
-                  </div>
-
-                  <div className="pt-4">
                     <TactileButton
                       variant="secondary"
                       size="sm"
-                      className="w-full justify-center font-black"
-                      onClick={() => handleApplyUpdateProfile("default")}
-                      disabled={isProcessing || !isWindows}
+                      onClick={handleApplyDns}
+                      disabled={isProcessing}
                     >
-                      Restore Defaults
+                      Apply DNS
                     </TactileButton>
                   </div>
                 </div>
 
-                {/* Profile 3: Disable Updates */}
-                <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${
-                  winUpdateState?.active_profile === "disable" || winUpdateState?.fully_disabled
-                    ? "border-red-500 bg-red-50/30 shadow-md ring-2 ring-red-500/20"
-                    : "border-red-200 bg-white hover:border-red-400"
-                }`}>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-base font-black text-red-600">Disable Updates</h4>
-                      {(winUpdateState?.active_profile === "disable" || winUpdateState?.fully_disabled) && (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300">
-                          Active ✓
-                        </span>
-                      )}
+                {/* Windows Update Shield (Only shown if Windows) */}
+                {isWindows && (
+                  <div className="card-duo transition-all space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-base font-black text-slate-900">
+                            Windows Update Shield (4 Tiers)
+                          </h3>
+                          {winUpdateState?.fully_disabled ? (
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-red-100 text-red-800 border border-red-200">
+                              Updates Disabled
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              Default Active
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1 max-w-xl">
+                          Blocks automatic reboots, forced updates, and telemetry across Services, Scheduled Tasks, Metered Connections, and Group Policy.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <TactileButton
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleToggleWindowsUpdate(true)}
+                          disabled={isProcessing || winUpdateState?.fully_disabled}
+                        >
+                          Disable Updates
+                        </TactileButton>
+                        <TactileButton
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleToggleWindowsUpdate(false)}
+                          disabled={isProcessing || !winUpdateState?.fully_disabled}
+                        >
+                          Restore Updates
+                        </TactileButton>
+                      </div>
                     </div>
-                    <p className="text-xs font-bold text-red-500">
-                      Advanced use only
-                    </p>
-
-                    <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4 leading-relaxed">
-                      <li>Disables automatic update policy</li>
-                      <li>Stops update services and scheduled tasks</li>
-                      <li>Clears downloaded update files</li>
-                    </ul>
-
-                    <p className="text-[11px] italic font-semibold text-red-500 pt-1">
-                      Security updates will not be installed while this profile is active.
-                    </p>
                   </div>
-
-                  <div className="pt-4">
-                    <TactileButton
-                      variant="danger"
-                      size="sm"
-                      className="w-full justify-center font-black"
-                      onClick={() => handleApplyUpdateProfile("disable")}
-                      disabled={isProcessing || !isWindows}
-                    >
-                      Disable Updates
-                    </TactileButton>
-                  </div>
-                </div>
+                )}
               </div>
-
-              {/* Bottom Notification Banner */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs font-semibold text-slate-600">
-                Changes apply system-wide. Restart Windows after switching profiles. Use Restore Defaults to undo update policies.
-              </div>
-            </div>
-            </div>
-          )}
-
-          {/* Windows Preset Card (Greyed out if running on Fedora) */}
-          {isLinux && (
-            <div className="card-duo space-y-3 border-2 border-slate-200/60 bg-slate-50/50 opacity-60 rounded-3xl p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-slate-700">
-                      Windows 10/11 Essential Tweaks Preset
-                    </h3>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-200 text-slate-600">
-                      Windows Only
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
-                    Essential telemetry, Bing search, and privacy suite. Unavailable because current host is Fedora Linux.
-                  </p>
-                </div>
-                <button
-                  disabled
-                  className="px-3 py-2 rounded-xl text-xs font-black bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300 shrink-0"
-                >
-                  Unavailable on Fedora
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Secure DNS Preset Card with Auto-Detection */}
-          <div className="card-duo border-2 border-slate-100 shadow-duo flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold shrink-0">
-                <Globe className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-black text-slate-900">Secure DNS Switcher</h4>
-                  {dnsInfo && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3 text-indigo-500" />
-                      Active: {dnsInfo.display_name}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500">
-                  Speed up DNS queries and block ads with encrypted, privacy-first DNS resolvers.
-                  {dnsInfo?.servers && dnsInfo.servers.length > 0 && ` (${dnsInfo.servers.join(", ")})`}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 shrink-0">
-              <select
-                value={selectedDns}
-                onChange={(e) => setSelectedDns(e.target.value)}
-                className="text-xs font-bold text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-400 cursor-pointer"
-              >
-                <option value="default">Default (ISP / DHCP Assigned)</option>
-                <option value="cloudflare">Cloudflare (1.1.1.1 — Fast & Private)</option>
-                <option value="google">Google Public (8.8.8.8)</option>
-                <option value="quad9">Quad9 (9.9.9.9 — Malware Shield)</option>
-                <option value="adguard">AdGuard (Ad-Blocking DNS)</option>
-              </select>
-
-              <TactileButton
-                variant="secondary"
-                size="sm"
-                onClick={handleApplyDns}
-                disabled={isProcessing}
-              >
-                Apply DNS
-              </TactileButton>
             </div>
           </div>
-
-          {/* Windows Update Controls (Only shown if Windows or informational) */}
-          {isWindows && (
-            <div className="card-duo transition-all border-2 border-slate-100 shadow-duo space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-slate-900">
-                      Windows Update Shield (4 Tiers)
-                    </h3>
-                    {winUpdateState?.fully_disabled ? (
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-red-100 text-red-800 border border-red-200">
-                        Updates Disabled
-                      </span>
-                    ) : (
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200">
-                        Default Active
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1 max-w-xl">
-                    Blocks automatic reboots, forced updates, and telemetry across Services, Scheduled Tasks, Metered Connections, and Group Policy.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <TactileButton
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleToggleWindowsUpdate(true)}
-                    disabled={isProcessing || winUpdateState?.fully_disabled}
-                  >
-                    Disable Updates
-                  </TactileButton>
-                  <TactileButton
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleToggleWindowsUpdate(false)}
-                    disabled={isProcessing || !winUpdateState?.fully_disabled}
-                  >
-                    Restore Updates
-                  </TactileButton>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
         )
       )}
@@ -925,7 +1069,7 @@ export const TweaksView: React.FC = () => {
       {viewMode === "power" && (
         <div className="space-y-6">
           {/* Advanced Mode Action Bar */}
-          <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
+          <div className="bg-white rounded-3xl p-7 border-2 border-slate-100 shadow-duo space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -1085,7 +1229,7 @@ export const TweaksView: React.FC = () => {
                           <div
                             key={tweak.id}
                             onClick={() => toggleTweak(tweak.id)}
-                            className={`flex items-center justify-between p-2.5 rounded-xl transition-all cursor-pointer select-none border ${
+                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border ${
                               isChecked
                                 ? "bg-indigo-50/50 border-indigo-200"
                                 : "bg-white hover:bg-slate-50 border-slate-100"
@@ -1162,7 +1306,7 @@ export const TweaksView: React.FC = () => {
                           <div
                             key={tweak.id}
                             onClick={() => toggleTweak(tweak.id)}
-                            className={`flex items-center justify-between p-2.5 rounded-xl transition-all cursor-pointer select-none border ${
+                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border ${
                               isChecked
                                 ? "bg-indigo-50/50 border-indigo-200"
                                 : "bg-white hover:bg-slate-50 border-slate-100"
@@ -1239,7 +1383,7 @@ export const TweaksView: React.FC = () => {
                           <div
                             key={tweak.id}
                             onClick={() => toggleTweak(tweak.id)}
-                            className={`flex items-center justify-between p-2.5 rounded-xl transition-all cursor-pointer select-none border ${
+                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border ${
                               isChecked
                                 ? "bg-pink-50/50 border-pink-200"
                                 : "bg-white hover:bg-slate-50 border-slate-100"
@@ -1343,7 +1487,7 @@ export const TweaksView: React.FC = () => {
                       <div
                         key={tweak.id}
                         onClick={() => !isUnsupported && toggleTweak(tweak.id)}
-                        className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer select-none ${
+                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl transition-all cursor-pointer select-none ${
                           isChecked
                             ? "bg-indigo-50/60 hover:bg-indigo-50"
                             : "hover:bg-slate-50"
@@ -1415,7 +1559,7 @@ export const TweaksView: React.FC = () => {
                       <div
                         key={tweak.id}
                         onClick={() => !isUnsupported && toggleTweak(tweak.id)}
-                        className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer select-none ${
+                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl transition-all cursor-pointer select-none ${
                           isChecked
                             ? "bg-amber-50/60 hover:bg-amber-50"
                             : "hover:bg-slate-50"
@@ -1471,7 +1615,7 @@ export const TweaksView: React.FC = () => {
 
                 {/* Bottom Controls: ShutUp10 & DNS */}
                 <div className="pt-4 border-t border-slate-100 space-y-3">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap">
                     <button
                       type="button"
                       disabled={!isShutUp10Installed}

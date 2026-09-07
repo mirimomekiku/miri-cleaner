@@ -3,19 +3,24 @@ import { clsx } from "clsx";
 
 interface TactileButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "success" | "danger" | "secondary" | "ghost";
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "hero";
+  /** Full-capsule shape for the one obvious primary action on a lesson-style
+   * screen (Duolingo's CONTINUE-button silhouette), instead of the standard
+   * chunky-but-square-cornered button used everywhere else. */
+  pill?: boolean;
   children: React.ReactNode;
 }
 
 export const TactileButton: React.FC<TactileButtonProps> = ({
   variant = "primary",
   size = "md",
+  pill = false,
   className,
   children,
   ...props
 }) => {
   const baseStyles =
-    "font-extrabold rounded-2xl flex items-center justify-center gap-2 cursor-pointer select-none transition-all active:translate-y-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-miri-400/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:translate-y-0";
+    "font-extrabold flex items-center justify-center gap-2 cursor-pointer select-none transition-all active:translate-y-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-miri-400/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:translate-y-0";
 
   const variants = {
     primary:
@@ -31,9 +36,10 @@ export const TactileButton: React.FC<TactileButtonProps> = ({
   };
 
   const sizes = {
-    sm: "text-xs px-3 py-1.5 rounded-xl",
-    md: "text-sm px-5 py-2.5",
-    lg: "text-base px-8 py-3.5 text-lg",
+    sm: `text-xs px-3 py-1.5 ${pill ? "rounded-full" : "rounded-xl"}`,
+    md: `text-sm px-5 py-2.5 ${pill ? "rounded-full" : "rounded-2xl"}`,
+    lg: `text-base px-8 py-3.5 text-lg ${pill ? "rounded-full" : "rounded-2xl"}`,
+    hero: `text-lg px-10 py-4 w-full sm:w-auto sm:min-w-[280px] ${pill ? "rounded-full" : "rounded-2xl"}`,
   };
 
   return (

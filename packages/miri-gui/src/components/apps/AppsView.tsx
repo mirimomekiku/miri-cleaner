@@ -20,9 +20,10 @@ import {
   Check,
   Trash2,
   Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { bridge } from "../../lib/bridge";
-import { AppDefinition, AppLeftover } from "../../types";
+import { AppDefinition, AppLeftover, InstalledAppUsage } from "../../types";
 import { AppCatalogSkeleton, CardSkeleton } from "../ui/Skeleton";
 import { formatBytes } from "../../lib/formatters";
 import { ErrorBanner } from "../ui/ErrorBanner";
@@ -40,17 +41,57 @@ export const AppsView: React.FC = () => {
   const isWindows = currentOs === "windows";
 
   const [apps, setApps] = useState<AppDefinition[]>([]);
+  const [installedAppUsage, setInstalledAppUsage] = useState<InstalledAppUsage[]>([]);
   const [selectedAppIds, setSelectedAppIds] = useState<Set<string>>(new Set());
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [linuxBackend, setLinuxBackend] = useState<"flatpak" | "dnf">("flatpak");
   const [customPackageId, setCustomPackageId] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [packsExpanded, setPacksExpanded] = useState(false);
   const errorAction = useAsyncAction();
 
   useEffect(() => {
     bridge.getAppsCatalog().then(setApps).catch(() => {});
+    bridge.getInstalledAppUsage().then(setInstalledAppUsage).catch(() => {});
   }, []);
+
+  const UNUSED_THRESHOLD_DAYS = 90;
+  const suggestedUninstalls = useMemo(
+    () =>
+      installedAppUsage
+        .filter((a) => a.last_used_days_ago >= UNUSED_THRESHOLD_DAYS)
+        .sort((a, b) => b.install_size_bytes - a.install_size_bytes),
+    [installedAppUsage]
+  );
+
+  const handleUninstallSuggested = (app: InstalledAppUsage) => {
+    openDangerModal({
+      title: `Uninstall ${app.name}?`,
+      description: `${app.name} hasn't been opened in ${app.last_used_days_ago} days and takes up ${formatBytes(app.install_size_bytes).formatted}. This removes it from your system; user data files are preserved.`,
+      requiresElevation: isWindows,
+      riskLevel: "moderate",
+      onConfirm: async () => {
+        setIsProcessing(true);
+        addLog(`[Suggested Uninstalls] Uninstalling ${app.name} (unused ${app.last_used_days_ago}d)...`);
+        await errorAction.run(
+          async () => {
+            const [report] = await bridge.uninstallApps([app.id]);
+            addLog(`[Suggested Uninstalls] ${report?.details ?? "Done"}`);
+            const updated = await bridge.getInstalledAppUsage();
+            setInstalledAppUsage(updated);
+          },
+          {
+            formatError: (e) => {
+              addLog(`[Suggested Uninstalls] Error uninstalling ${app.name}: ${e}`);
+              return `Uninstalling ${app.name} failed: ${e instanceof Error ? e.message : String(e)}`;
+            },
+          }
+        );
+        setIsProcessing(false);
+      },
+    });
+  };
   const [activeSubTab, setActiveSubTab] = useState<"catalog" | "leftovers">("catalog");
   const [leftovers, setLeftovers] = useState<AppLeftover[]>([]);
   const [isLoadingLeftovers, setIsLoadingLeftovers] = useState(false);
@@ -333,6 +374,183 @@ export const AppsView: React.FC = () => {
         </button>
       </div>
 
+      {/* ========================================================================= */}
+      {/* SUGGESTED UNINSTALLS (usage-based, distinct from orphaned leftovers)      */}
+      {/* Casual: this IS the one dominant focal module -- mascot + headline +     */}
+      {/* the list, with Quick Starter Packs tucked behind an expand toggle below. */}
+      {/* Advanced: unchanged compact card, just with a responsive row fix.        */}
+      {/* ========================================================================= */}
+      {viewMode === "casual" ? (
+        <div className="animate-slide-down bg-gradient-to-b from-white to-amber-50/60 rounded-[2rem] p-10 sm:p-12 border-2 border-amber-100 shadow-duo space-y-6">
+          <div className="flex flex-col items-center text-center gap-3">
+            <Mascot mood={suggestedUninstalls.length > 0 ? "alert" : "happy"} size="lg" />
+            <PixelBadge label="Suggested Uninstalls" variant="pink" />
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              {suggestedUninstalls.length === 0
+                ? "Nothing Gathering Dust!"
+                : `${suggestedUninstalls.length} App${
+                    suggestedUninstalls.length > 1 ? "s" : ""
+                  } Haven't Been Opened in ${UNUSED_THRESHOLD_DAYS}+ Days`}
+            </h2>
+            <p className="text-sm font-semibold text-slate-600 max-w-md leading-relaxed">
+              {suggestedUninstalls.length === 0
+                ? "Every installed app has been opened recently -- nothing to suggest removing right now."
+                : `Still fully installed and safe to keep -- nothing here is removed automatically. Free up ${
+                    formatBytes(
+                      suggestedUninstalls.reduce((acc, a) => acc + a.install_size_bytes, 0)
+                    ).formatted
+                  } whenever you're ready.`}
+            </p>
+          </div>
+
+          {suggestedUninstalls.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left">
+              {suggestedUninstalls.map((app) => (
+                <div
+                  key={app.id}
+                  className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
+                >
+                  <div className="min-w-0">
+                    <div className="font-black text-slate-900 text-sm truncate">{app.name}</div>
+                    <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                      Not opened in {app.last_used_days_ago} days ·{" "}
+                      {formatBytes(app.install_size_bytes).formatted}
+                    </div>
+                  </div>
+                  <TactileButton
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleUninstallSuggested(app)}
+                    disabled={isProcessing}
+                    className="shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                    Uninstall
+                  </TactileButton>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Quick Starter Packs -- tucked behind an expand toggle, per the        */}
+          {/* lesson-screen brief, so it no longer competes with the focal module. */}
+          <div className="pt-2 border-t border-amber-100/70">
+            <button
+              type="button"
+              onClick={() => setPacksExpanded((v) => !v)}
+              aria-expanded={packsExpanded}
+              className="w-full flex items-center justify-center gap-2 text-xs font-black text-slate-600 hover:text-slate-900 py-2 group"
+            >
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              <span>{packsExpanded ? "Hide Quick Starter Packs" : "Show Quick Starter Packs"}</span>
+              <ChevronDown
+                className={`w-4 h-4 text-slate-400 transition-transform group-hover:text-slate-700 ${
+                  packsExpanded ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            <div className={`collapsible-rows ${packsExpanded ? "is-expanded" : ""}`}>
+              <div className="collapsible-inner">
+                <div className="pt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+                  <button
+                    type="button"
+                    onClick={() => applyPreset("dev")}
+                    className="flex items-center gap-3 p-3.5 rounded-2xl border-2 border-indigo-100 bg-indigo-50/40 hover:bg-indigo-50 transition-all text-left shadow-duo-sm active:translate-y-[1px]"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 font-bold">
+                      <Code2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-black text-slate-900 text-xs">Dev Workstation</div>
+                      <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                        VS Code, Git, Podman, Node.js
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => applyPreset("gaming")}
+                    className="flex items-center gap-3 p-3.5 rounded-2xl border-2 border-purple-100 bg-purple-50/40 hover:bg-purple-50 transition-all text-left shadow-duo-sm active:translate-y-[1px]"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0 font-bold">
+                      <Gamepad2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-black text-slate-900 text-xs">Gamer Pack</div>
+                      <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                        Steam, Heroic, Discord, OBS
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => applyPreset("privacy")}
+                    className="flex items-center gap-3 p-3.5 rounded-2xl border-2 border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50 transition-all text-left shadow-duo-sm active:translate-y-[1px]"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 font-bold">
+                      <Globe className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-black text-slate-900 text-xs">Privacy Starter</div>
+                      <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                        Brave, Bitwarden, BleachBit
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        suggestedUninstalls.length > 0 && (
+          <div className="bg-white rounded-3xl p-6 border-2 border-amber-100 shadow-duo space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <Package className="w-5 h-5 text-amber-500" />
+                  <span>Suggested Uninstalls</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-md">
+                  Installed apps you haven't opened in {UNUSED_THRESHOLD_DAYS}+ days -- still fully
+                  installed, just gathering dust. Nothing here is removed automatically.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {suggestedUninstalls.map((app) => (
+                <div
+                  key={app.id}
+                  className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
+                >
+                  <div className="min-w-0">
+                    <div className="font-black text-slate-900 text-sm truncate">{app.name}</div>
+                    <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                      Not opened in {app.last_used_days_ago} days ·{" "}
+                      {formatBytes(app.install_size_bytes).formatted}
+                    </div>
+                  </div>
+                  <TactileButton
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleUninstallSuggested(app)}
+                    disabled={isProcessing}
+                    className="shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                    Uninstall
+                  </TactileButton>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      )}
+
       {/* Leftovers Sub-View */} {activeSubTab === "leftovers" ? (
         <div className="space-y-4">
           <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -396,65 +614,6 @@ export const AppsView: React.FC = () => {
         </div>
       ) : (
         <>
-
-      {viewMode === "casual" && (
-        <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
-          <div className="flex items-center gap-2 font-black text-slate-900 text-sm">
-            <Sparkles className="w-4 h-4 text-amber-500" />
-            <span>Quick Starter Packs (1-Click Selection)</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <button
-              type="button"
-              onClick={() => applyPreset("dev")}
-              className="flex items-center gap-3 p-3.5 rounded-2xl border-2 border-indigo-100 bg-indigo-50/40 hover:bg-indigo-50 transition-all text-left shadow-duo-sm active:translate-y-[1px]"
-            >
-              <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 font-bold">
-                <Code2 className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="font-black text-slate-900 text-xs">🚀 Dev Workstation</div>
-                <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
-                  VS Code, Git, Podman, Node.js
-                </div>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => applyPreset("gaming")}
-              className="flex items-center gap-3 p-3.5 rounded-2xl border-2 border-purple-100 bg-purple-50/40 hover:bg-purple-50 transition-all text-left shadow-duo-sm active:translate-y-[1px]"
-            >
-              <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0 font-bold">
-                <Gamepad2 className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="font-black text-slate-900 text-xs">🎮 Gamer Pack</div>
-                <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
-                  Steam, Heroic, Discord, OBS
-                </div>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => applyPreset("privacy")}
-              className="flex items-center gap-3 p-3.5 rounded-2xl border-2 border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50 transition-all text-left shadow-duo-sm active:translate-y-[1px]"
-            >
-              <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 font-bold">
-                <Globe className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="font-black text-slate-900 text-xs">🛡️ Privacy Starter</div>
-                <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
-                  Brave, Bitwarden, BleachBit
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Category Tabs & Search Bar */}
       <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
@@ -651,6 +810,7 @@ export const AppsView: React.FC = () => {
             <TactileButton
               variant="primary"
               size="md"
+              pill={viewMode === "casual"}
               onClick={handleInstallSelected}
               disabled={isProcessing}
             >

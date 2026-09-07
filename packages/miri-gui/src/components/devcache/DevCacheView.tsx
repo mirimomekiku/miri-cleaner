@@ -9,12 +9,12 @@ import {
   Cpu,
   Sparkles,
   Trash2,
-  Info,
   FolderOpen,
   Lock,
   Play,
   ShieldCheck,
   CheckCircle2,
+  ChevronDown,
 } from "lucide-react";
 import { bridge } from "../../lib/bridge";
 import { formatBytes } from "../../lib/formatters";
@@ -42,6 +42,7 @@ export const DevCacheView: React.FC = () => {
   const [dryRun, setDryRun] = useState(false);
   const [successCelebration, setSuccessCelebration] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [safetyExpanded, setSafetyExpanded] = useState(false);
   const errorAction = useAsyncAction();
 
   // Targets in dev_caches category
@@ -158,9 +159,14 @@ export const DevCacheView: React.FC = () => {
       {/* ========================================================================= */}
       {viewMode === "casual" ? (
         <>
-          {/* Top Header */}
-          <div className="bg-gradient-to-br from-white to-emerald-50/40 rounded-3xl p-8 border-2 border-emerald-100 shadow-duo flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-6 w-full md:w-auto min-w-0">
+          {/* ==================================================================== */}
+          {/* ONE HERO MODULE -- lesson-screen grammar: mascot as focal anchor,     */}
+          {/* one headline, a consolidated stat strip, and one obvious pill        */}
+          {/* primary action. Safety rationale collapses behind a toggle instead   */}
+          {/* of three parallel same-size explainer cards.                        */}
+          {/* ==================================================================== */}
+          <div className="bg-gradient-to-b from-white to-miri-50/60 rounded-[2rem] p-10 sm:p-12 border-2 border-miri-100 shadow-duo text-center space-y-6">
+            <div className="flex justify-center">
               <Mascot
                 mood={
                   successCelebration
@@ -173,113 +179,140 @@ export const DevCacheView: React.FC = () => {
                 }
                 size="lg"
               />
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <PixelBadge label="Dev Toolchains" variant="green" />
-                  <span className="text-xs font-bold text-slate-400">
-                    Cargo • Node/pnpm • Docker/Podman • Python • Go • ccache
-                  </span>
-                </div>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-                  Developer Ecosystem Caches
-                </h2>
-                <p className="text-sm font-semibold text-slate-500 mt-1 max-w-md">
-                  Clean accumulated build artifacts, package registries, and container
-                  layers safely without touching your source code or git trees.
-                </p>
-              </div>
             </div>
 
-            {/* Total Reclaimable Pill */}
-            <div className="bg-white rounded-2xl p-4 border-2 border-slate-100 shadow-duo-sm text-center min-w-[140px]">
-              <div className="text-3xl font-black text-slate-800">
-                {totalDevFormatted.value}{" "}
-                <span className="text-sm font-bold text-slate-400">{totalDevFormatted.unit}</span>
-              </div>
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
-                Caches Stored
-              </div>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <PixelBadge label="Dev Toolchains" variant="green" />
+              <span className="text-xs font-bold text-slate-500">
+                Cargo • Node/pnpm • Docker/Podman • Python • Go • ccache
+              </span>
             </div>
-          </div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+              Developer Ecosystem Caches
+            </h2>
+            <p className="text-sm font-semibold text-slate-600 max-w-md mx-auto leading-relaxed">
+              Clean accumulated build artifacts, package registries, and container
+              layers safely without touching your source code or git trees.
+            </p>
 
-          {/* Friendly Explanation Card */}
-          <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo-sm space-y-3">
-            <div className="flex items-center gap-2.5 text-slate-800 font-extrabold text-sm">
-              <Info className="w-4 h-4 text-emerald-600" />
-              <span>Safe for active development</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600 leading-relaxed">
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
-                <div className="font-black text-slate-800 mb-1 flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  Source Code Protected
+            {/* Consolidated stat strip -- caches stored, selected, and a toggle
+                for the safety rationale, instead of stacking separate cards. */}
+            <div className="flex items-center justify-center flex-wrap gap-x-8 gap-y-3 pt-1">
+              <div className="text-center">
+                <div className="text-2xl font-black text-slate-800 tabular-nums">
+                  {totalDevFormatted.value}
+                  <span className="text-xs font-bold text-slate-500 ml-0.5">{totalDevFormatted.unit}</span>
                 </div>
-                <p>
-                  Only global artifact stores and build cache directories are cleaned.
-                  Your git repositories and local code remain completely untouched.
-                </p>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Caches Stored</div>
               </div>
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
-                <div className="font-black text-slate-800 mb-1 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  Auto-Regenerated
+              <div className="text-center">
+                <div className="text-2xl font-black text-slate-800 tabular-nums">
+                  {selectedFormatted.value}
+                  <span className="text-xs font-bold text-slate-500 ml-0.5">{selectedFormatted.unit}</span>
                 </div>
-                <p>
-                  Compilers (cargo, npm, go) automatically download and rebuild caches
-                  the next time you compile your projects.
-                </p>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Selected to Clean</div>
               </div>
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
-                <div className="font-black text-slate-800 mb-1 flex items-center gap-1.5">
-                  <Cpu className="w-3.5 h-3.5 text-emerald-600" />
-                  Free Tens of Gigabytes
-                </div>
-                <p>
-                  Dangling Docker layers and untracked npm caches can easily devour
-                  20-50 GB of disk over months of coding.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Bar */}
-          <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2.5 text-xs font-bold text-slate-700 bg-slate-50 px-3.5 py-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors">
-                <PixelCheckbox
-                  checked={dryRun}
-                  onChange={setDryRun}
-                  label="Toggle dry run simulation"
-                />
-                <span>Dry-Run Mode (Simulation only, no file deletion)</span>
-              </label>
-            </div>
-
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <TactileButton
-                variant="secondary"
-                onClick={handleScan}
-                disabled={isScanning}
-                className="flex-1 sm:flex-none"
+              <button
+                type="button"
+                onClick={() => setSafetyExpanded((v) => !v)}
+                aria-expanded={safetyExpanded}
+                className="text-center group"
               >
-                <Sparkles className={`w-4 h-4 ${isScanning ? "animate-spin" : ""}`} />
-                {isScanning ? "Scanning..." : "Scan Toolchains"}
-              </TactileButton>
+                <div className="text-2xl font-black text-emerald-600 flex items-center gap-1 justify-center">
+                  <ShieldCheck className="w-5 h-5" />
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${safetyExpanded ? "rotate-180" : ""}`} />
+                </div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-slate-700">
+                  {safetyExpanded ? "Hide Safety Info" : "Why It's Safe"}
+                </div>
+              </button>
+            </div>
 
-              <TactileButton
-                variant="primary"
-                onClick={handleClean}
-                disabled={isCleaning || selectedDevTargets.length === 0}
-                size="lg"
-                className="flex-1 sm:flex-none"
-              >
-                <Trash2 className="w-5 h-5" />
-                {isCleaning
-                  ? "Cleaning Safely..."
-                  : dryRun
-                  ? `Simulate Clean (${selectedFormatted.formatted})`
-                  : `Clean Dev Caches (${selectedFormatted.formatted})`}
-              </TactileButton>
+            {/* Secondary safety rationale tucked behind expansion */}
+            <div className={`collapsible-rows ${safetyExpanded ? "is-expanded" : ""}`}>
+              <div className="collapsible-inner">
+                <div className="pt-4 text-left space-y-3">
+                  <div className="flex items-start gap-2.5 text-xs text-slate-600 leading-relaxed">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <p>
+                      <span className="font-black text-slate-800">Source Code Protected. </span>
+                      Only global artifact stores and build cache directories are cleaned.
+                      Your git repositories and local code remain completely untouched.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2.5 text-xs text-slate-600 leading-relaxed">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <p>
+                      <span className="font-black text-slate-800">Auto-Regenerated. </span>
+                      Compilers (cargo, npm, go) automatically download and rebuild caches
+                      the next time you compile your projects.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2.5 text-xs text-slate-600 leading-relaxed">
+                    <Cpu className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <p>
+                      <span className="font-black text-slate-800">Free Tens of Gigabytes. </span>
+                      Dangling Docker layers and untracked npm caches can easily devour
+                      20-50 GB of disk over months of coding.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ONE big pill primary action -- Scan first, then Clean once ready */}
+            <div className="flex flex-col items-center gap-3 pt-2">
+              {!scanResult || devTargets.length === 0 ? (
+                <TactileButton
+                  variant="primary"
+                  size="hero"
+                  pill
+                  onClick={handleScan}
+                  disabled={isScanning}
+                  aria-busy={isScanning}
+                >
+                  <Sparkles className={`w-5 h-5 shrink-0 ${isScanning ? "animate-spin" : ""}`} />
+                  {isScanning ? "Scanning..." : "Scan Toolchains"}
+                </TactileButton>
+              ) : (
+                <TactileButton
+                  variant="primary"
+                  size="hero"
+                  pill
+                  onClick={handleClean}
+                  disabled={isCleaning || selectedDevTargets.length === 0}
+                  aria-busy={isCleaning}
+                >
+                  <Trash2 className="w-5 h-5 shrink-0" />
+                  {isCleaning
+                    ? "Cleaning Safely..."
+                    : dryRun
+                    ? `Simulate Clean (${selectedFormatted.formatted})`
+                    : `Clean Dev Caches (${selectedFormatted.formatted})`}
+                </TactileButton>
+              )}
+
+              {/* Secondary actions -- visually subordinate to the one primary CTA */}
+              <div className="flex items-center gap-4 flex-wrap justify-center text-xs font-bold">
+                {scanResult && devTargets.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleScan}
+                    disabled={isScanning || isCleaning}
+                    className="text-slate-500 hover:text-slate-800 underline decoration-dotted underline-offset-4 disabled:opacity-50"
+                  >
+                    Re-scan
+                  </button>
+                )}
+                <label className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-800 cursor-pointer">
+                  <PixelCheckbox
+                    checked={dryRun}
+                    onChange={setDryRun}
+                    label="Toggle dry run simulation"
+                  />
+                  Dry-run simulation only
+                </label>
+              </div>
             </div>
           </div>
 
@@ -413,7 +446,7 @@ export const DevCacheView: React.FC = () => {
                 return (
                   <div
                     key={target.id}
-                    className={`bg-white rounded-2xl p-4 border-2 transition-all flex items-center justify-between gap-4 ${
+                    className={`bg-white rounded-2xl p-4 border-2 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${
                       isSelected
                         ? "border-miri-400 shadow-duo-sm"
                         : "border-slate-100 hover:border-slate-200"
@@ -426,7 +459,7 @@ export const DevCacheView: React.FC = () => {
                         label={`Select ${target.name}`}
                       />
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="font-black text-slate-800 text-sm">
                             {target.name}
                           </h4>
@@ -447,7 +480,7 @@ export const DevCacheView: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="text-right shrink-0">
+                    <div className="text-right shrink-0 pl-8 sm:pl-0">
                       <div className="font-pixel text-xs text-slate-800 font-bold">
                         {targetFormatted}
                       </div>

@@ -9,6 +9,11 @@ export interface DangerModalConfig {
   title: string;
   description: string;
   target?: CleanTarget;
+  /** The full set of targets a bulk-clean confirmation covers, for the
+   * per-target "what exactly will happen" preview. Single-target/tweak
+   * confirmations keep using `target` above; this is additive, not a
+   * replacement. */
+  targets?: CleanTarget[];
   requiresElevation: boolean;
   riskLevel: RiskLevel;
   onConfirm: () => void;

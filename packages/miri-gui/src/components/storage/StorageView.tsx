@@ -8,14 +8,12 @@ import {
   Copy,
   FolderOpen,
   FileText,
-  Sparkles,
-  Trash2,
   ShieldCheck,
   CheckCircle2,
-  Info,
   RefreshCw,
   FolderTree,
   Zap,
+  ChevronDown,
 } from "lucide-react";
 import { bridge } from "../../lib/bridge";
 import { XRayReport, DuplicateGroup } from "../../types";
@@ -33,6 +31,7 @@ export const StorageView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [targetPathInput, setTargetPathInput] = useState("");
   const [isReflinking, setIsReflinking] = useState(false);
+  const [pathExpanded, setPathExpanded] = useState(false);
   const errorAction = useAsyncAction();
 
   useEffect(() => {
@@ -121,96 +120,149 @@ export const StorageView: React.FC = () => {
         />
       )}
 
-      {/* Top Hero Card */}
-      <div className="bg-white rounded-3xl p-8 border-2 border-slate-100 shadow-duo flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-6 w-full md:w-auto min-w-0">
+      {/* ========================================================================= */}
+      {/* ONE HERO MODULE -- lesson-screen grammar: a single dominant focal card     */}
+      {/* replacing the old header card + metric pill + separate sub-nav bar. The   */}
+      {/* mascot anchors mood, stats collapse into a slim strip, the custom-path    */}
+      {/* control tucks behind an expand toggle, and one big pill action drives    */}
+      {/* whichever operation matters most for the active sub-tab.                 */}
+      {/* ========================================================================= */}
+      <div className="bg-gradient-to-b from-white to-amber-50/50 rounded-[2rem] p-10 sm:p-12 border-2 border-amber-100 shadow-duo text-center space-y-6">
+        <div className="flex justify-center">
           <Mascot mood={isLoading ? "scanning" : "happy"} size="lg" />
-          <div>
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <PixelBadge label="Storage & Duplicates" variant="yellow" />
-              <span className="text-xs font-bold text-slate-500">
-                Visual Disk Treemap • Largest Files • Duplicate Extents
-              </span>
+        </div>
+
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          <PixelBadge label="Storage & Duplicates" variant="yellow" />
+          <span className="text-xs font-bold text-slate-500">
+            Visual Disk Treemap • Largest Files • Duplicate Extents
+          </span>
+        </div>
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+          Storage Intelligence & Deduplication
+        </h2>
+        <p className="text-sm font-semibold text-slate-500 max-w-lg mx-auto leading-relaxed">
+          Visualize where your disk space goes with interactive treemaps, uncover
+          gigabyte-sized files, and eliminate duplicate files with Btrfs CoW.
+        </p>
+
+        {/* Slim consolidated stat strip -- both totals always visible, with the
+            custom-path control tucked behind expansion instead of a third
+            parallel card. */}
+        <div className="flex items-center justify-center flex-wrap gap-x-8 gap-y-3 pt-1">
+          <div className="text-center">
+            <div className="text-2xl font-black text-amber-600 tabular-nums">
+              {xrayReport ? formatBytes(xrayReport.total_scanned_bytes).formatted : "--"}
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-              Storage Intelligence & Deduplication
-            </h2>
-            <p className="text-sm font-semibold text-slate-500 mt-1 max-w-lg">
-              Visualize where your disk space goes with interactive treemaps, uncover
-              gigabyte-sized files, and eliminate duplicate files with Btrfs CoW.
-            </p>
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Total Analyzed
+            </div>
           </div>
-        </div>
-
-        {/* Action / Metric Pill */}
-        <div className="bg-white rounded-2xl p-4 border-2 border-slate-100 shadow-duo-sm text-center min-w-[140px]">
-          <div className="text-2xl font-black text-slate-800">
-            {activeSubTab === "xray" && xrayReport
-              ? formatBytes(xrayReport.total_scanned_bytes).formatted
-              : totalWastedFormatted}
+          <div className="text-center">
+            <div className="text-2xl font-black text-rose-600 tabular-nums">{totalWastedFormatted}</div>
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Wasted by Copies
+            </div>
           </div>
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
-            {activeSubTab === "xray" ? "Total Analyzed" : "Wasted by Copies"}
-          </div>
-        </div>
-      </div>
-
-      {/* Sub-tab Navigation and Scan Controls */}
-      <div className="bg-white rounded-2xl p-3 border-2 border-slate-100 shadow-duo-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-2 p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto">
           <button
-            onClick={() => setActiveSubTab("xray")}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
-              activeSubTab === "xray"
-                ? "bg-white text-slate-900 shadow-duo-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
+            type="button"
+            onClick={() => setPathExpanded((v) => !v)}
+            aria-expanded={pathExpanded}
+            className="text-center group"
           >
-            <FolderTree className="w-4 h-4 text-amber-500" />
-            <span>Storage Breakdown</span>
-          </button>
-          <button
-            onClick={() => setActiveSubTab("twins")}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
-              activeSubTab === "twins"
-                ? "bg-white text-slate-900 shadow-duo-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Copy className="w-4 h-4 text-indigo-500" />
-            <span>Duplicate Finder</span>
+            <div className="text-2xl font-black text-slate-400 flex items-center gap-1 justify-center">
+              <FolderOpen className="w-5 h-5" />
+              <ChevronDown className={`w-4 h-4 transition-transform ${pathExpanded ? "rotate-180" : ""}`} />
+            </div>
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-slate-700">
+              {pathExpanded ? "Hide Path" : "Custom Path"}
+            </div>
           </button>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-          <input
-            type="text"
-            placeholder="Custom path (e.g. ~/Downloads)..."
-            aria-label="Custom directory path to inspect"
-            value={targetPathInput}
-            onChange={(e) => setTargetPathInput(e.target.value)}
-            className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-400 w-48"
-          />
-          <TactileButton
-            variant="secondary"
-            size="sm"
-            onClick={loadData}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-            <span>{isLoading ? "Scanning..." : "Re-Scan"}</span>
-          </TactileButton>
+        {/* Secondary control tucked behind expansion, per the lesson-screen brief */}
+        <div className={`collapsible-rows ${pathExpanded ? "is-expanded" : ""}`}>
+          <div className="collapsible-inner">
+            <div className="pt-4 flex items-center justify-center">
+              <input
+                type="text"
+                placeholder="Custom path (e.g. ~/Downloads)..."
+                aria-label="Custom directory path to inspect"
+                value={targetPathInput}
+                onChange={(e) => setTargetPathInput(e.target.value)}
+                className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-400 w-full max-w-xs"
+              />
+            </div>
+          </div>
+        </div>
 
-          {activeSubTab === "twins" && (
+        {/* Sub-tab segmented toggle */}
+        <div className="flex justify-center">
+          <div className="inline-flex items-center gap-2 p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto">
+            <button
+              onClick={() => setActiveSubTab("xray")}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
+                activeSubTab === "xray"
+                  ? "bg-white text-slate-900 shadow-duo-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <FolderTree className="w-4 h-4 text-amber-500" />
+              <span>Storage Breakdown</span>
+            </button>
+            <button
+              onClick={() => setActiveSubTab("twins")}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
+                activeSubTab === "twins"
+                  ? "bg-white text-slate-900 shadow-duo-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Copy className="w-4 h-4 text-indigo-500" />
+              <span>Duplicate Finder</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ONE big pill primary action -- Reflink once duplicates are found and
+            ready to dedupe, otherwise Re-Scan is the obvious next step. */}
+        <div className="flex flex-col items-center gap-3 pt-2">
+          {activeSubTab === "twins" && duplicateGroups.length > 0 ? (
             <TactileButton
               variant="primary"
-              size="sm"
+              size="hero"
+              pill
               onClick={handleReflinkAll}
-              disabled={isReflinking || duplicateGroups.length === 0}
+              disabled={isReflinking}
+              aria-busy={isReflinking}
             >
-              <Zap className="w-4 h-4" />
-              <span>{isReflinking ? "Reflinking..." : "Reflink Duplicates"}</span>
+              <Zap className="w-5 h-5 shrink-0" />
+              {isReflinking ? "Reflinking..." : `Reflink Duplicates (${totalWastedFormatted})`}
             </TactileButton>
+          ) : (
+            <TactileButton
+              variant="primary"
+              size="hero"
+              pill
+              onClick={loadData}
+              disabled={isLoading}
+              aria-busy={isLoading}
+            >
+              <RefreshCw className={`w-5 h-5 shrink-0 ${isLoading ? "animate-spin" : ""}`} />
+              {isLoading ? "Scanning..." : "Re-Scan"}
+            </TactileButton>
+          )}
+
+          {/* Secondary action -- visually subordinate to the one primary CTA */}
+          {activeSubTab === "twins" && duplicateGroups.length > 0 && (
+            <button
+              type="button"
+              onClick={loadData}
+              disabled={isLoading}
+              className="text-xs font-bold text-slate-500 hover:text-slate-800 underline decoration-dotted underline-offset-4 disabled:opacity-50"
+            >
+              Re-Scan
+            </button>
           )}
         </div>
       </div>

@@ -27,6 +27,8 @@ import {
   XRayReportSchema,
   AppLeftover,
   AppLeftoverSchema,
+  InstalledAppUsage,
+  InstalledAppUsageSchema,
   AutostartItem,
   AutostartItemSchema,
   DuplicateGroup,
@@ -85,6 +87,1015 @@ const mockAuditEntries: AuditEntry[] = [
     rollback_payload: {},
     is_rolled_back: false,
   },
+];
+
+const mockAutostartItems: AutostartItem[] = [
+  { id: "discord.desktop", name: "Discord", command: "flatpak run com.discordapp.Discord", enabled: true, file_path: "~/.config/autostart/discord.desktop", impact: "high", source: "user_autostart" },
+  { id: "steam.desktop", name: "Steam Client", command: "steam -silent", enabled: true, file_path: "~/.config/autostart/steam.desktop", impact: "high", source: "user_autostart" },
+  { id: "spotify.desktop", name: "Spotify", command: "spotify --minimized", enabled: false, file_path: "~/.config/autostart/spotify.desktop", impact: "medium", source: "user_autostart" },
+  { id: "nextcloud.desktop", name: "Nextcloud Desktop", command: "nextcloud --background", enabled: true, file_path: "~/.config/autostart/nextcloud.desktop", impact: "medium", source: "user_autostart" },
+  { id: "gamemode.desktop", name: "Feral GameMode Indicator", command: "gamemoded", enabled: true, file_path: "/etc/xdg/autostart/gamemoded.desktop", impact: "low", source: "system_autostart" },
+];
+
+const mockLinuxTweaks: LinuxTweakItem[] = [
+  {
+    id: "fedora_dnf_speed",
+    name: "DNF Speedup - Parallel Downloads & Fastest Mirror",
+    category: "essential",
+    description: "Configures max_parallel_downloads=10, fastestmirror=True, and defaultyes=True in /etc/dnf/dnf.conf to speed up repository queries.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-dnf-speed --apply"
+  },
+  {
+    id: "fedora_rpmfusion",
+    name: "RPM Fusion - Free & Non-Free Repositories",
+    category: "essential",
+    description: "Enables RPM Fusion Free and Non-Free repositories for accessing proprietary drivers, Steam, Discord, and codecs.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-rpmfusion --apply"
+  },
+  {
+    id: "fedora_appstream_core",
+    name: "App-Stream Metadata - Upgrade Core Repositories",
+    category: "essential",
+    description: "Upgrades core app-stream metadata packages for software center component discovery.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: true,
+    is_applicable: true,
+    command: "sudo fedora-appstream-core --apply"
+  },
+  {
+    id: "fedora_flathub",
+    name: "Flathub - Enable Unfiltered App Repository",
+    category: "essential",
+    description: "Adds full, unfiltered Flathub repository access for Flatpak desktop applications.",
+    requires_root: false,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-flathub --apply"
+  },
+  {
+    id: "fedora_multimedia_codecs",
+    name: "Multimedia Codecs - Full FFmpeg & GStreamer",
+    category: "essential",
+    description: "Swaps ffmpeg-free for full non-free FFmpeg and installs GStreamer plugins for complete audio/video playback.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-multimedia-codecs --apply"
+  },
+  {
+    id: "fedora_disable_nm_wait",
+    name: "Boot Speed - Disable NetworkManager-wait-online",
+    category: "optimization",
+    description: "Disables NetworkManager-wait-online.service, cutting system boot time by ~15s-20s.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: true,
+    is_applicable: true,
+    command: "sudo fedora-disable-nm-wait --apply"
+  },
+  {
+    id: "fedora_disable_gnome_software_autostart",
+    name: "GNOME Software - Disable Background Startup & Search",
+    category: "optimization",
+    description: "Stops org.gnome.Software from autostarting on boot (saving 100MB-900MB RAM) and disables search background indexing.",
+    requires_root: false,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-disable-gnome-software-autostart --apply"
+  },
+  {
+    id: "fedora_hw_video_accel",
+    name: "Hardware Video Acceleration - VA-API & FFmpeg-Libs",
+    category: "optimization",
+    description: "Installs ffmpeg-libs, libva, and libva-utils for hardware-accelerated video decoding (lowers CPU usage and laptop heat).",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-hw-video-accel --apply"
+  },
+  {
+    id: "fedora_openh264_firefox",
+    name: "Firefox - Cisco OpenH264 & WebRTC Video Codec",
+    category: "optimization",
+    description: "Installs openh264, gstreamer1-plugin-openh264, and mozilla-openh264 with Cisco OpenH264 repo enabled.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: true,
+    is_applicable: true,
+    command: "sudo fedora-openh264-firefox --apply"
+  },
+  {
+    id: "fedora_utc_clock",
+    name: "Hardware Clock - Set Real-Time Clock to UTC",
+    category: "optimization",
+    description: "Ensures the system hardware RTC clock is set to UTC to maintain accurate cross-boot time.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-utc-clock --apply"
+  },
+  {
+    id: "fedora_fuse_appimage",
+    name: "AppImage Support - FUSE Filesystem Compatibility",
+    category: "optimization",
+    description: "Installs fuse-libs so portable AppImage binaries launch seamlessly.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-fuse-appimage --apply"
+  },
+  {
+    id: "fedora_archive_utilities",
+    name: "Archive Support - 7-Zip & Unrar Extraction Suite",
+    category: "optimization",
+    description: "Installs p7zip, p7zip-plugins, and unrar for opening .7z, .rar, and encrypted archives.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: true,
+    is_applicable: true,
+    command: "sudo fedora-archive-utilities --apply"
+  },
+  {
+    id: "fedora_firefox_clean_startpage",
+    name: "Firefox - Restore Standard Blank/Home Start Page",
+    category: "optimization",
+    description: "Removes default Red Hat / Fedora landing page redirection, restoring standard Firefox start page.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-firefox-clean-startpage --apply"
+  },
+  {
+    id: "fedora_pop_shell",
+    name: "GNOME Extension - Pop Shell Tiling Window Manager",
+    category: "gnome_extension",
+    description: "Installs System76 Pop Shell extension for keyboard-driven auto-tiling windows.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-pop-shell --apply"
+  },
+  {
+    id: "fedora_gsconnect_firewall",
+    name: "GSConnect / KDE Connect - Open Firewalld Service",
+    category: "optimization",
+    description: "Installs nautilus-python and opens kdeconnect service in firewalld for seamless Android phone sync.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: true,
+    is_applicable: true,
+    command: "sudo fedora-gsconnect-firewall --apply"
+  },
+  {
+    id: "fedora_gnome_ext_appindicator",
+    name: "GNOME Extension - AppIndicator & Tray Icons",
+    category: "gnome_extension",
+    description: "Adds system tray icons for background applications like Steam, Discord, and Telegram to the GNOME top bar.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-gnome-ext-appindicator --apply"
+  },
+  {
+    id: "fedora_gnome_ext_dash_to_dock",
+    name: "GNOME Extension - Dash to Dock",
+    category: "gnome_extension",
+    description: "Transforms the default GNOME dash into a customizable, always-accessible desktop application dock.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-gnome-ext-dash-to-dock --apply"
+  },
+  {
+    id: "fedora_gnome_ext_blur_my_shell",
+    name: "GNOME Extension - Blur My Shell",
+    category: "gnome_extension",
+    description: "Adds sleek frosted-glass blur effects to the GNOME top panel, dash dock, and window overview.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: true,
+    is_applicable: true,
+    command: "sudo fedora-gnome-ext-blur-my-shell --apply"
+  },
+  {
+    id: "fedora_gnome_ext_vitals",
+    name: "GNOME Extension - Vitals System Monitor",
+    category: "gnome_extension",
+    description: "Displays real-time hardware telemetry: CPU, RAM, GPU temperature, fan speed, and bandwidth in the top bar.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-gnome-ext-vitals --apply"
+  },
+  {
+    id: "fedora_gnome_ext_caffeine",
+    name: "GNOME Extension - Caffeine Sleep Inhibitor",
+    category: "gnome_extension",
+    description: "Quick toggle in the top bar to inhibit screen blanking, screensaver, and auto-sleep.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-gnome-ext-caffeine --apply"
+  },
+  {
+    id: "fedora_gnome_ext_just_perfection",
+    name: "GNOME Extension - Just Perfection",
+    category: "gnome_extension",
+    description: "Detailed tweak tool to customize GNOME Shell UI elements, animation speeds, panel sizes, and visibility.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: true,
+    is_applicable: true,
+    command: "sudo fedora-gnome-ext-just-perfection --apply"
+  },
+  {
+    id: "fedora_gnome_ext_user_themes",
+    name: "GNOME Extension - User Themes",
+    category: "gnome_extension",
+    description: "Enables applying custom GTK and Shell themes directly from ~/.themes directory.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-gnome-ext-user-themes --apply"
+  },
+  {
+    id: "fedora_gnome_extension_manager",
+    name: "GNOME Extension Manager (GUI)",
+    category: "gnome_extension",
+    description: "Native desktop application for searching, installing, and updating GNOME Shell extensions without a browser plugin.",
+    requires_root: false,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-gnome-extension-manager --apply"
+  },
+  {
+    id: "fedora_gnome_tweaks_extra",
+    name: "GNOME Tweaks & Extra Themes Suite",
+    category: "optimization",
+    description: "Installs GNOME Tweaks for window titlebar buttons (minimize/maximize) and gnome-themes-extra.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: true,
+    is_applicable: true,
+    command: "sudo fedora-gnome-tweaks-extra --apply"
+  },
+  {
+    id: "fedora_zram_optimization",
+    name: "ZRAM Compressed Swap Optimization (ZSTD)",
+    category: "optimization",
+    description: "Configures zram-generator to use ZSTD compression algorithm for faster compressed RAM swap throughput.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-zram-optimization --apply"
+  },
+  {
+    id: "fedora_gaming_mangohud",
+    name: "Gaming Optimization - MangoHud & Lutris",
+    category: "optimization",
+    description: "Installs MangoHud GPU/CPU performance HUD overlay and Lutris game library manager.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-gaming-mangohud --apply"
+  },
+  {
+    id: "fedora_flatseal_utility",
+    name: "Flatseal - Flatpak Permissions Manager",
+    category: "optimization",
+    description: "Graphical utility to review and modify fine-grained Flatpak permissions (filesystem, network, devices).",
+    requires_root: false,
+    danger_level: "safe",
+    is_applied: true,
+    is_applicable: true,
+    command: "sudo fedora-flatseal-utility --apply"
+  },
+  {
+    id: "fedora_swappiness_tune",
+    name: "Swappiness Tuning (vm.swappiness=10)",
+    category: "optimization",
+    description: "Makes the kernel less eager to swap RAM to disk, for a snappier desktop under memory pressure.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-swappiness-tune --apply"
+  },
+  {
+    id: "fedora_dirty_ratio_tune",
+    name: "Write-Back Tuning (dirty_ratio)",
+    category: "optimization",
+    description: "Flushes dirty pages to disk sooner, reducing multi-second I/O stalls during large file writes.",
+    requires_root: true,
+    danger_level: "moderate",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-dirty-ratio-tune --apply"
+  },
+  {
+    id: "fedora_inotify_watches",
+    name: "Increase Inotify Watch Limit",
+    category: "optimization",
+    description: "Fixes \"too many open files\" / ENOSPC errors in VS Code and other IDEs watching large repositories.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: true,
+    is_applicable: true,
+    command: "sudo fedora-inotify-watches --apply"
+  },
+  {
+    id: "fedora_earlyoom",
+    name: "earlyoom - Responsive Out-of-Memory Handling",
+    category: "optimization",
+    description: "Replaces the default systemd-oomd (often too conservative on desktops with many browser tabs) with earlyoom for faster, more responsive OOM recovery.",
+    requires_root: true,
+    danger_level: "moderate",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-earlyoom --apply"
+  },
+  {
+    id: "fedora_fstrim_timer",
+    name: "Periodic SSD TRIM (fstrim.timer)",
+    category: "optimization",
+    description: "Enables the weekly systemd timer that TRIMs unused SSD blocks, standard modern-distro practice.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-fstrim-timer --apply"
+  },
+  {
+    id: "fedora_disable_bluetooth",
+    name: "Disable Bluetooth Service",
+    category: "optimization",
+    description: "For systems with no Bluetooth devices -- reduces battery drain and attack surface.",
+    requires_root: true,
+    danger_level: "moderate",
+    is_applied: true,
+    is_applicable: true,
+    command: "sudo fedora-disable-bluetooth --apply"
+  },
+  {
+    id: "fedora_disable_cups",
+    name: "Disable Printing Service (CUPS)",
+    category: "optimization",
+    description: "For systems with no printer configured.",
+    requires_root: true,
+    danger_level: "moderate",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-disable-cups --apply"
+  },
+  {
+    id: "fedora_disable_avahi",
+    name: "Disable Network Discovery (Avahi/mDNS)",
+    category: "optimization",
+    description: "Reduces local-network discovery surface if you don't use AirPrint or LAN service discovery.",
+    requires_root: true,
+    danger_level: "moderate",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-disable-avahi --apply"
+  },
+  {
+    id: "fedora_gamemode_install",
+    name: "Install Feral GameMode",
+    category: "optimization",
+    description: "Installs the GameMode daemon so games can request temporary CPU/GPU performance optimizations.",
+    requires_root: true,
+    danger_level: "safe",
+    is_applied: true,
+    is_applicable: true,
+    command: "sudo fedora-gamemode-install --apply"
+  },
+  {
+    id: "fedora_power_profile_performance",
+    name: "Switch Power Profile to Performance",
+    category: "optimization",
+    description: "Switches power-profiles-daemon to the Performance profile for the current session (reversible any time from Safety & Vitals).",
+    requires_root: false,
+    danger_level: "safe",
+    is_applied: false,
+    is_applicable: true,
+    command: "sudo fedora-power-profile-performance --apply"
+  }
+];
+
+const mockWindowsTweaks: WindowsTweakItem[] = [
+  {
+    id: "activity_history",
+    name: "Activity History - Disable",
+    category: "essential",
+    description: "Prevents Windows from storing timeline activities and uploading them to Microsoft servers.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# activity_history registry/service tweak"
+  },
+  {
+    id: "bitlocker",
+    name: "BitLocker - Disable",
+    category: "essential",
+    description: "Disables BitLocker device encryption on drive C: to prevent unexpected recovery key lockouts.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "moderate",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# bitlocker registry/service tweak"
+  },
+  {
+    id: "consumer_features",
+    name: "ConsumerFeatures - Disable",
+    category: "essential",
+    description: "Disables automatic installation of promoted OEM apps and games (Candy Crush, TikTok, etc.).",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# consumer_features registry/service tweak"
+  },
+  {
+    id: "delivery_optimization",
+    name: "Delivery Optimization - Disable",
+    category: "essential",
+    description: "Stops Windows Update from sharing your internet bandwidth with peer computers on the web.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: true,
+    is_applicable: true,
+    command: "# delivery_optimization registry/service tweak"
+  },
+  {
+    id: "disk_cleanup",
+    name: "Disk Cleanup - Run",
+    category: "essential",
+    description: "Triggers automated silent Windows Disk Cleanup to purge obsolete temporary update files.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# disk_cleanup registry/service tweak"
+  },
+  {
+    id: "end_task_right_click",
+    name: "End Task With Right Click - Enable",
+    category: "essential",
+    description: "Adds an instant 'End Task' option to taskbar app icons (Windows 11 23H2+ only).",
+    min_windows_version: 11,
+    requires_admin: false,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# end_task_right_click registry/service tweak"
+  },
+  {
+    id: "folder_discovery",
+    name: "File Explorer Automatic Folder Discovery - Disable",
+    category: "essential",
+    description: "Disables automatic template sniffing in File Explorer, greatly speeding up browsing large directories.",
+    min_windows_version: null,
+    requires_admin: false,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# folder_discovery registry/service tweak"
+  },
+  {
+    id: "hibernation",
+    name: "Hibernation - Disable",
+    category: "essential",
+    description: "Disables hibernation and deletes C:\\hiberfil.sys, reclaiming 8 to 32 GB of SSD storage.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: true,
+    is_applicable: true,
+    command: "# hibernation registry/service tweak"
+  },
+  {
+    id: "location_tracking",
+    name: "Location Tracking - Disable",
+    category: "essential",
+    description: "Disables Windows location sensors and geolocation tracking service (lfsvc).",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# location_tracking registry/service tweak"
+  },
+  {
+    id: "store_search_results",
+    name: "Microsoft Store Recommended Search Results - Disable",
+    category: "essential",
+    description: "Removes web search results, Bing queries, and store ads from the Start Menu search box.",
+    min_windows_version: null,
+    requires_admin: false,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# store_search_results registry/service tweak"
+  },
+  {
+    id: "prevent_device_companion",
+    name: "Prevent Device Companion Apps",
+    category: "essential",
+    description: "Blocks Windows from downloading manufacturer companion bloatware when plugging in peripherals.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# prevent_device_companion registry/service tweak"
+  },
+  {
+    id: "restore_point_create",
+    name: "Restore Point - Create",
+    category: "essential",
+    description: "Creates an immutable Windows System Restore checkpoint on drive C: before applying tweaks.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: true,
+    is_applicable: true,
+    command: "# restore_point_create registry/service tweak"
+  },
+  {
+    id: "services_manual",
+    name: "Services - Set to Manual",
+    category: "essential",
+    description: "Sets unnecessary diagnostic, retail demo, and telemetry services to demand-start (Manual).",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# services_manual registry/service tweak"
+  },
+  {
+    id: "start_menu_previous_layout",
+    name: "Start Menu Previous Layout - Enable",
+    category: "essential",
+    description: "Aligns Start Menu and taskbar icons to the classic left position on Windows 11.",
+    min_windows_version: 11,
+    requires_admin: false,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# start_menu_previous_layout registry/service tweak"
+  },
+  {
+    id: "telemetry",
+    name: "Telemetry - Disable",
+    category: "essential",
+    description: "Disables DiagTrack, Connected User Experiences, and Windows CEIP telemetry.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# telemetry registry/service tweak"
+  },
+  {
+    id: "temp_files_remove",
+    name: "Temporary Files - Remove",
+    category: "essential",
+    description: "Cleans out %TEMP% and C:\\Windows\\Temp without touching active files.",
+    min_windows_version: null,
+    requires_admin: false,
+    danger_level: "safe",
+    is_enabled: true,
+    is_applicable: true,
+    command: "# temp_files_remove registry/service tweak"
+  },
+  {
+    id: "widgets_remove",
+    name: "Widgets - Remove",
+    category: "essential",
+    description: "Disables the Windows 11 taskbar widgets icon and WebExperience news feed background process.",
+    min_windows_version: 11,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# widgets_remove registry/service tweak"
+  },
+  {
+    id: "wpbt_disable",
+    name: "Windows Platform Binary Table (WPBT) - Disable",
+    category: "essential",
+    description: "Blocks motherboard firmware from injecting vendor bloatware directly into Windows at boot.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# wpbt_disable registry/service tweak"
+  },
+  {
+    id: "adobe_url_blocklist",
+    name: "Adobe URL Block List - Enable",
+    category: "advanced_caution",
+    description: "Appends known Adobe telemetry and tracking domains to C:\\Windows\\System32\\drivers\\etc\\hosts.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "moderate",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# adobe_url_blocklist registry/service tweak"
+  },
+  {
+    id: "background_apps",
+    name: "Background Apps - Disable",
+    category: "advanced_caution",
+    description: "Disables UWP apps from running and consuming power in the background when minimized.",
+    min_windows_version: null,
+    requires_admin: false,
+    danger_level: "moderate",
+    is_enabled: true,
+    is_applicable: true,
+    command: "# background_apps registry/service tweak"
+  },
+  {
+    id: "brave_debloat",
+    name: "Brave Browser - Debloat",
+    category: "advanced_caution",
+    description: "Disables Brave VPN, Crypto Wallet, Rewards, and IPFS via registry group policies.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "moderate",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# brave_debloat registry/service tweak"
+  },
+  {
+    id: "date_time_utc",
+    name: "Date & Time - Set Time to UTC",
+    category: "advanced_caution",
+    description: "Configures Windows hardware clock to UTC (RealTimeIsUniversal).",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# date_time_utc registry/service tweak"
+  },
+  {
+    id: "disable_reserved_storage",
+    name: "Disable Reserved Storage",
+    category: "advanced_caution",
+    description: "Reclaims ~7 GB of hard drive space reserved by Windows for system updates.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "moderate",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# disable_reserved_storage registry/service tweak"
+  },
+  {
+    id: "file_explorer_home_gallery",
+    name: "File Explorer Home and Gallery - Disable",
+    category: "advanced_caution",
+    description: "Hides Gallery from the navigation pane and sets default Explorer startup folder to 'This PC'.",
+    min_windows_version: 11,
+    requires_admin: true,
+    danger_level: "moderate",
+    is_enabled: true,
+    is_applicable: true,
+    command: "# file_explorer_home_gallery registry/service tweak"
+  },
+  {
+    id: "ipv6_disable",
+    name: "IPv6 - Disable",
+    category: "advanced_caution",
+    description: "Disables IPv6 protocol bindings across network adapters (use only if your ISP doesn't support IPv6).",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "moderate",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# ipv6_disable registry/service tweak"
+  },
+  {
+    id: "ipv6_prefer_ipv4",
+    name: "IPv6 - Set IPv4 as Preferred",
+    category: "advanced_caution",
+    description: "Prioritizes IPv4 DNS resolution while keeping IPv6 enabled for compatibility.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# ipv6_prefer_ipv4 registry/service tweak"
+  },
+  {
+    id: "logitech_assistant_disable",
+    name: "Logitech Download Assistant Auto-Install - Disable",
+    category: "advanced_caution",
+    description: "Removes Logitech Download Assistant startup autoruns to eliminate recurring popups.",
+    min_windows_version: null,
+    requires_admin: false,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# logitech_assistant_disable registry/service tweak"
+  },
+  {
+    id: "edge_debloat",
+    name: "Microsoft Edge - Debloat",
+    category: "advanced_caution",
+    description: "Disables Edge background startup boost, shopping assistant, sidebar promotions, and telemetry.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "moderate",
+    is_enabled: true,
+    is_applicable: true,
+    command: "# edge_debloat registry/service tweak"
+  },
+  {
+    id: "edge_remove",
+    name: "Microsoft Edge - Remove",
+    category: "advanced_caution",
+    description: "Uninstalls Microsoft Edge browser while safely retaining Edge WebView2 for desktop applications.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "aggressive",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# edge_remove registry/service tweak"
+  },
+  {
+    id: "onedrive_remove",
+    name: "Microsoft OneDrive - Remove",
+    category: "advanced_caution",
+    description: "Unlinks and uninstalls OneDrive, removing its sync folder from the File Explorer sidebar.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "aggressive",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# onedrive_remove registry/service tweak"
+  },
+  {
+    id: "razer_software_disable",
+    name: "Razer Software Auto-Install - Disable",
+    category: "advanced_caution",
+    description: "Prevents Windows from automatically prompting the Razer Synapse installer when plugging in hardware.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# razer_software_disable registry/service tweak"
+  },
+  {
+    id: "rdp_unsigned_warnings",
+    name: "RDP Unsigned File Warnings - Disable",
+    category: "advanced_caution",
+    description: "Suppresses publisher verification warnings when connecting to Remote Desktop sessions.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "moderate",
+    is_enabled: true,
+    is_applicable: true,
+    command: "# rdp_unsigned_warnings registry/service tweak"
+  },
+  {
+    id: "right_click_classic_menu",
+    name: "Right-Click Menu Previous Layout - Enable",
+    category: "advanced_caution",
+    description: "Restores the Windows 10 classic full right-click context menu (bypasses Windows 11 'Show more options').",
+    min_windows_version: 11,
+    requires_admin: false,
+    danger_level: "moderate",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# right_click_classic_menu registry/service tweak"
+  },
+  {
+    id: "storage_sense_disable",
+    name: "Storage Sense - Disable",
+    category: "advanced_caution",
+    description: "Disables automated background deletion of user files in Downloads and Recycle Bin.",
+    min_windows_version: null,
+    requires_admin: false,
+    danger_level: "moderate",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# storage_sense_disable registry/service tweak"
+  },
+  {
+    id: "tray_notifications_disable",
+    name: "System Tray Notifications & Calendar - Disable",
+    category: "advanced_caution",
+    description: "Disables action center notification popups and lock screen calendar notifications.",
+    min_windows_version: null,
+    requires_admin: false,
+    danger_level: "moderate",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# tray_notifications_disable registry/service tweak"
+  },
+  {
+    id: "teredo_disable",
+    name: "Teredo - Disable",
+    category: "advanced_caution",
+    description: "Disables Microsoft Teredo IPv6 tunneling adapter to reduce network attack surface.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: true,
+    is_applicable: true,
+    command: "# teredo_disable registry/service tweak"
+  },
+  {
+    id: "visual_effects_performance",
+    name: "Visual Effects - Set to Best Performance",
+    category: "advanced_caution",
+    description: "Disables window drop shadows, fade animations, and smooth scroll for instantaneous responsiveness.",
+    min_windows_version: null,
+    requires_admin: false,
+    danger_level: "moderate",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# visual_effects_performance registry/service tweak"
+  },
+  {
+    id: "windows_ai_remove",
+    name: "Windows AI - Disable And Remove",
+    category: "advanced_caution",
+    description: "Disables Windows Recall snapshots, AI data analysis telemetry, and removes Copilot.",
+    min_windows_version: 11,
+    requires_admin: true,
+    danger_level: "aggressive",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# windows_ai_remove registry/service tweak"
+  },
+  {
+    id: "shutup10_run",
+    name: "O&O ShutUp10++ - Run",
+    category: "advanced_caution",
+    description: "Launches the external O&O ShutUp10++ anti-spy companion tool if installed.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# shutup10_run registry/service tweak"
+  },
+  {
+    id: "disable_sysmain",
+    name: "SysMain (Superfetch) - Disable",
+    category: "advanced_caution",
+    description: "Stops the background service that preloads apps into memory; mainly beneficial on SSD systems.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "moderate",
+    is_enabled: true,
+    is_applicable: true,
+    command: "# disable_sysmain registry/service tweak"
+  },
+  {
+    id: "network_throttling_index",
+    name: "Remove Network Throttling Index Cap",
+    category: "advanced_caution",
+    description: "Removes Windows' default 10,000 packets/sec MMCSS throttle, useful for gaming/streaming.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "moderate",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# network_throttling_index registry/service tweak"
+  },
+  {
+    id: "hags_enable",
+    name: "Hardware-Accelerated GPU Scheduling - Enable",
+    category: "advanced_caution",
+    description: "Moves part of GPU scheduling off the CPU to reduce input latency on modern GPUs. Requires a sign-out or reboot to take effect.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "moderate",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# hags_enable registry/service tweak"
+  },
+  {
+    id: "mouse_acceleration_disable",
+    name: "Disable Mouse Acceleration",
+    category: "essential",
+    description: "Turns off \"Enhance pointer precision\" for consistent 1:1 mouse movement, a standard gaming-precision tweak.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# mouse_acceleration_disable registry/service tweak"
+  },
+  {
+    id: "ultimate_performance_plan",
+    name: "Enable Ultimate Performance Power Plan",
+    category: "advanced_caution",
+    description: "Unlocks Windows' hidden max-performance power scheme. Increases power draw and heat; not recommended for laptops on battery.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "moderate",
+    is_enabled: true,
+    is_applicable: true,
+    command: "# ultimate_performance_plan registry/service tweak"
+  },
+  {
+    id: "search_indexing_disable",
+    name: "Disable Windows Search Indexing",
+    category: "advanced_caution",
+    description: "Reduces background CPU/disk I/O at the cost of slower file search.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "moderate",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# search_indexing_disable registry/service tweak"
+  },
+  {
+    id: "fast_startup_disable",
+    name: "Disable Fast Startup",
+    category: "essential",
+    description: "Fast Startup's hybrid-boot hiberfile is a well-known cause of filesystem corruption on dual-boot Fedora/Windows systems. Distinct from the full Hibernation tweak above.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# fast_startup_disable registry/service tweak"
+  },
+  {
+    id: "gamebar_disable",
+    name: "Xbox Game Bar & Game DVR - Disable",
+    category: "essential",
+    description: "Removes background recording/overlay overhead from Xbox Game Bar.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# gamebar_disable registry/service tweak"
+  },
+  {
+    id: "start_menu_web_search_disable",
+    name: "Disable Bing/Web Results in Start Search",
+    category: "essential",
+    description: "Turns off the Start-menu search box's web/Bing integration -- distinct from the Store Search Results tweak, which covers in-Store suggestions only.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: true,
+    is_applicable: true,
+    command: "# start_menu_web_search_disable registry/service tweak"
+  },
+  {
+    id: "usb_selective_suspend_disable",
+    name: "Disable USB Selective Suspend",
+    category: "advanced_caution",
+    description: "Reduces peripheral latency/disconnect issues at a small battery-life cost on laptops.",
+    min_windows_version: null,
+    requires_admin: true,
+    danger_level: "safe",
+    is_enabled: false,
+    is_applicable: true,
+    command: "# usb_selective_suspend_disable registry/service tweak"
+  }
 ];
 
 const mockScanResult: ScanResult = {
@@ -393,7 +1404,7 @@ export const bridge = {
       const raw = await invokeNative<unknown[]>("get_windows_tweaks");
       return z.array(WindowsTweakItemSchema).parse(raw);
     }
-    return [];
+    return mockWindowsTweaks.map((t) => ({ ...t }));
   },
 
   async getWindowsVersionInfo(): Promise<WindowsVersionInfo> {
@@ -451,7 +1462,7 @@ export const bridge = {
       const raw = await invokeNative<unknown[]>("get_linux_tweaks");
       return z.array(LinuxTweakItemSchema).parse(raw);
     }
-    return [];
+    return mockLinuxTweaks.map((t) => ({ ...t }));
   },
 
   async applyLinuxTweaks(ids: string[]): Promise<TweakActionReport[]> {
@@ -499,6 +1510,38 @@ export const bridge = {
       succeeded: true,
       details: `App ${id} uninstalled successfully (Simulation)`,
     };
+  },
+
+  async uninstallApps(ids: string[]): Promise<TweakActionReport[]> {
+    if (isTauri() || isElectron()) {
+      const raw = await invokeNative<unknown[]>("uninstall_apps", { ids });
+      return z.array(TweakActionReportSchema).parse(raw);
+    }
+    await new Promise((r) => setTimeout(r, 800));
+    return ids.map((id) => ({
+      name: `Uninstall ${id}`,
+      succeeded: true,
+      details: `App ${id} uninstalled successfully (Simulation)`,
+    }));
+  },
+
+  async getInstalledAppUsage(): Promise<InstalledAppUsage[]> {
+    if (isTauri() || isElectron()) {
+      const raw = await invokeNative<unknown[]>("get_installed_app_usage");
+      return z.array(InstalledAppUsageSchema).parse(raw);
+    }
+    await new Promise((r) => setTimeout(r, 500));
+    return [
+      { id: "discord", name: "Discord", category: "communication", install_size_bytes: 420000000, last_used_days_ago: 2, is_installed: true },
+      { id: "vscode", name: "Visual Studio Code", category: "development", install_size_bytes: 380000000, last_used_days_ago: 0, is_installed: true },
+      { id: "steam", name: "Steam", category: "gaming", install_size_bytes: 1200000000, last_used_days_ago: 5, is_installed: true },
+      { id: "gimp", name: "GIMP", category: "media_tools", install_size_bytes: 610000000, last_used_days_ago: 143, is_installed: true },
+      { id: "blender", name: "Blender", category: "media_tools", install_size_bytes: 1450000000, last_used_days_ago: 208, is_installed: true },
+      { id: "android_studio", name: "Android Studio", category: "development", install_size_bytes: 3800000000, last_used_days_ago: 172, is_installed: true },
+      { id: "libreoffice", name: "LibreOffice", category: "utilities", install_size_bytes: 890000000, last_used_days_ago: 96, is_installed: true },
+      { id: "obs_studio", name: "OBS Studio", category: "media_tools", install_size_bytes: 340000000, last_used_days_ago: 61, is_installed: true },
+      { id: "postman", name: "Postman", category: "development", install_size_bytes: 512000000, last_used_days_ago: 265, is_installed: true },
+    ];
   },
 
   async getXRay(targetPath?: string): Promise<XRayReport> {
@@ -589,13 +1632,9 @@ export const bridge = {
       return z.array(AutostartItemSchema).parse(raw);
     }
     await new Promise((r) => setTimeout(r, 400));
-    return [
-      { id: "discord.desktop", name: "Discord", command: "flatpak run com.discordapp.Discord", enabled: true, file_path: "~/.config/autostart/discord.desktop", impact: "high", source: "user_autostart" },
-      { id: "steam.desktop", name: "Steam Client", command: "steam -silent", enabled: true, file_path: "~/.config/autostart/steam.desktop", impact: "high", source: "user_autostart" },
-      { id: "spotify.desktop", name: "Spotify", command: "spotify --minimized", enabled: false, file_path: "~/.config/autostart/spotify.desktop", impact: "medium", source: "user_autostart" },
-      { id: "nextcloud.desktop", name: "Nextcloud Desktop", command: "nextcloud --background", enabled: true, file_path: "~/.config/autostart/nextcloud.desktop", impact: "medium", source: "user_autostart" },
-      { id: "gamemode.desktop", name: "Feral GameMode Indicator", command: "gamemoded", enabled: true, file_path: "/etc/xdg/autostart/gamemoded.desktop", impact: "low", source: "system_autostart" },
-    ];
+    // Return a copy so callers can't mutate the shared mock store directly;
+    // toggleAutostart below is the only thing allowed to change it.
+    return mockAutostartItems.map((item) => ({ ...item }));
   },
 
   async toggleAutostart(filePath: string, enable: boolean): Promise<{ success: boolean; details: string }> {
@@ -603,7 +1642,12 @@ export const bridge = {
       return await invokeNative<{ success: boolean; details: string }>("toggle_autostart", { filePath, enable });
     }
     await new Promise((r) => setTimeout(r, 400));
-    return { success: true, details: `Autostart set to ${enable}` };
+    const item = mockAutostartItems.find((a) => a.file_path === filePath);
+    if (!item) {
+      throw new Error(`No autostart entry found at ${filePath}.`);
+    }
+    item.enabled = enable;
+    return { success: true, details: `${item.name} autostart ${enable ? "enabled" : "disabled"}.` };
   },
 
   async getDuplicates(targetPath?: string): Promise<DuplicateGroup[]> {

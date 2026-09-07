@@ -16,6 +16,7 @@ import { LogDrawer } from "./components/layout/LogDrawer";
 import { DangerConfirmationModal } from "./components/layout/DangerConfirmationModal";
 import { bridge } from "./lib/bridge";
 import { formatBytes } from "./lib/formatters";
+import { recordActivity } from "./lib/streakTracker";
 
 export const App: React.FC = () => {
   const { viewMode, activeTab, setScanResult, setIsScanning, addLog } = useCleanerStore();
@@ -50,6 +51,10 @@ export const App: React.FC = () => {
             formatBytes(res.total_reclaimable_bytes).formatted
           } discovered across ${res.targets.length} targets.`
         );
+        // A successful scan is the one activity signal every session
+        // produces, regardless of which tab the user lands on -- the
+        // single integration point for the cleaning-streak tracker.
+        recordActivity();
       })
       .catch((err) => {
         addLog(`Scan failed: ${err}`);

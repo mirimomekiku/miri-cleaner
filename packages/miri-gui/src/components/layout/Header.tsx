@@ -20,7 +20,6 @@ export const Header: React.FC = () => {
           <div className="flex items-center gap-2 min-w-0">
             <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5 truncate">
               Miri Cleaner
-              <span className="hidden sm:inline text-miri-400 font-normal text-sm font-pixel">(•◡•)</span>
             </h1>
             <span className="hidden sm:inline">
               <PixelBadge label="v0.1.0" variant="pink" />
