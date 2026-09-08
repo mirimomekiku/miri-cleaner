@@ -1,6 +1,20 @@
 use crate::elevation::ElevationManager;
 use crate::models::{AppCategory, AppDefinition, OsType, TweakActionReport};
+use serde::{Deserialize, Serialize};
 use std::process::Command;
+
+/// Best-effort "last used" record for a catalog app that is currently installed.
+/// See [`AppManager::get_installed_app_usage`] for how the numbers are derived -
+/// this is a documented heuristic, not an exact measurement.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstalledAppUsage {
+    pub id: String,
+    pub name: String,
+    pub category: AppCategory,
+    pub install_size_bytes: u64,
+    pub last_used_days_ago: u32,
+    pub is_installed: bool,
+}
 
 pub struct AppManager;
 
@@ -731,5 +745,146 @@ impl AppManager {
             }
         }
         Ok(reports)
+    }
+
+    /// Batch uninstallation of multiple applications
+    pub fn uninstall_batch(app_ids: &[String]) -> Result<Vec<TweakActionReport>, String> {
+        let mut reports = Vec::new();
+        for id in app_ids {
+            match Self::uninstall_app(id) {
+                Ok(rep) => reports.push(rep),
+                Err(e) => reports.push(TweakActionReport {
+                    name: format!("Uninstall {}", id),
+                    succeeded: false,
+                    details: e,
+                }),
+            }
+        }
+        Ok(reports)
+    }
+
+    /// Returns a best-effort "last used" estimate for every catalog app that is
+    /// currently installed. There is no reliable, exact, cross-platform way to know
+    /// when an app was last launched without deep OS-specific instrumentation, so
+    /// this uses a documented per-OS heuristic instead of fabricating a number:
+    ///
+    /// - Linux: the modification time of the app's Flatpak per-app data directory
+    ///   (`~/.var/app/<linux_flatpak_id>`), since Flatpak apps touch files under
+    ///   that directory on every run. Falls back to a guessed `~/.config/<id>` or
+    ///   `~/.cache/<id>` directory derived from the app id. If none of those exist,
+    ///   the app is skipped entirely rather than guessing a number.
+    /// - Windows: the newest modification time among
+    ///   `C:\Windows\Prefetch\<EXENAME>-*.pf` files matching the app, since
+    ///   Windows touches (or recreates) the Prefetch entry on each launch. Skipped
+    ///   if the Prefetch folder isn't readable or no matching entry is found.
+    ///
+    /// This is scoped to the same curated catalog the rest of the app manages
+    /// (via [`Self::get_catalog`]), not a scan of every binary on the system.
+    pub fn get_installed_app_usage() -> Vec<InstalledAppUsage> {
+        let catalog = Self::get_catalog();
+        let mut results = Vec::new();
+
+        for app in catalog.into_iter().filter(|a| a.is_installed) {
+            if let Some((mtime, size)) = Self::estimate_usage_signal(&app) {
+                results.push(InstalledAppUsage {
+                    id: app.id,
+                    name: app.name,
+                    category: app.category,
+                    install_size_bytes: size,
+                    last_used_days_ago: Self::days_since(mtime),
+                    is_installed: true,
+                });
+            }
+        }
+
+        results
+    }
+
+    #[cfg(target_os = "linux")]
+    fn estimate_usage_signal(app: &AppDefinition) -> Option<(std::time::SystemTime, u64)> {
+        let home = std::env::var("HOME").ok()?;
+        let home_path = std::path::Path::new(&home);
+
+        let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+        if !app.linux_flatpak_id.is_empty() {
+            candidates.push(home_path.join(".var/app").join(&app.linux_flatpak_id));
+        }
+        candidates.push(home_path.join(".config").join(&app.id));
+        candidates.push(home_path.join(".cache").join(&app.id));
+
+        for dir in candidates {
+            if let Ok(meta) = std::fs::metadata(&dir) {
+                if meta.is_dir() {
+                    if let Ok(mtime) = meta.modified() {
+                        return Some((mtime, Self::dir_size(&dir)));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    #[cfg(target_os = "linux")]
+    fn dir_size(dir: &std::path::Path) -> u64 {
+        walkdir::WalkDir::new(dir)
+            .max_depth(6)
+            .follow_links(false)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.path().is_file())
+            .filter_map(|e| e.metadata().ok())
+            .map(|m| m.len())
+            .sum()
+    }
+
+    #[cfg(target_os = "windows")]
+    fn estimate_usage_signal(app: &AppDefinition) -> Option<(std::time::SystemTime, u64)> {
+        let prefetch_dir = std::path::Path::new(r"C:\Windows\Prefetch");
+        let entries = std::fs::read_dir(prefetch_dir).ok()?;
+
+        // Crude EXE-name guess from the app's display name (Prefetch entries are
+        // named "<EXENAME>-<HASH>.pf"); good enough as a best-effort match, not
+        // a precise executable resolution.
+        let guess: String = app
+            .name
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .collect::<String>()
+            .to_uppercase();
+        if guess.is_empty() {
+            return None;
+        }
+
+        let mut best: Option<(std::time::SystemTime, u64)> = None;
+        for entry in entries.filter_map(|e| e.ok()) {
+            let fname = entry.file_name().to_string_lossy().to_uppercase();
+            if !fname.ends_with(".PF") {
+                continue;
+            }
+            let stem: String = fname.chars().filter(|c| c.is_ascii_alphanumeric()).collect();
+            if !stem.contains(&guess) {
+                continue;
+            }
+            if let Ok(meta) = entry.metadata() {
+                if let Ok(mtime) = meta.modified() {
+                    if best.map(|(t, _)| mtime > t).unwrap_or(true) {
+                        best = Some((mtime, meta.len()));
+                    }
+                }
+            }
+        }
+        best
+    }
+
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+    fn estimate_usage_signal(_app: &AppDefinition) -> Option<(std::time::SystemTime, u64)> {
+        None
+    }
+
+    fn days_since(t: std::time::SystemTime) -> u32 {
+        std::time::SystemTime::now()
+            .duration_since(t)
+            .map(|d| (d.as_secs() / 86400) as u32)
+            .unwrap_or(0)
     }
 }

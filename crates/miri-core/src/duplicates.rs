@@ -53,6 +53,7 @@ impl DuplicateFinder {
             .max_depth(4)
             .follow_links(false)
             .into_iter()
+            .filter_entry(|e| !RuleEngine::is_path_blocked(e.path()))
             .filter_map(|e| e.ok())
         {
             if entry.path().is_file() {

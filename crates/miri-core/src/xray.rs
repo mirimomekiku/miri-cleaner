@@ -67,12 +67,10 @@ impl SpaceXRay {
             .max_depth(4)
             .follow_links(false)
             .into_iter()
+            .filter_entry(|e| !RuleEngine::is_path_blocked(e.path()))
             .filter_map(|e| e.ok())
         {
             let path = entry.path();
-            if RuleEngine::is_path_blocked(path) {
-                continue;
-            }
 
             if path.is_file() {
                 if let Ok(meta) = entry.metadata() {

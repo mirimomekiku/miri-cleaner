@@ -14,7 +14,7 @@ pub mod tweaks;
 pub mod vitals;
 pub mod xray;
 
-pub use apps::AppManager;
+pub use apps::{AppManager, InstalledAppUsage};
 pub use audit::AuditJournal;
 pub use autostart::{AutostartItem, AutostartManager};
 pub use dev_cache::DevCacheCleaner;
