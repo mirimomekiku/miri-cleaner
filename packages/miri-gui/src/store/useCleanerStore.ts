@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { CleanExecutionResult, CleanTarget, RiskLevel, ScanResult } from "../types";
 
 export type ViewMode = "casual" | "power";
-export type TabId = "dashboard" | "storage" | "apps" | "packages" | "tweaks" | "devcache" | "snapshots";
+export type TabId = "dashboard" | "storage" | "apps" | "packages" | "tweaks" | "snapshots";
 
 export interface DangerModalConfig {
   isOpen: boolean;

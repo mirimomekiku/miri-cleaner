@@ -10,7 +10,6 @@ import { AppsView } from "./components/apps/AppsView";
 import { StorageView } from "./components/storage/StorageView";
 import { PackagesView } from "./components/packages/PackagesView";
 import { TweaksView } from "./components/tweaks/TweaksView";
-import { DevCacheView } from "./components/devcache/DevCacheView";
 import { SnapshotsView } from "./components/snapshots/SnapshotsView";
 import { LogDrawer } from "./components/layout/LogDrawer";
 import { DangerConfirmationModal } from "./components/layout/DangerConfirmationModal";
@@ -92,7 +91,7 @@ export const App: React.FC = () => {
               (viewMode === "casual" ? <CasualView /> : <PowerView />)}
             {activeTab === "storage" && <StorageView />}
             {activeTab === "apps" && <AppsView />}
-            {(activeTab === "packages" || activeTab === "devcache") && <PackagesView />}
+            {activeTab === "packages" && <PackagesView />}
             {activeTab === "tweaks" && <TweaksView />}
             {activeTab === "snapshots" && <SnapshotsView />}
           </main>
