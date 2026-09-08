@@ -9,6 +9,8 @@ import {
   RotateCcw,
   FileCheck,
   ChevronDown,
+  HardDrive,
+  Zap,
 } from "lucide-react";
 import { bridge } from "../../lib/bridge";
 import { SnapshotStatus, AuditEntry, SystemVitalsReport } from "../../types";
@@ -242,6 +244,57 @@ export const SnapshotsView: React.FC = () => {
             {vitals?.battery && (
               <div className="text-left pt-2">
                 <BatteryHealthCard battery={vitals.battery} history={batteryHistory} />
+              </div>
+            )}
+
+            {/* Disk Health & Power Profile -- real system readings, previously
+                fetched but never shown anywhere in this view. */}
+            {vitals && (vitals.disk_health.total_gb > 0 || vitals.power_profile) && (
+              <div className="text-left pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {vitals.disk_health.total_gb > 0 && (
+                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+                    <div className="flex items-center gap-2 text-xs font-black text-slate-700 mb-2">
+                      <HardDrive className="w-4 h-4 text-sky-600" />
+                      <span>{vitals.disk_health.filesystem} Root Volume</span>
+                    </div>
+                    <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-sky-400 rounded-full"
+                        style={{
+                          width: `${Math.min(100, (vitals.disk_health.used_gb / Math.max(vitals.disk_health.total_gb, 1)) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="text-[11px] font-bold text-slate-500 mt-1.5">
+                      {vitals.disk_health.used_gb.toFixed(1)} GB used of {vitals.disk_health.total_gb.toFixed(1)} GB
+                      {vitals.disk_health.is_btrfs && " · Btrfs"}
+                    </div>
+                  </div>
+                )}
+                {vitals.power_profile && (
+                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+                    <div className="flex items-center gap-2 text-xs font-black text-slate-700 mb-2">
+                      <Zap className="w-4 h-4 text-amber-500" />
+                      <span>Power Profile</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {vitals.power_profile.available_profiles.map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => handleSetPowerProfile(p)}
+                          className={`chip-press px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
+                            p === vitals.power_profile?.active_profile
+                              ? "bg-amber-100 text-amber-800 border-amber-300"
+                              : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
