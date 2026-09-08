@@ -123,11 +123,17 @@ impl SystemVitals {
                     if let Some(line) = text.lines().nth(1) {
                         let parts: Vec<&str> = line.split_whitespace().collect();
                         if parts.len() >= 4 {
-                            let total = parts[1].trim_end_matches('G').parse::<f64>().unwrap_or(500.0);
-                            let used = parts[2].trim_end_matches('G').parse::<f64>().unwrap_or(150.0);
-                            let free = parts[3].trim_end_matches('G').parse::<f64>().unwrap_or(350.0);
+                            let total = parts[1].trim_end_matches('G').parse::<f64>().unwrap_or(0.0);
+                            let used = parts[2].trim_end_matches('G').parse::<f64>().unwrap_or(0.0);
+                            let free = parts[3].trim_end_matches('G').parse::<f64>().unwrap_or(0.0);
 
-                            let is_btrfs = parts[0].contains("btrfs") || text.contains("btrfs");
+                            // `df` reports the device path, not the filesystem type; ask
+                            // `findmnt` for the real fstype rather than string-sniffing.
+                            let is_btrfs = Command::new("findmnt")
+                                .args(["-n", "-o", "FSTYPE", "/"])
+                                .output()
+                                .map(|o| String::from_utf8_lossy(&o.stdout).trim() == "btrfs")
+                                .unwrap_or(false);
 
                             return DiskHealthSummary {
                                 filesystem: if is_btrfs { "Btrfs".to_string() } else { "ext4".to_string() },
@@ -143,52 +149,278 @@ impl SystemVitals {
             }
         }
 
-        DiskHealthSummary {
-            filesystem: "Standard".to_string(),
-            total_gb: 512.0,
-            used_gb: 180.0,
-            free_gb: 332.0,
-            is_btrfs: false,
-            trim_supported: true,
+        #[cfg(target_os = "windows")]
+        {
+            let script = "Get-Volume -DriveLetter C | Select-Object @{N='Total';E={$_.Size}},@{N='Free';E={$_.SizeRemaining}},FileSystemType | ConvertTo-Json -Compress";
+            if let Ok(out) = Command::new("powershell")
+                .args(["-NoProfile", "-NonInteractive", "-Command", script])
+                .output()
+            {
+                if out.status.success() {
+                    let text = String::from_utf8_lossy(&out.stdout);
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(text.trim()) {
+                        let total_bytes = json.get("Total").and_then(|v| v.as_f64());
+                        let free_bytes = json.get("Free").and_then(|v| v.as_f64());
+                        let fs_type = json.get("FileSystemType").and_then(|v| v.as_str()).unwrap_or("NTFS");
+                        if let (Some(total_b), Some(free_b)) = (total_bytes, free_bytes) {
+                            let total = total_b / 1_073_741_824.0;
+                            let free = free_b / 1_073_741_824.0;
+                            return DiskHealthSummary {
+                                filesystem: fs_type.to_string(),
+                                total_gb: total,
+                                used_gb: (total - free).max(0.0),
+                                free_gb: free,
+                                is_btrfs: false,
+                                trim_supported: true,
+                            };
+                        }
+                    }
+                }
+            }
         }
+
+        // Real disk stats couldn't be determined on this platform/config -- report
+        // that honestly (zeroed) rather than fabricating plausible-looking numbers.
+        DiskHealthSummary {
+            filesystem: "Unknown".to_string(),
+            total_gb: 0.0,
+            used_gb: 0.0,
+            free_gb: 0.0,
+            is_btrfs: false,
+            trim_supported: false,
+        }
+    }
+
+    /// Parses `snapper list`'s table output into (snapshot number, age in days)
+    /// pairs, skipping the header/separator rows and the always-present
+    /// snapshot 0 ("current"), which cannot be deleted or dated.
+    #[cfg(target_os = "linux")]
+    fn parse_snapper_snapshots(list_output: &str) -> Vec<(u32, i64)> {
+        let now = chrono::Utc::now().naive_utc();
+        list_output
+            .lines()
+            .filter_map(|line| {
+                let cols: Vec<&str> = line.split('|').map(|c| c.trim()).collect();
+                if cols.len() < 4 {
+                    return None;
+                }
+                let number: u32 = cols[0].parse().ok()?;
+                if number == 0 {
+                    return None;
+                }
+                let date_str = cols[3];
+                if date_str.is_empty() {
+                    return None;
+                }
+                let parsed = chrono::NaiveDateTime::parse_from_str(date_str, "%a %d %b %Y %H:%M:%S").ok()?;
+                let age_days = (now - parsed).num_days();
+                Some((number, age_days))
+            })
+            .collect()
+    }
+
+    /// Parses `timeshift --list`'s output into (snapshot name, age in days)
+    /// pairs. Snapshot names are themselves timestamps (`YYYY-MM-DD_HH-MM-SS`).
+    #[cfg(target_os = "linux")]
+    fn parse_timeshift_snapshots(list_output: &str) -> Vec<(String, i64)> {
+        let now = chrono::Utc::now().naive_utc();
+        list_output
+            .lines()
+            .filter_map(|line| {
+                let trimmed = line.trim();
+                let name = trimmed.split_whitespace().next()?;
+                let parsed = chrono::NaiveDateTime::parse_from_str(name, "%Y-%m-%d_%H-%M-%S").ok()?;
+                let age_days = (now - parsed).num_days();
+                Some((name.to_string(), age_days))
+            })
+            .collect()
     }
 
     fn read_snapshot_compactor() -> SnapshotCompactorInfo {
         #[cfg(target_os = "linux")]
         {
-            let has_snapper = Path::new("/etc/snapper/configs/root").exists();
-            let provider = if has_snapper { "Snapper (Btrfs)" } else { "Timeshift" };
+            let has_snapper = Command::new("which").arg("snapper").output().map(|o| o.status.success()).unwrap_or(false);
+            if has_snapper {
+                if let Ok(out) = Command::new("snapper").args(["list", "-t", "single"]).output() {
+                    if out.status.success() {
+                        let snaps = Self::parse_snapper_snapshots(&String::from_utf8_lossy(&out.stdout));
+                        return SnapshotCompactorInfo {
+                            provider: "Snapper (Btrfs)".to_string(),
+                            total_snapshots: snaps.len(),
+                            older_than_14d_count: snaps.iter().filter(|(_, age)| *age >= 14).count(),
+                            older_than_30d_count: snaps.iter().filter(|(_, age)| *age >= 30).count(),
+                            // Btrfs snapshots share extents with the live subvolume (CoW),
+                            // so a per-snapshot "size" isn't meaningful without an expensive
+                            // `btrfs fi du` walk; report 0 rather than a fabricated estimate.
+                            estimated_reclaimable_mb: 0,
+                        };
+                    }
+                }
+            }
 
-            return SnapshotCompactorInfo {
-                provider: provider.to_string(),
-                total_snapshots: 6,
-                older_than_14d_count: 2,
-                older_than_30d_count: 1,
-                estimated_reclaimable_mb: 18400, // ~18.4 GB
-            };
+            let has_timeshift = Command::new("which").arg("timeshift").output().map(|o| o.status.success()).unwrap_or(false);
+            if has_timeshift {
+                if let Ok(out) = Command::new("timeshift").arg("--list").output() {
+                    if out.status.success() {
+                        let snaps = Self::parse_timeshift_snapshots(&String::from_utf8_lossy(&out.stdout));
+                        return SnapshotCompactorInfo {
+                            provider: "Timeshift".to_string(),
+                            total_snapshots: snaps.len(),
+                            older_than_14d_count: snaps.iter().filter(|(_, age)| *age >= 14).count(),
+                            older_than_30d_count: snaps.iter().filter(|(_, age)| *age >= 30).count(),
+                            estimated_reclaimable_mb: 0,
+                        };
+                    }
+                }
+            }
+
+            SnapshotCompactorInfo {
+                provider: "None detected".to_string(),
+                total_snapshots: 0,
+                older_than_14d_count: 0,
+                older_than_30d_count: 0,
+                estimated_reclaimable_mb: 0,
+            }
         }
 
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(target_os = "windows")]
         {
+            let script = "Get-ComputerRestorePoint | Select-Object CreationTime | ConvertTo-Json -Compress";
+            if let Ok(out) = Command::new("powershell")
+                .args(["-NoProfile", "-NonInteractive", "-Command", script])
+                .output()
+            {
+                if out.status.success() {
+                    let text = String::from_utf8_lossy(&out.stdout);
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(text.trim()) {
+                        // A single restore point deserializes as an object, several as an array.
+                        let points: Vec<&serde_json::Value> = match &json {
+                            serde_json::Value::Array(arr) => arr.iter().collect(),
+                            serde_json::Value::Object(_) => vec![&json],
+                            _ => vec![],
+                        };
+                        let now = chrono::Utc::now().naive_utc();
+                        let ages: Vec<i64> = points
+                            .iter()
+                            .filter_map(|p| p.get("CreationTime")?.as_str())
+                            .filter_map(|s| {
+                                // PowerShell's ConvertTo-Json renders DateTime as
+                                // "/Date(<epoch-ms>)/" by default.
+                                let digits: String = s.chars().filter(|c| c.is_ascii_digit()).collect();
+                                let epoch_ms: i64 = digits.parse().ok()?;
+                                let created = chrono::DateTime::from_timestamp_millis(epoch_ms)?.naive_utc();
+                                Some((now - created).num_days())
+                            })
+                            .collect();
+                        return SnapshotCompactorInfo {
+                            provider: "Windows System Restore (VSS)".to_string(),
+                            total_snapshots: ages.len(),
+                            older_than_14d_count: ages.iter().filter(|age| **age >= 14).count(),
+                            older_than_30d_count: ages.iter().filter(|age| **age >= 30).count(),
+                            estimated_reclaimable_mb: 0,
+                        };
+                    }
+                }
+            }
+
             SnapshotCompactorInfo {
-                provider: "Windows Volume Shadow Copy (VSS)".to_string(),
-                total_snapshots: 4,
-                older_than_14d_count: 2,
-                older_than_30d_count: 1,
-                estimated_reclaimable_mb: 24500,
+                provider: "Windows System Restore (VSS)".to_string(),
+                total_snapshots: 0,
+                older_than_14d_count: 0,
+                older_than_30d_count: 0,
+                estimated_reclaimable_mb: 0,
             }
         }
     }
 
-    /// Prune snapshots older than days
+    /// Deletes local snapshots older than `older_than_days`. Real deletion for
+    /// Snapper (`snapper delete <N>`) and Timeshift (`timeshift --delete`) --
+    /// both support removing an individual snapshot without touching the rest
+    /// of the system. Windows System Restore has no equivalent granular
+    /// deletion primitive available to this app (`vssadmin`/`Get-CimInstance
+    /// SystemRestore` deletion is all-or-oldest, not "everything older than N
+    /// days"), so that case is disclosed as unsupported rather than faked.
     pub fn prune_old_snapshots(older_than_days: u32) -> Result<String, String> {
         #[cfg(target_os = "linux")]
         {
-            Ok(format!("Successfully compacted checkpoints older than {} days.", older_than_days))
+            let cutoff = older_than_days as i64;
+
+            let has_snapper = Command::new("which").arg("snapper").output().map(|o| o.status.success()).unwrap_or(false);
+            if has_snapper {
+                let list_out = Command::new("snapper").args(["list", "-t", "single"]).output()
+                    .map_err(|e| format!("Failed to list snapper snapshots: {}", e))?;
+                let old: Vec<u32> = Self::parse_snapper_snapshots(&String::from_utf8_lossy(&list_out.stdout))
+                    .into_iter()
+                    .filter(|(_, age)| *age >= cutoff)
+                    .map(|(number, _)| number)
+                    .collect();
+
+                if old.is_empty() {
+                    return Ok(format!("No Snapper snapshots older than {} days were found.", older_than_days));
+                }
+
+                let mut deleted = 0usize;
+                let mut errors = Vec::new();
+                for number in &old {
+                    let out = Command::new("snapper").args(["delete", &number.to_string()]).output();
+                    match out {
+                        Ok(o) if o.status.success() => deleted += 1,
+                        Ok(o) => errors.push(format!("#{}: {}", number, String::from_utf8_lossy(&o.stderr).trim())),
+                        Err(e) => errors.push(format!("#{}: {}", number, e)),
+                    }
+                }
+
+                return if errors.is_empty() {
+                    Ok(format!("Deleted {} Snapper snapshot(s) older than {} days.", deleted, older_than_days))
+                } else if deleted > 0 {
+                    Ok(format!("Deleted {} of {} snapshot(s); failures: {}", deleted, old.len(), errors.join("; ")))
+                } else {
+                    Err(format!("Failed to delete any snapshots: {}", errors.join("; ")))
+                };
+            }
+
+            let has_timeshift = Command::new("which").arg("timeshift").output().map(|o| o.status.success()).unwrap_or(false);
+            if has_timeshift {
+                let list_out = Command::new("timeshift").arg("--list").output()
+                    .map_err(|e| format!("Failed to list Timeshift snapshots: {}", e))?;
+                let old: Vec<String> = Self::parse_timeshift_snapshots(&String::from_utf8_lossy(&list_out.stdout))
+                    .into_iter()
+                    .filter(|(_, age)| *age >= cutoff)
+                    .map(|(name, _)| name)
+                    .collect();
+
+                if old.is_empty() {
+                    return Ok(format!("No Timeshift snapshots older than {} days were found.", older_than_days));
+                }
+
+                let mut deleted = 0usize;
+                let mut errors = Vec::new();
+                for name in &old {
+                    let out = Command::new("timeshift").args(["--delete", "--snapshot", name, "--yes"]).output();
+                    match out {
+                        Ok(o) if o.status.success() => deleted += 1,
+                        Ok(o) => errors.push(format!("{}: {}", name, String::from_utf8_lossy(&o.stderr).trim())),
+                        Err(e) => errors.push(format!("{}: {}", name, e)),
+                    }
+                }
+
+                return if errors.is_empty() {
+                    Ok(format!("Deleted {} Timeshift snapshot(s) older than {} days.", deleted, older_than_days))
+                } else if deleted > 0 {
+                    Ok(format!("Deleted {} of {} snapshot(s); failures: {}", deleted, old.len(), errors.join("; ")))
+                } else {
+                    Err(format!("Failed to delete any snapshots: {}", errors.join("; ")))
+                };
+            }
+
+            Ok("No local snapshot tool (Snapper or Timeshift) detected; nothing to compact.".to_string())
         }
         #[cfg(not(target_os = "linux"))]
         {
-            Ok(format!("Compacted Windows System Restore checkpoints older than {} days.", older_than_days))
+            let _ = older_than_days;
+            Err("Windows System Restore does not support deleting individual checkpoints by age. \
+                 Open \"Configure System Restore\" and delete old restore points manually, or use \
+                 Disk Cleanup's \"Clean up system restore and shadow copies\" option.".to_string())
         }
     }
 
@@ -207,9 +439,29 @@ impl SystemVitals {
                 Err(String::from_utf8_lossy(&out.stderr).to_string())
             }
         }
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(target_os = "windows")]
         {
-            Ok(format!("Windows power mode set to {}", profile))
+            // Windows' three built-in power schemes, addressed by their well-known
+            // (constant across all Windows installs) GUIDs.
+            let guid = match profile.to_lowercase().as_str() {
+                "performance" => "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
+                "power-saver" | "powersaver" | "battery-saver" => "a1841308-3541-4fab-bc81-f71556f20b4a",
+                _ => "381b4222-f694-41f0-9685-ff5bb260df2e", // balanced
+            };
+            let out = Command::new("powercfg")
+                .args(["/setactive", guid])
+                .output()
+                .map_err(|e| e.to_string())?;
+
+            if out.status.success() {
+                Ok(format!("Power plan switched to: {}", profile))
+            } else {
+                Err(String::from_utf8_lossy(&out.stderr).to_string())
+            }
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+        {
+            Err(format!("Power profile switching is not supported on this platform (requested: {}).", profile))
         }
     }
 }

@@ -59,7 +59,9 @@ impl AutostartManager {
 
         #[cfg(target_os = "windows")]
         {
-            // Windows startup folder and mock entries
+            // Windows startup folder (per-user Start Menu > Startup shortcuts).
+            // Registry Run/RunOnce keys are a common second source of autostart
+            // entries but aren't scanned here yet -- a known gap, not simulated.
             let appdata = std::env::var("APPDATA").unwrap_or_default();
             let startup_dir = format!("{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup", appdata);
             let p_startup = Path::new(&startup_dir);
