@@ -1,6 +1,6 @@
 [package]
 name = "miri-gui-backend"
-version = "0.1.0"
+version = "0.3.0"
 description = "Miri Cleaner Tauri GUI Desktop Backend"
 authors = ["Miri Cleaner Contributors"]
 edition = "2021"
