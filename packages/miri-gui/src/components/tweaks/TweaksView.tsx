@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useCleanerStore } from "../../store/useCleanerStore";
 import { Mascot } from "../ui/Mascot";
 import { TactileButton } from "../ui/TactileButton";
@@ -81,6 +81,49 @@ export const TweaksView: React.FC = () => {
   const [copiedCommand, setCopiedCommand] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const errorAction = useAsyncAction();
+  const infoModalRef = useRef<HTMLDivElement>(null);
+
+  // Escape-to-dismiss and focus trap for the tweak info/command modal, matching
+  // the pattern already used by DangerConfirmationModal, OnboardingFlow, and
+  // SmartCleanWizard -- this modal was the one exception to that convention.
+  useEffect(() => {
+    if (!activeInfoModal) return;
+
+    const timer = setTimeout(() => infoModalRef.current?.focus(), 50);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActiveInfoModal(null);
+        return;
+      }
+      if (e.key === "Tab" && infoModalRef.current) {
+        const focusable = infoModalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeInfoModal]);
   const [isLoading, setIsLoading] = useState(true);
   const [autostartItems, setAutostartItems] = useState<AutostartItem[]>([]);
   const [togglingAutostartId, setTogglingAutostartId] = useState<string | null>(null);
@@ -90,6 +133,15 @@ export const TweaksView: React.FC = () => {
   // focal point, mirroring CasualView's `gardenExpanded` pattern.
   const [bootExpanded, setBootExpanded] = useState(false);
   const [moreExpanded, setMoreExpanded] = useState(false);
+  // Progressive disclosure for the large flat tweak lists (Windows Essential/
+  // Advanced, Linux Performance/GNOME Extensions can run 9-27 items) -- shows
+  // a manageable first page and reveals the rest on demand, rather than
+  // always rendering every item at once.
+  const TWEAK_LIST_PAGE_SIZE = 8;
+  const [winEssentialExpanded, setWinEssentialExpanded] = useState(false);
+  const [winAdvancedExpanded, setWinAdvancedExpanded] = useState(false);
+  const [linuxOptimizationExpanded, setLinuxOptimizationExpanded] = useState(false);
+  const [linuxExtensionExpanded, setLinuxExtensionExpanded] = useState(false);
 
   // Load data on mount
   useEffect(() => {
@@ -284,6 +336,7 @@ export const TweaksView: React.FC = () => {
         description: `You are about to apply ${ids.length} system optimizations from the Fedora Post-Install Guide. Elevated privileges will be requested for package and systemd modifications.`,
         requiresElevation: true,
         riskLevel: "safe",
+        confirmWord: "APPLY",
         onConfirm: async () => {
           setIsProcessing(true);
           addLog(`[Fedora Tweaks] Applying ${ids.length} optimizations...`);
@@ -315,6 +368,7 @@ export const TweaksView: React.FC = () => {
         }`,
         requiresElevation: true,
         riskLevel: "moderate",
+        confirmWord: "APPLY",
         onConfirm: async () => {
           setIsProcessing(true);
           addLog(`[Windows Tweaks] Applying ${ids.length} tweaks (Restore Point: ${createRestorePoint})...`);
@@ -347,6 +401,7 @@ export const TweaksView: React.FC = () => {
       description: `Configures primary and secondary DNS servers on active network adapters.`,
       requiresElevation: true,
       riskLevel: "safe",
+      confirmWord: "SET",
       onConfirm: async () => {
         setIsProcessing(true);
         addLog(`[DNS] Configuring DNS preset: ${selectedDns}...`);
@@ -381,11 +436,17 @@ export const TweaksView: React.FC = () => {
       default: "Removes update deferral policies, restores update service startup settings to standard, and re-enables scheduled maintenance tasks.",
       disable: "Stops and disables update services (wuauserv, WaaSMedic, UsoSvc, DoSvc), enforces GPO registry override (NoAutoUpdate=1), disables scheduled tasks, and purges downloaded update files.",
     };
+    const confirmWords = {
+      recommended: "APPLY",
+      default: "RESTORE",
+      disable: "DISABLE",
+    };
     openDangerModal({
       title: titles[profile],
       description: descriptions[profile],
       requiresElevation: true,
       riskLevel: profile === "disable" ? "aggressive" : "safe",
+      confirmWord: confirmWords[profile],
       onConfirm: async () => {
         setIsProcessing(true);
         addLog(`[Windows Updates] Switching profile to: ${profile}...`);
@@ -646,7 +707,7 @@ export const TweaksView: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 max-w-xl">
-                Applies the 17 essential tweaks: turns off telemetry and timeline tracking,
+                Applies the {winEssentialTweaks.length} essential tweaks: turns off telemetry and timeline tracking,
                 disables Bing search results in Start Menu, stops sponsored OEM apps, and speeds up File Explorer.
               </p>
             </div>
@@ -728,19 +789,25 @@ export const TweaksView: React.FC = () => {
                           return (
                             <div
                               key={t.id}
+                              role="checkbox"
+                              aria-checked={isChecked}
+                              aria-label={`Toggle ${t.name}`}
+                              tabIndex={0}
                               onClick={() => toggleTweak(t.id)}
-                              className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
+                              onKeyDown={(e) => {
+                                if (e.key === " " || e.key === "Enter") {
+                                  e.preventDefault();
+                                  toggleTweak(t.id);
+                                }
+                              }}
+                              className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
                                 isChecked
                                   ? "bg-pink-50/70 border-pink-300"
                                   : "bg-slate-50 hover:bg-slate-100 border-slate-200"
                               }`}
                             >
                               <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                                <PixelCheckbox
-                                  checked={isChecked}
-                                  onChange={() => toggleTweak(t.id)}
-                                  label={t.name}
-                                />
+                                <PixelCheckbox checked={isChecked} presentational />
                                 <span className="font-bold text-slate-800 truncate text-xs">
                                   {t.name.replace("GNOME Extension - ", "")}
                                 </span>
@@ -993,6 +1060,7 @@ export const TweaksView: React.FC = () => {
                     <select
                       value={selectedDns}
                       onChange={(e) => setSelectedDns(e.target.value)}
+                      aria-label="Select DNS preset"
                       className="text-xs font-bold text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-400 cursor-pointer"
                     >
                       <option value="default">Default (ISP / DHCP Assigned)</option>
@@ -1207,7 +1275,7 @@ export const TweaksView: React.FC = () => {
             <div className="space-y-6">
               <div className={`grid grid-cols-1 ${
                 linuxCategoryFilter === "all" ? "xl:grid-cols-3 md:grid-cols-2" : "grid-cols-1"
-              } gap-6 items-start font-pixel-body text-xs`}>
+              } gap-6 items-start text-xs`}>
                 {/* Column 1: Essential Fedora Tweaks */}
                 {(linuxCategoryFilter === "all" || linuxCategoryFilter === "essential") && (
                   <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
@@ -1228,19 +1296,25 @@ export const TweaksView: React.FC = () => {
                         return (
                           <div
                             key={tweak.id}
+                            role="checkbox"
+                            aria-checked={isChecked}
+                            aria-label={`Toggle ${tweak.name}`}
+                            tabIndex={0}
                             onClick={() => toggleTweak(tweak.id)}
-                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border ${
+                            onKeyDown={(e) => {
+                              if (e.key === " " || e.key === "Enter") {
+                                e.preventDefault();
+                                toggleTweak(tweak.id);
+                              }
+                            }}
+                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                               isChecked
                                 ? "bg-indigo-50/50 border-indigo-200"
                                 : "bg-white hover:bg-slate-50 border-slate-100"
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                              <PixelCheckbox
-                                checked={isChecked}
-                                onChange={() => toggleTweak(tweak.id)}
-                                label={tweak.name}
-                              />
+                              <PixelCheckbox checked={isChecked} presentational />
                               <span className="truncate text-slate-800 font-medium">
                                 {tweak.name}
                               </span>
@@ -1299,25 +1373,33 @@ export const TweaksView: React.FC = () => {
                     </div>
 
                     <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
-                      {filteredLinuxOptimizations.map((tweak) => {
+                      {filteredLinuxOptimizations
+                        .slice(0, linuxOptimizationExpanded ? filteredLinuxOptimizations.length : TWEAK_LIST_PAGE_SIZE)
+                        .map((tweak) => {
                         const isChecked = selectedTweakIds.has(tweak.id);
 
                         return (
                           <div
                             key={tweak.id}
+                            role="checkbox"
+                            aria-checked={isChecked}
+                            aria-label={`Toggle ${tweak.name}`}
+                            tabIndex={0}
                             onClick={() => toggleTweak(tweak.id)}
-                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border ${
+                            onKeyDown={(e) => {
+                              if (e.key === " " || e.key === "Enter") {
+                                e.preventDefault();
+                                toggleTweak(tweak.id);
+                              }
+                            }}
+                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                               isChecked
                                 ? "bg-indigo-50/50 border-indigo-200"
                                 : "bg-white hover:bg-slate-50 border-slate-100"
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                              <PixelCheckbox
-                                checked={isChecked}
-                                onChange={() => toggleTweak(tweak.id)}
-                                label={tweak.name}
-                              />
+                              <PixelCheckbox checked={isChecked} presentational />
                               <span className="truncate text-slate-800 font-medium">
                                 {tweak.name}
                               </span>
@@ -1359,6 +1441,18 @@ export const TweaksView: React.FC = () => {
                         );
                       })}
                     </div>
+                    {filteredLinuxOptimizations.length > TWEAK_LIST_PAGE_SIZE && (
+                      <button
+                        type="button"
+                        onClick={() => setLinuxOptimizationExpanded((v) => !v)}
+                        aria-expanded={linuxOptimizationExpanded}
+                        className="w-full text-center text-[11px] font-black text-indigo-600 hover:text-indigo-800 py-1.5"
+                      >
+                        {linuxOptimizationExpanded
+                          ? "Show fewer"
+                          : `Show ${filteredLinuxOptimizations.length - TWEAK_LIST_PAGE_SIZE} more`}
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -1376,25 +1470,33 @@ export const TweaksView: React.FC = () => {
                     </div>
 
                     <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
-                      {filteredLinuxExtensions.map((tweak) => {
+                      {filteredLinuxExtensions
+                        .slice(0, linuxExtensionExpanded ? filteredLinuxExtensions.length : TWEAK_LIST_PAGE_SIZE)
+                        .map((tweak) => {
                         const isChecked = selectedTweakIds.has(tweak.id);
 
                         return (
                           <div
                             key={tweak.id}
+                            role="checkbox"
+                            aria-checked={isChecked}
+                            aria-label={`Toggle ${tweak.name}`}
+                            tabIndex={0}
                             onClick={() => toggleTweak(tweak.id)}
-                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border ${
+                            onKeyDown={(e) => {
+                              if (e.key === " " || e.key === "Enter") {
+                                e.preventDefault();
+                                toggleTweak(tweak.id);
+                              }
+                            }}
+                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
                               isChecked
                                 ? "bg-pink-50/50 border-pink-200"
                                 : "bg-white hover:bg-slate-50 border-slate-100"
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                              <PixelCheckbox
-                                checked={isChecked}
-                                onChange={() => toggleTweak(tweak.id)}
-                                label={tweak.name}
-                              />
+                              <PixelCheckbox checked={isChecked} presentational />
                               <span className="truncate text-slate-800 font-medium">
                                 {tweak.name}
                               </span>
@@ -1436,6 +1538,18 @@ export const TweaksView: React.FC = () => {
                         );
                       })}
                     </div>
+                    {filteredLinuxExtensions.length > TWEAK_LIST_PAGE_SIZE && (
+                      <button
+                        type="button"
+                        onClick={() => setLinuxExtensionExpanded((v) => !v)}
+                        aria-expanded={linuxExtensionExpanded}
+                        className="w-full text-center text-[11px] font-black text-pink-600 hover:text-pink-800 py-1.5"
+                      >
+                        {linuxExtensionExpanded
+                          ? "Show fewer"
+                          : `Show ${filteredLinuxExtensions.length - TWEAK_LIST_PAGE_SIZE} more`}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1448,10 +1562,11 @@ export const TweaksView: React.FC = () => {
                   <select
                     value={selectedDns}
                     onChange={(e) => setSelectedDns(e.target.value)}
+                    aria-label="Select DNS preset"
                     className="font-bold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-800 outline-none focus:border-indigo-400 cursor-pointer"
                   >
                     <option value="default">Default (DHCP / Systemd-Resolved)</option>
-                    <option value="cloudflare">Cloudflare (1.1.1.1 - Low Latency)</option>
+                    <option value="cloudflare">Cloudflare (1.1.1.1 - Fast & Private)</option>
                     <option value="google">Google (8.8.8.8 - High Reliability)</option>
                     <option value="quad9">Quad9 (9.9.9.9 - Threat Blocking)</option>
                     <option value="adguard">AdGuard (Ad-Blocking & Tracking Protection)</option>
@@ -1464,7 +1579,7 @@ export const TweaksView: React.FC = () => {
             </div>
           ) : (
             /* WINDOWS TWEAKS GRID */
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start font-pixel-body text-xs">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start text-xs">
               {/* Left Column: Essential Tweaks */}
               <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -1478,7 +1593,9 @@ export const TweaksView: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5 max-h-[460px] overflow-y-auto pr-1">
-                  {filteredWinEssential.map((tweak) => {
+                  {filteredWinEssential
+                    .slice(0, winEssentialExpanded ? filteredWinEssential.length : TWEAK_LIST_PAGE_SIZE)
+                    .map((tweak) => {
                     const isChecked = selectedTweakIds.has(tweak.id);
                     const isWin11Only = tweak.min_windows_version === 11;
                     const isUnsupported = !tweak.is_applicable;
@@ -1486,20 +1603,26 @@ export const TweaksView: React.FC = () => {
                     return (
                       <div
                         key={tweak.id}
+                        role="checkbox"
+                        aria-checked={isChecked}
+                        aria-disabled={isUnsupported}
+                        aria-label={`Toggle ${tweak.name}`}
+                        tabIndex={isUnsupported ? -1 : 0}
                         onClick={() => !isUnsupported && toggleTweak(tweak.id)}
-                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl transition-all cursor-pointer select-none ${
+                        onKeyDown={(e) => {
+                          if (!isUnsupported && (e.key === " " || e.key === "Enter")) {
+                            e.preventDefault();
+                            toggleTweak(tweak.id);
+                          }
+                        }}
+                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                           isChecked
                             ? "bg-indigo-50/60 hover:bg-indigo-50"
                             : "hover:bg-slate-50"
                         } ${isUnsupported ? "opacity-40 cursor-not-allowed" : ""}`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                          <PixelCheckbox
-                            checked={isChecked}
-                            onChange={() => !isUnsupported && toggleTweak(tweak.id)}
-                            disabled={isUnsupported}
-                            label={tweak.name}
-                          />
+                          <PixelCheckbox checked={isChecked} disabled={isUnsupported} presentational />
                           <span className="truncate text-slate-800 font-medium">
                             {tweak.name}
                           </span>
@@ -1535,6 +1658,18 @@ export const TweaksView: React.FC = () => {
                     );
                   })}
                 </div>
+                {filteredWinEssential.length > TWEAK_LIST_PAGE_SIZE && (
+                  <button
+                    type="button"
+                    onClick={() => setWinEssentialExpanded((v) => !v)}
+                    aria-expanded={winEssentialExpanded}
+                    className="w-full text-center text-[11px] font-black text-indigo-600 hover:text-indigo-800 py-1.5"
+                  >
+                    {winEssentialExpanded
+                      ? "Show fewer"
+                      : `Show ${filteredWinEssential.length - TWEAK_LIST_PAGE_SIZE} more`}
+                  </button>
+                )}
               </div>
 
               {/* Right Column: Advanced Tweaks */}
@@ -1550,7 +1685,9 @@ export const TweaksView: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5 max-h-[460px] overflow-y-auto pr-1">
-                  {filteredWinAdvanced.map((tweak) => {
+                  {filteredWinAdvanced
+                    .slice(0, winAdvancedExpanded ? filteredWinAdvanced.length : TWEAK_LIST_PAGE_SIZE)
+                    .map((tweak) => {
                     const isChecked = selectedTweakIds.has(tweak.id);
                     const isWin11Only = tweak.min_windows_version === 11;
                     const isUnsupported = !tweak.is_applicable;
@@ -1558,20 +1695,26 @@ export const TweaksView: React.FC = () => {
                     return (
                       <div
                         key={tweak.id}
+                        role="checkbox"
+                        aria-checked={isChecked}
+                        aria-disabled={isUnsupported}
+                        aria-label={`Toggle ${tweak.name}`}
+                        tabIndex={isUnsupported ? -1 : 0}
                         onClick={() => !isUnsupported && toggleTweak(tweak.id)}
-                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl transition-all cursor-pointer select-none ${
+                        onKeyDown={(e) => {
+                          if (!isUnsupported && (e.key === " " || e.key === "Enter")) {
+                            e.preventDefault();
+                            toggleTweak(tweak.id);
+                          }
+                        }}
+                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
                           isChecked
                             ? "bg-amber-50/60 hover:bg-amber-50"
                             : "hover:bg-slate-50"
                         } ${isUnsupported ? "opacity-40 cursor-not-allowed" : ""}`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                          <PixelCheckbox
-                            checked={isChecked}
-                            onChange={() => !isUnsupported && toggleTweak(tweak.id)}
-                            disabled={isUnsupported}
-                            label={tweak.name}
-                          />
+                          <PixelCheckbox checked={isChecked} disabled={isUnsupported} presentational />
                           <span className="truncate text-slate-800 font-medium">
                             {tweak.name}
                           </span>
@@ -1612,6 +1755,18 @@ export const TweaksView: React.FC = () => {
                     );
                   })}
                 </div>
+                {filteredWinAdvanced.length > TWEAK_LIST_PAGE_SIZE && (
+                  <button
+                    type="button"
+                    onClick={() => setWinAdvancedExpanded((v) => !v)}
+                    aria-expanded={winAdvancedExpanded}
+                    className="w-full text-center text-[11px] font-black text-amber-700 hover:text-amber-900 py-1.5"
+                  >
+                    {winAdvancedExpanded
+                      ? "Show fewer"
+                      : `Show ${filteredWinAdvanced.length - TWEAK_LIST_PAGE_SIZE} more`}
+                  </button>
+                )}
 
                 {/* Bottom Controls: ShutUp10 & DNS */}
                 <div className="pt-4 border-t border-slate-100 space-y-3">
@@ -1624,12 +1779,21 @@ export const TweaksView: React.FC = () => {
                           ? "Run O&O ShutUp10++ companion"
                           : "O&O ShutUp10++ is not installed on this system"
                       }
-                      onClick={() => {
+                      onClick={async () => {
                         if (!isShutUp10Installed) return;
                         addLog("[ShutUp10] Attempting to invoke external companion O&O ShutUp10++...");
-                        bridge.applyWindowsTweaks(["shutup10_run"], false).then((res) => {
-                          addLog(`[ShutUp10] ${res[0]?.details || "Done"}`);
-                        });
+                        await errorAction.run(
+                          async () => {
+                            const res = await bridge.applyWindowsTweaks(["shutup10_run"], false);
+                            addLog(`[ShutUp10] ${res[0]?.details || "Done"}`);
+                          },
+                          {
+                            formatError: (e) => {
+                              addLog(`[ShutUp10] Error: ${e}`);
+                              return `Launching O&O ShutUp10++ failed: ${e instanceof Error ? e.message : String(e)}`;
+                            },
+                          }
+                        );
                       }}
                       className={`text-xs font-black px-3 py-2 rounded-xl border transition-all ${
                         isShutUp10Installed
@@ -1645,6 +1809,7 @@ export const TweaksView: React.FC = () => {
                       <select
                         value={selectedDns}
                         onChange={(e) => setSelectedDns(e.target.value)}
+                        aria-label="Select DNS preset"
                         className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-800 outline-none focus:border-indigo-400"
                       >
                         <option value="default">Default</option>
@@ -1709,16 +1874,24 @@ export const TweaksView: React.FC = () => {
         <div
           role="dialog"
           aria-modal="true"
+          aria-labelledby="tweak-info-modal-title"
           className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setActiveInfoModal(null);
+          }}
         >
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 border-2 border-slate-100 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+          <div
+            ref={infoModalRef}
+            tabIndex={-1}
+            className="bg-white rounded-3xl max-w-xl w-full p-6 border-2 border-slate-100 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
                   <HelpCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-black text-slate-900 text-base leading-snug">
+                  <h3 id="tweak-info-modal-title" className="font-black text-slate-900 text-base leading-snug">
                     {activeInfoModal.name}
                   </h3>
                   <span className="text-[10px] font-bold text-slate-400">

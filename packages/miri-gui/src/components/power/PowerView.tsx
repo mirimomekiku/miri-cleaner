@@ -8,19 +8,36 @@ import { bridge } from "../../lib/bridge";
 import { SnapshotStatus } from "../../types";
 import { ListSkeleton } from "../ui/Skeleton";
 import { formatBytes } from "../../lib/formatters";
+import { useAsyncAction } from "../../lib/useAsyncAction";
+import { ErrorBanner } from "../ui/ErrorBanner";
 
 export const PowerView: React.FC = () => {
   const { scanResult, selectedTargetIds, toggleTarget, selectAll, deselectAll } =
     useCleanerStore();
 
   const [snapshotStatus, setSnapshotStatus] = useState<SnapshotStatus | null>(null);
+  const errorAction = useAsyncAction();
 
   useEffect(() => {
-    bridge.getSnapshotStatus().then(setSnapshotStatus);
+    errorAction.run(
+      async () => {
+        const status = await bridge.getSnapshotStatus();
+        setSnapshotStatus(status);
+      },
+      {
+        formatError: (e) =>
+          `Loading snapshot status failed: ${e instanceof Error ? e.message : String(e)}`,
+      }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto select-none">
+      {errorAction.error && (
+        <ErrorBanner message={errorAction.error} onDismiss={errorAction.dismiss} onRetry={errorAction.retry} />
+      )}
+
       {/* Advanced Header */}
       <div className="bg-white rounded-3xl p-7 border-2 border-slate-100 shadow-duo flex items-center justify-between">
         <div>

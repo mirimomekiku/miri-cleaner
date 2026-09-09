@@ -56,8 +56,16 @@ const HealthSparkline: React.FC<{ samples: BatterySample[]; color: string }> = (
 };
 
 export const BatteryHealthCard: React.FC<BatteryHealthCardProps> = ({ battery, history }) => {
-  const isCharging = battery.status.toLowerCase().includes("charg") && !battery.status.toLowerCase().includes("dis");
+  const statusLower = battery.status.toLowerCase();
+  const isCharging = statusLower.includes("charg") && !statusLower.includes("dis");
   const health = battery.health_percentage;
+  // Green is reserved for a verified-good state (Green-Means-Guaranteed): a
+  // discharging or health-degraded battery must not read as "all clear"
+  // just because it happens to be plugged in and reporting a status string.
+  const isDischarging = statusLower.includes("discharg");
+  const isDegraded = health != null && health < 80;
+  const statusBadgeVariant: "green" | "yellow" | "gray" =
+    isDischarging || isDegraded ? "yellow" : isCharging || statusLower.includes("full") ? "green" : "gray";
   const trendDelta =
     history.length >= 2 ? history[history.length - 1].healthPercentage - history[0].healthPercentage : 0;
 
@@ -71,7 +79,7 @@ export const BatteryHealthCard: React.FC<BatteryHealthCardProps> = ({ battery, h
           <div>
             <div className="flex items-center gap-2">
               <h4 className="text-sm font-black text-slate-900">Battery Health</h4>
-              <PixelBadge label={battery.status} variant="green" />
+              <PixelBadge label={battery.status} variant={statusBadgeVariant} />
             </div>
             <p className="text-xs text-slate-500">
               {battery.percentage}% charged

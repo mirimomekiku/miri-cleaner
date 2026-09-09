@@ -76,6 +76,7 @@ export const SnapshotsView: React.FC = () => {
       }.`,
       requiresElevation: true,
       riskLevel: "safe",
+      confirmWord: "COMPACT",
       onConfirm: async () => {
         setIsCompacting(true);
         addLog(`[Compactor] Pruning snapshots older than ${days} days...`);
@@ -123,6 +124,7 @@ export const SnapshotsView: React.FC = () => {
       description: "Restores files and settings to the pre-cleanup snapshot checkpoint created for this operation.",
       requiresElevation: true,
       riskLevel: "safe",
+      confirmWord: "ROLLBACK",
       onConfirm: async () => {
         setIsProcessing(true);
         addLog(`Initiating rollback for transaction: ${auditId}`);
@@ -151,15 +153,16 @@ export const SnapshotsView: React.FC = () => {
       description: "Takes an immediate system snapshot (Btrfs subvolume or Windows VSS shadow copy) for manual safety peace-of-mind.",
       requiresElevation: true,
       riskLevel: "safe",
+      confirmWord: "CREATE",
       onConfirm: async () => {
         setIsProcessing(true);
         addLog("Creating manual pre-flight snapshot...");
         await errorAction.run(
           async () => {
-            await new Promise((r) => setTimeout(r, 600));
+            const snapshotId = await bridge.createManualSnapshot();
             const refreshedStatus = await bridge.getSnapshotStatus();
             setSnapshotStatus(refreshedStatus);
-            addLog("Manual safety checkpoint verified.");
+            addLog(`Manual safety checkpoint created: ${snapshotId}`);
           },
           {
             formatError: (e) => {

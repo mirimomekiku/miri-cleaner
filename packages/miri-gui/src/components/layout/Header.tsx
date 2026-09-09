@@ -22,7 +22,7 @@ export const Header: React.FC = () => {
               Miri Cleaner
             </h1>
             <span className="hidden sm:inline">
-              <PixelBadge label="v0.1.0" variant="pink" />
+              <PixelBadge label={`v${__APP_VERSION__}`} variant="pink" />
             </span>
           </div>
           <p className="hidden sm:block text-xs font-semibold text-slate-400 truncate">

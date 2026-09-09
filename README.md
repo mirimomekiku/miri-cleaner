@@ -148,7 +148,7 @@ This packages the `miri-cleaner` binary, installs the Polkit policy (`org.freede
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\packaging\windows\build-windows.ps1
 ```
-This builds the release binary, bundles the React frontend, and creates the NSIS installer and application manifest with `asInvoker` zero-trust privileges.
+This builds the `miri-cleaner` CLI/TUI binary, then builds and bundles the Tauri desktop GUI (`npm run tauri build` in `packages/miri-gui`), producing the real Windows desktop app installer(s) under `packages\miri-gui\src-tauri\target\release\bundle\{nsis,msi}`. A separate, optional NSIS installer for the CLI-only tool is also produced at `packaging\windows\MiriCleaner-CLI-Setup-*.exe`, with `asInvoker` zero-trust privileges.
 
 ---
 

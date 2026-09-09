@@ -20,6 +20,8 @@ import { CardSkeleton } from "../ui/Skeleton";
 import { formatBytes } from "../../lib/formatters";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { useAsyncAction } from "../../lib/useAsyncAction";
+import { ConfettiBurst } from "../ui/ConfettiBurst";
+import { celebrationTier } from "../casual/CasualView";
 
 export const PackagesToolchainsView: React.FC = () => {
   const {
@@ -49,6 +51,7 @@ export const PackagesToolchainsView: React.FC = () => {
 
   const [dryRun, setDryRun] = useState(false);
   const [successCelebration, setSuccessCelebration] = useState(false);
+  const [celebrationFreedBytes, setCelebrationFreedBytes] = useState(0);
   const [activeFilter, setActiveFilter] = useState<"all" | "packages" | "toolchains">("all");
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
@@ -131,6 +134,7 @@ export const PackagesToolchainsView: React.FC = () => {
             addLog(
               `Cleanup finished: ${formatBytes(result.freed_bytes).formatted} freed across ${result.deleted_files} files.`
             );
+            setCelebrationFreedBytes(result.freed_bytes);
             setSuccessCelebration(true);
             setTimeout(() => setSuccessCelebration(false), 5000);
             const refreshed = await bridge.scanAll();
@@ -200,7 +204,7 @@ export const PackagesToolchainsView: React.FC = () => {
           {/* a toggle instead of standing as the page's main structure.           */}
           {/* ==================================================================== */}
           <div className="bg-gradient-to-b from-white to-miri-50/60 rounded-[2rem] p-10 sm:p-12 border-2 border-miri-100 shadow-duo text-center space-y-6">
-            <div className="flex justify-center">
+            <div className="flex justify-center relative">
               <Mascot
                 mood={
                   successCelebration
@@ -213,6 +217,9 @@ export const PackagesToolchainsView: React.FC = () => {
                 }
                 size="lg"
               />
+              {successCelebration && !dryRun && (
+                <ConfettiBurst tier={celebrationTier(celebrationFreedBytes)} />
+              )}
             </div>
 
             <div className="flex items-center justify-center gap-2 flex-wrap">
