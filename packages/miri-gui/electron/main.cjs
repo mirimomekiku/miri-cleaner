@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, Notification } = require("electron");
 const path = require("path");
+const os = require("os");
 const { execFile, execFileSync } = require("child_process");
 const fs = require("fs");
 
@@ -87,22 +88,27 @@ function createWindow() {
   });
 }
 
-// IPC Handlers bridged to Rust miri-cleaner binary
-ipcMain.handle("scan_all", async () => {
+/** Runs the miri-cleaner CLI with the given args and parses its stdout as
+ * JSON -- the shared shape behind every read-only IPC handler that just
+ * wants "run this CLI subcommand, hand back its JSON". Handlers that need
+ * bespoke behavior on non-JSON stdout (treating plain-text output as a
+ * successful action report) stay separate below; that's genuinely
+ * different behavior, not this same pattern repeated. */
+function runCliJson(args) {
   return new Promise((resolve, reject) => {
-    execFile(BINARY_PATH, ["scan", "--json"], (err, stdout, stderr) => {
-      if (err) {
-        return reject(stderr || err.message);
-      }
+    execFile(BINARY_PATH, args, (err, stdout, stderr) => {
+      if (err) return reject(stderr || err.message);
       try {
-        const data = JSON.parse(stdout);
-        resolve(data);
+        resolve(JSON.parse(stdout));
       } catch (parseErr) {
-        reject(`Failed to parse scan output: ${parseErr}`);
+        reject(`Failed to parse CLI output: ${parseErr}`);
       }
     });
   });
-});
+}
+
+// IPC Handlers bridged to Rust miri-cleaner binary
+ipcMain.handle("scan_all", async () => runCliJson(["scan", "--json"]));
 
 ipcMain.handle("execute_clean", async (event, { plan }) => {
   return new Promise((resolve, reject) => {
@@ -188,31 +194,9 @@ ipcMain.handle("set_windows_updates", async (event, { disabled, profile }) => {
   });
 });
 
-ipcMain.handle("get_windows_tweaks", async () => {
-  return new Promise((resolve, reject) => {
-    execFile(BINARY_PATH, ["tweak", "windows-list", "--json"], (err, stdout, stderr) => {
-      if (err) return reject(stderr || err.message);
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
-});
+ipcMain.handle("get_windows_tweaks", async () => runCliJson(["tweak", "windows-list", "--json"]));
 
-ipcMain.handle("get_windows_version_info", async () => {
-  return new Promise((resolve, reject) => {
-    execFile(BINARY_PATH, ["tweak", "windows-info", "--json"], (err, stdout, stderr) => {
-      if (err) return reject(stderr || err.message);
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
-});
+ipcMain.handle("get_windows_version_info", async () => runCliJson(["tweak", "windows-info", "--json"]));
 
 ipcMain.handle("apply_windows_tweaks", async (event, { ids, restorePoint }) => {
   return new Promise((resolve, reject) => {
@@ -234,18 +218,7 @@ ipcMain.handle("apply_windows_tweaks", async (event, { ids, restorePoint }) => {
   });
 });
 
-ipcMain.handle("get_dns_info", async () => {
-  return new Promise((resolve, reject) => {
-    execFile(BINARY_PATH, ["tweak", "dns-get", "--json"], (err, stdout, stderr) => {
-      if (err) return reject(stderr || err.message);
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
-});
+ipcMain.handle("get_dns_info", async () => runCliJson(["tweak", "dns-get", "--json"]));
 
 ipcMain.handle("set_dns", async (event, { preset }) => {
   return new Promise((resolve, reject) => {
@@ -260,18 +233,7 @@ ipcMain.handle("set_dns", async (event, { preset }) => {
   });
 });
 
-ipcMain.handle("get_linux_tweaks", async () => {
-  return new Promise((resolve, reject) => {
-    execFile(BINARY_PATH, ["tweak", "fedora-list", "--json"], (err, stdout, stderr) => {
-      if (err) return reject(stderr || err.message);
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
-});
+ipcMain.handle("get_linux_tweaks", async () => runCliJson(["tweak", "fedora-list", "--json"]));
 
 ipcMain.handle("apply_linux_tweaks", async (event, { ids }) => {
   return new Promise((resolve, reject) => {
@@ -299,18 +261,7 @@ ipcMain.handle("execute_linux_tweak", async (event, { tweakName }) => {
   });
 });
 
-ipcMain.handle("get_apps_catalog", async () => {
-  return new Promise((resolve, reject) => {
-    execFile(BINARY_PATH, ["apps", "list", "--json"], (err, stdout, stderr) => {
-      if (err) return reject(stderr || err.message);
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
-});
+ipcMain.handle("get_apps_catalog", async () => runCliJson(["apps", "list", "--json"]));
 
 ipcMain.handle("install_apps", async (event, { ids, backend }) => {
   return new Promise((resolve, reject) => {
@@ -367,32 +318,32 @@ ipcMain.handle("get_audit_history", async () => {
 
 
 ipcMain.handle("get_xray", async (event, { targetPath } = {}) => {
-  return new Promise((resolve, reject) => {
-    const args = ["xray", "--json"];
-    if (targetPath) args.push(`--path=${targetPath}`);
-    execFile(BINARY_PATH, args, (err, stdout, stderr) => {
-      if (err) return reject(stderr || err.message);
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
+  const args = ["xray", "--json"];
+  if (targetPath) args.push(`--path=${targetPath}`);
+  return runCliJson(args);
 });
 
-ipcMain.handle("get_leftovers", async () => {
-  return new Promise((resolve, reject) => {
-    execFile(BINARY_PATH, ["leftovers", "--json"], (err, stdout, stderr) => {
-      if (err) return reject(stderr || err.message);
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
+ipcMain.handle("get_disk_health", async () => runCliJson(["disk-health", "--json"]));
+
+ipcMain.handle("get_disk_health_elevated", async () => runCliJson(["disk-health", "--elevated", "--json"]));
+
+ipcMain.handle("find_big_files", async (event, { query } = {}) => {
+  const q = query || {};
+  const args = ["big-files", "--json"];
+  if (q.root_path) args.push(`--path=${q.root_path}`);
+  if (q.min_size_bytes) args.push(`--min-mb=${Math.floor(q.min_size_bytes / (1024 * 1024))}`);
+  if (q.categories && q.categories.length > 0) args.push(`--categories=${q.categories.join(",")}`);
+  if (q.modified_before_days != null) args.push(`--modified-before-days=${q.modified_before_days}`);
+  if (q.modified_within_days != null) args.push(`--modified-within-days=${q.modified_within_days}`);
+  if (q.unopened_for_days != null) args.push(`--unopened-for-days=${q.unopened_for_days}`);
+  if (q.sort_by) args.push(`--sort-by=${q.sort_by}`);
+  if (q.limit != null) args.push(`--limit=${q.limit}`);
+  return runCliJson(args);
 });
+
+ipcMain.handle("scan_browser_data", async () => runCliJson(["browser-data", "--json"]));
+
+ipcMain.handle("get_leftovers", async () => runCliJson(["leftovers", "--json"]));
 
 ipcMain.handle("clean_leftovers", async () => {
   return new Promise((resolve, reject) => {
@@ -407,18 +358,7 @@ ipcMain.handle("clean_leftovers", async () => {
   });
 });
 
-ipcMain.handle("get_autostart", async () => {
-  return new Promise((resolve, reject) => {
-    execFile(BINARY_PATH, ["autostart", "--json"], (err, stdout, stderr) => {
-      if (err) return reject(stderr || err.message);
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
-});
+ipcMain.handle("get_autostart", async () => runCliJson(["autostart", "--json"]));
 
 ipcMain.handle("toggle_autostart", async (event, { filePath, enable }) => {
   return new Promise((resolve, reject) => {
@@ -430,18 +370,9 @@ ipcMain.handle("toggle_autostart", async (event, { filePath, enable }) => {
 });
 
 ipcMain.handle("get_duplicates", async (event, { targetPath } = {}) => {
-  return new Promise((resolve, reject) => {
-    const args = ["duplicates", "--json"];
-    if (targetPath) args.push(`--path=${targetPath}`);
-    execFile(BINARY_PATH, args, (err, stdout, stderr) => {
-      if (err) return reject(stderr || err.message);
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
+  const args = ["duplicates", "--json"];
+  if (targetPath) args.push(`--path=${targetPath}`);
+  return runCliJson(args);
 });
 
 ipcMain.handle("reflink_duplicates", async (event, { targetPath } = {}) => {
@@ -455,18 +386,7 @@ ipcMain.handle("reflink_duplicates", async (event, { targetPath } = {}) => {
   });
 });
 
-ipcMain.handle("get_vitals", async () => {
-  return new Promise((resolve, reject) => {
-    execFile(BINARY_PATH, ["vitals", "--json"], (err, stdout, stderr) => {
-      if (err) return reject(stderr || err.message);
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
-});
+ipcMain.handle("get_vitals", async () => runCliJson(["vitals", "--json"]));
 
 ipcMain.handle("compact_snapshots", async (event, { days }) => {
   return new Promise((resolve, reject) => {
@@ -484,6 +404,117 @@ ipcMain.handle("set_power_profile", async (event, { profile }) => {
       resolve(stdout.trim());
     });
   });
+});
+
+// ==========================================
+// Storage & Duplicates context menu (delete / reveal / properties)
+// ==========================================
+
+/** Same hardening contract as the Tauri backend's fs_ops::harden_path:
+ * require a non-empty absolute path, resolve it to its real location
+ * (symlinks and `..` included), require that it actually exists, and
+ * refuse a fixed list of filesystem roots / profile directories so a
+ * single click here can never wipe out a whole drive or home folder. */
+function hardenPath(rawPath) {
+  if (typeof rawPath !== "string" || rawPath.trim().length === 0) {
+    throw new Error("No path was provided.");
+  }
+  if (!path.isAbsolute(rawPath)) {
+    throw new Error("Only absolute paths are allowed.");
+  }
+  let real;
+  try {
+    real = fs.realpathSync(rawPath);
+  } catch (e) {
+    throw new Error(`Path does not exist or is inaccessible: ${e.message}`);
+  }
+
+  const forbidden = [os.homedir()];
+  if (process.platform === "win32") {
+    forbidden.push("C:\\", "C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)", "C:\\Users", "C:\\ProgramData");
+  } else {
+    forbidden.push("/", "/home", "/usr", "/etc", "/boot", "/var", "/root", "/opt", "/proc", "/sys");
+  }
+
+  const normalizedReal = path.normalize(real).replace(/[/\\]+$/, "") || real;
+  if (forbidden.some((root) => path.normalize(root).replace(/[/\\]+$/, "") === normalizedReal)) {
+    throw new Error("Refusing to operate on a protected system or home directory.");
+  }
+  if (path.dirname(real) === real) {
+    throw new Error("Refusing to operate on a filesystem root.");
+  }
+
+  return real;
+}
+
+ipcMain.handle("delete_path", async (event, { path: rawPath } = {}) => {
+  const target = hardenPath(rawPath);
+  await shell.trashItem(target);
+  return { success: true, details: `Moved "${target}" to the recycle bin.` };
+});
+
+/** Moves every path in a browser data category to the trash. Same
+ * best-effort-per-path contract as the Tauri backend's
+ * fs_ops::clear_browser_data -- one locked/already-gone path doesn't abort
+ * the rest of the batch. */
+ipcMain.handle("clear_browser_data", async (event, { paths } = {}) => {
+  const list = Array.isArray(paths) ? paths : [];
+  if (list.length === 0) {
+    return { success: true, details: "Nothing to clear." };
+  }
+
+  let cleared = 0;
+  const errors = [];
+  for (const raw of list) {
+    try {
+      const target = hardenPath(raw);
+      await shell.trashItem(target);
+      cleared += 1;
+    } catch (e) {
+      errors.push(`${raw}: ${e.message || e}`);
+    }
+  }
+
+  if (errors.length === 0) {
+    return { success: true, details: `Cleared ${cleared} item(s).` };
+  }
+  if (cleared > 0) {
+    return {
+      success: true,
+      details: `Cleared ${cleared} of ${list.length} item(s); some are likely still open in the browser: ${errors.join("; ")}`,
+    };
+  }
+  throw new Error(`Couldn't clear any of it -- close the browser and try again. Details: ${errors.join("; ")}`);
+});
+
+/** Shows a native desktop notification via Electron's own Notification
+ * module (works on both Fedora/Linux and Windows without any extra
+ * dependency), matching Tauri's notify-rust-backed show_notification
+ * command. Purely a courtesy signal, never fatal to whatever triggered it. */
+ipcMain.handle("show_notification", async (event, { title, body } = {}) => {
+  if (!Notification.isSupported()) {
+    throw new Error("Notifications are not supported on this system.");
+  }
+  new Notification({ title: title || "Miri Cleaner", body: body || "" }).show();
+});
+
+ipcMain.handle("reveal_in_file_manager", async (event, { path: rawPath } = {}) => {
+  const target = hardenPath(rawPath);
+  shell.showItemInFolder(target);
+});
+
+ipcMain.handle("get_file_properties", async (event, { path: rawPath } = {}) => {
+  const target = hardenPath(rawPath);
+  const stats = fs.statSync(target);
+  return {
+    name: path.basename(target),
+    path: target,
+    is_dir: stats.isDirectory(),
+    size_bytes: stats.size,
+    modified_ms: stats.mtimeMs ?? null,
+    created_ms: stats.birthtimeMs ?? null,
+    readonly: (stats.mode & 0o200) === 0,
+  };
 });
 
 app.whenReady().then(createWindow);

@@ -19,7 +19,9 @@ import { formatBytes } from "../../lib/formatters";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { useAsyncAction } from "../../lib/useAsyncAction";
 import { BatteryHealthCard } from "./BatteryHealthCard";
+import { DiskHealthPanel } from "./DiskHealthPanel";
 import { BatterySample, getBatteryHistory, recordBatterySample } from "../../lib/batteryHistory";
+import { HeroCard } from "../ui/HeroCard";
 
 export const SnapshotsView: React.FC = () => {
   const { viewMode, addLog, openDangerModal } = useCleanerStore();
@@ -195,37 +197,29 @@ export const SnapshotsView: React.FC = () => {
           {/* stat strip, cleanup history tucks behind an expand toggle, and    */}
           {/* one big pill action drives the obvious next step.                */}
           {/* ================================================================= */}
-          <div className="bg-gradient-to-b from-white to-sky-50/60 rounded-[2rem] p-10 sm:p-12 border-2 border-sky-100 shadow-duo text-center space-y-6">
-            <div className="flex justify-center">
-              <Mascot mood={isProcessing ? "cleaning" : "happy"} size="lg" />
-            </div>
-
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <PixelBadge label="Safety & Rollback" variant="blue" />
-              <span className="text-xs font-bold text-slate-400">Btrfs Snapper • Windows VSS</span>
-            </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-              System Safety Checkpoints
-            </h2>
-            <p className="text-sm font-semibold text-slate-500 max-w-md mx-auto leading-relaxed">
-              Automatic safety checkpoints ensure every cleanup is reversible.
-              Undo any operation anytime with a single tap.
-            </p>
-
+          <HeroCard
+            accent="sky"
+            mascot={<Mascot mood={isProcessing ? "cleaning" : "happy"} size="lg" />}
+            badgeLabel="Safety & Rollback"
+            badgeVariant="blue"
+            badgeSubtitle="Btrfs Snapper • Windows VSS"
+            heading="System Safety Checkpoints"
+            description="Automatic safety checkpoints ensure every cleanup is reversible. Undo any operation anytime with a single tap."
+          >
             {/* Slim consolidated stat strip -- provider status and history    */}
             {/* count instead of a separate parallel "readiness pill" card.    */}
             <div className="flex items-center justify-center flex-wrap gap-x-8 gap-y-3 pt-1">
               <div className="text-center">
                 <div className="flex items-center justify-center gap-1.5 text-emerald-600 font-black text-2xl">
-                  <ShieldCheck className="w-5 h-5" />
+                  <ShieldCheck className="w-5 h-5" aria-hidden="true" />
                 </div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Protected</div>
+                <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Protected</div>
               </div>
               <div className="text-center">
-                <div className="text-sm font-black text-slate-800 max-w-[10rem] truncate">
+                <div className="text-sm font-black text-slate-800 dark:text-slate-200 max-w-[10rem] truncate">
                   {snapshotStatus?.provider_name || "Btrfs / VSS Ready"}
                 </div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Snapshot Shield</div>
+                <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Snapshot Shield</div>
               </div>
               <button
                 type="button"
@@ -233,11 +227,11 @@ export const SnapshotsView: React.FC = () => {
                 aria-expanded={historyExpanded}
                 className="text-center group"
               >
-                <div className="text-2xl font-black text-slate-800 tabular-nums flex items-center gap-1 justify-center">
+                <div className="text-2xl font-black text-slate-800 dark:text-slate-200 tabular-nums flex items-center gap-1 justify-center">
                   {auditEntries.length}
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${historyExpanded ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform ${historyExpanded ? "rotate-180" : ""}`} />
                 </div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-slate-700">
+                <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider group-hover:text-slate-700 dark:group-hover:text-slate-300">
                   {historyExpanded ? "Hide History" : "Cleanup History"}
                 </div>
               </button>
@@ -255,8 +249,8 @@ export const SnapshotsView: React.FC = () => {
             {vitals && (vitals.disk_health.total_gb > 0 || vitals.power_profile) && (
               <div className="text-left pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {vitals.disk_health.total_gb > 0 && (
-                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
-                    <div className="flex items-center gap-2 text-xs font-black text-slate-700 mb-2">
+                  <div className="bg-slate-50 dark:bg-slate-900/40 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center gap-2 text-xs font-black text-slate-700 dark:text-slate-300 mb-2">
                       <HardDrive className="w-4 h-4 text-sky-600" />
                       <span>{vitals.disk_health.filesystem} Root Volume</span>
                     </div>
@@ -268,15 +262,16 @@ export const SnapshotsView: React.FC = () => {
                         }}
                       />
                     </div>
-                    <div className="text-[11px] font-bold text-slate-500 mt-1.5">
-                      {vitals.disk_health.used_gb.toFixed(1)} GB used of {vitals.disk_health.total_gb.toFixed(1)} GB
+                    <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1.5">
+                      {formatBytes(vitals.disk_health.used_gb * 1024 ** 3).formatted} used of{" "}
+                      {formatBytes(vitals.disk_health.total_gb * 1024 ** 3).formatted}
                       {vitals.disk_health.is_btrfs && " · Btrfs"}
                     </div>
                   </div>
                 )}
                 {vitals.power_profile && (
-                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
-                    <div className="flex items-center gap-2 text-xs font-black text-slate-700 mb-2">
+                  <div className="bg-slate-50 dark:bg-slate-900/40 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center gap-2 text-xs font-black text-slate-700 dark:text-slate-300 mb-2">
                       <Zap className="w-4 h-4 text-amber-500" />
                       <span>Power Profile</span>
                     </div>
@@ -289,7 +284,7 @@ export const SnapshotsView: React.FC = () => {
                           className={`chip-press px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
                             p === vitals.power_profile?.active_profile
                               ? "bg-amber-100 text-amber-800 border-amber-300"
-                              : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                              : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
                           }`}
                         >
                           {p}
@@ -301,12 +296,14 @@ export const SnapshotsView: React.FC = () => {
               </div>
             )}
 
+            <DiskHealthPanel />
+
             {/* Secondary content tucked behind expansion, per the lesson-screen brief */}
             <div className={`collapsible-rows ${historyExpanded ? "is-expanded" : ""}`}>
               <div className="collapsible-inner">
                 <div className="pt-4 text-left">
                   {auditEntries.length === 0 ? (
-                    <div className="text-center py-8 text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
+                    <div className="text-center py-8 text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-slate-700">
                       No cleanups have been performed yet. Your system is protected by default snapshots.
                     </div>
                   ) : (
@@ -314,10 +311,10 @@ export const SnapshotsView: React.FC = () => {
                       {auditEntries.slice(0, 3).map((entry) => (
                         <div
                           key={entry.id}
-                          className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                          className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
                         >
                           <div>
-                            <div className="font-black text-slate-800 text-sm flex items-center gap-2 flex-wrap">
+                            <div className="font-black text-slate-800 dark:text-slate-200 text-sm flex items-center gap-2 flex-wrap">
                               <span>{entry.operation === "system-clean" ? "System Cleanup" : "Dry-Run Simulation"}</span>
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
                                 Verified Safe
@@ -328,8 +325,8 @@ export const SnapshotsView: React.FC = () => {
                                 </span>
                               )}
                             </div>
-                            <div className="text-slate-500 mt-1">
-                              Freed: <span className="font-bold text-slate-700">{formatBytes(entry.freed_bytes).formatted}</span> • {new Date(entry.timestamp).toLocaleString()}
+                            <div className="text-slate-500 dark:text-slate-400 mt-1">
+                              Freed: <span className="font-bold text-slate-700 dark:text-slate-300">{formatBytes(entry.freed_bytes).formatted}</span> • {new Date(entry.timestamp).toLocaleString()}
                             </div>
                           </div>
 
@@ -364,7 +361,7 @@ export const SnapshotsView: React.FC = () => {
                 {isProcessing ? "Working..." : "Create Safety Checkpoint Now"}
               </TactileButton>
             </div>
-          </div>
+          </HeroCard>
         </>
       ) : (
         /* ========================================================================= */
@@ -372,15 +369,15 @@ export const SnapshotsView: React.FC = () => {
         /* ========================================================================= */
         <>
           {/* Advanced Header */}
-          <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <PixelBadge label="Advanced" variant="blue" />
-                <span className="text-xs font-bold text-slate-400">
+                <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
                   Zero-Trust Audit Journal & Subvolume Recovery
                 </span>
               </div>
-              <h2 className="text-2xl font-black text-slate-900">
+              <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">
                 Safety Checkpoints & Rollback History
               </h2>
             </div>
@@ -400,8 +397,8 @@ export const SnapshotsView: React.FC = () => {
 
           {/* Provider Details Card */}
           <div className="card-duo">
-            <h3 className="text-lg font-black text-slate-900 mb-2">Pre-Flight Safety Snapshots</h3>
-            <p className="text-xs text-slate-500 mb-4">
+            <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 mb-2">Pre-Flight Safety Snapshots</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
               Miri Cleaner integrates directly with Snapper (Btrfs root subvolumes) and Timeshift on Linux, and Windows System Restore (VSS) on Windows 10/11.
             </p>
             {snapshotStatus && (
@@ -421,21 +418,21 @@ export const SnapshotsView: React.FC = () => {
           {/* Audit History Card */}
           <div className="card-duo space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-              <h3 className="text-lg font-black text-slate-900">Immutable Audit Journal (`audit.json`)</h3>
-              <span className="text-xs font-mono text-slate-400">{auditEntries.length} entries recorded</span>
+              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">Immutable Audit Journal (`audit.json`)</h3>
+              <span className="text-xs font-mono text-slate-400 dark:text-slate-500">{auditEntries.length} entries recorded</span>
             </div>
 
             <div className="space-y-3">
               {auditEntries.map((entry) => (
                 <div
                   key={entry.id}
-                  className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 text-xs"
+                  className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 text-xs"
                 >
                   <div>
-                    <div className="font-mono font-bold text-slate-800 flex items-center gap-2">
+                    <div className="font-mono font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                       <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
                       <span>{entry.id}</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-600 font-sans">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-600 dark:text-slate-400 font-sans">
                         {entry.operation}
                       </span>
                       {entry.is_rolled_back && (
@@ -444,8 +441,8 @@ export const SnapshotsView: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <div className="text-slate-500 mt-1">
-                      Freed: <span className="font-bold text-slate-700">{formatBytes(entry.freed_bytes).formatted}</span> • Targets: {entry.target_ids.join(", ")}
+                    <div className="text-slate-500 dark:text-slate-400 mt-1">
+                      Freed: <span className="font-bold text-slate-700 dark:text-slate-300">{formatBytes(entry.freed_bytes).formatted}</span> • Targets: {entry.target_ids.join(", ")}
                     </div>
                     {entry.snapshot_id && (
                       <div className="text-emerald-700 font-mono text-[11px] mt-0.5">

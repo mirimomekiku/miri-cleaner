@@ -23,7 +23,7 @@ export const CardSkeleton: React.FC<{ count?: number }> = ({ count = 4 }) => {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo flex items-center justify-between gap-4"
+          className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo flex items-center justify-between gap-4"
         >
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
             <Skeleton className="w-6 h-6 rounded-lg shrink-0" />
@@ -48,7 +48,7 @@ export const TreemapSkeleton: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Category Bar Skeleton */}
-      <div className="skeleton-card bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
+      <div className="skeleton-card bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1.5">
             <Skeleton className="h-5 w-48 rounded-md" />
@@ -72,7 +72,7 @@ export const TreemapSkeleton: React.FC = () => {
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm space-y-3"
+            className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm space-y-3"
           >
             <div className="flex items-center justify-between">
               <Skeleton className="w-10 h-10 rounded-xl" />
@@ -85,7 +85,7 @@ export const TreemapSkeleton: React.FC = () => {
       </div>
 
       {/* Heavy Files List Skeleton */}
-      <div className="skeleton-card bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
+      <div className="skeleton-card bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4">
         <div className="flex items-center justify-between">
           <Skeleton className="h-5 w-40 rounded-md" />
           <Skeleton className="h-4 w-20 rounded-md" />
@@ -94,7 +94,7 @@ export const TreemapSkeleton: React.FC = () => {
           {Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
-              className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-4"
+              className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-4"
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <Skeleton className="w-8 h-8 rounded-xl shrink-0" />
@@ -118,7 +118,7 @@ export const ListSkeleton: React.FC<{ count?: number }> = ({ count = 5 }) => {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="bg-white rounded-2xl p-4 border-2 border-slate-100 shadow-duo-sm flex items-center justify-between gap-4"
+          className="bg-white dark:bg-slate-800 rounded-2xl p-4 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm flex items-center justify-between gap-4"
         >
           <div className="flex items-center gap-3.5 flex-1 min-w-0">
             <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
@@ -142,7 +142,7 @@ export const AppCatalogSkeleton: React.FC = () => {
       {Array.from({ length: 6 }).map((_, i) => (
         <div
           key={i}
-          className="bg-white rounded-3xl p-5 border-2 border-slate-100 shadow-duo flex flex-col justify-between space-y-4"
+          className="bg-white dark:bg-slate-800 rounded-3xl p-5 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo flex flex-col justify-between space-y-4"
         >
           <div className="flex items-start gap-3.5">
             <Skeleton className="w-12 h-12 rounded-2xl shrink-0" />
@@ -152,7 +152,7 @@ export const AppCatalogSkeleton: React.FC = () => {
               <Skeleton className="h-3 w-full rounded-md" />
             </div>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700/60">
             <Skeleton className="h-4 w-16 rounded-md" />
             <Skeleton className="h-8 w-24 rounded-xl" />
           </div>
@@ -168,7 +168,7 @@ export const TweaksSkeleton: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Card Skeleton */}
-      <div className="skeleton-card bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="skeleton-card bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Skeleton className="w-12 h-12 rounded-2xl shrink-0" />
           <div className="space-y-2">
@@ -184,7 +184,7 @@ export const TweaksSkeleton: React.FC = () => {
       {Array.from({ length: 2 }).map((_, cardIdx) => (
         <div
           key={cardIdx}
-          className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4"
+          className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-2 flex-1 min-w-0">
@@ -193,7 +193,7 @@ export const TweaksSkeleton: React.FC = () => {
             </div>
             <Skeleton className="h-10 w-44 rounded-2xl shrink-0" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-700/60">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-8 w-full rounded-xl" />
             ))}
@@ -202,7 +202,7 @@ export const TweaksSkeleton: React.FC = () => {
       ))}
 
       {/* DNS Switcher Bar Skeleton */}
-      <div className="bg-white rounded-2xl p-4 border-2 border-slate-100 shadow-duo-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <Skeleton className="w-10 h-10 rounded-2xl shrink-0" />
           <div className="space-y-1.5 flex-1">
@@ -223,7 +223,7 @@ export const VitalsSkeleton: React.FC = () => {
         {Array.from({ length: 2 }).map((_, i) => (
           <div
             key={i}
-            className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4"
+            className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4"
           >
             <div className="flex items-center gap-3">
               <Skeleton className="w-10 h-10 rounded-2xl shrink-0" />
@@ -237,7 +237,7 @@ export const VitalsSkeleton: React.FC = () => {
           </div>
         ))}
       </div>
-      <div className="skeleton-card bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
+      <div className="skeleton-card bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4">
         <div className="flex items-center justify-between">
           <Skeleton className="h-5 w-44 rounded-md" />
           <Skeleton className="h-8 w-32 rounded-xl" />
@@ -246,7 +246,7 @@ export const VitalsSkeleton: React.FC = () => {
           {Array.from({ length: 3 }).map((_, i) => (
             <div
               key={i}
-              className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-4"
+              className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-4"
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <Skeleton className="w-8 h-8 rounded-xl shrink-0" />

@@ -1,8 +1,10 @@
 import { create } from "zustand";
 import { CleanExecutionResult, CleanTarget, RiskLevel, ScanResult } from "../types";
+import { applyThemeClass, getStoredThemeMode, storeThemeMode, ThemeMode } from "../lib/theme";
+import { AppSettings, getSettings, saveSettings } from "../lib/settings";
 
 export type ViewMode = "casual" | "power";
-export type TabId = "dashboard" | "storage" | "apps" | "packages" | "tweaks" | "snapshots";
+export type TabId = "dashboard" | "storage" | "apps" | "packages" | "tweaks" | "snapshots" | "settings";
 
 export interface DangerModalConfig {
   isOpen: boolean;
@@ -22,11 +24,16 @@ export interface DangerModalConfig {
    * of confirmed action (installs, tweaks, DNS changes, rollbacks) trains
    * users to type a meaningless string regardless of what it does. */
   confirmWord?: string;
-  onConfirm: () => void;
+  /** May return a Promise; the modal awaits it and keeps itself open with
+   * the thrown error shown inline on rejection, instead of closing
+   * immediately regardless of outcome. */
+  onConfirm: () => void | Promise<void>;
 }
 
 interface CleanerState {
   viewMode: ViewMode;
+  themeMode: ThemeMode;
+  settings: AppSettings;
   activeTab: TabId;
   scanResult: ScanResult | null;
   selectedTargetIds: string[];
@@ -38,6 +45,8 @@ interface CleanerState {
   lastCleanResult: CleanExecutionResult | null;
 
   setViewMode: (mode: ViewMode) => void;
+  setThemeMode: (mode: ThemeMode) => void;
+  updateSettings: (patch: Partial<AppSettings>) => void;
   setActiveTab: (tab: TabId) => void;
   setScanResult: (res: ScanResult | null) => void;
   setIsScanning: (scanning: boolean) => void;
@@ -55,6 +64,8 @@ interface CleanerState {
 
 export const useCleanerStore = create<CleanerState>((set) => ({
   viewMode: "casual",
+  themeMode: getStoredThemeMode(),
+  settings: getSettings(),
   activeTab: "dashboard",
   scanResult: null,
   selectedTargetIds: [],
@@ -76,6 +87,21 @@ export const useCleanerStore = create<CleanerState>((set) => ({
   lastCleanResult: null,
 
   setViewMode: (mode) => set({ viewMode: mode }),
+  setThemeMode: (mode) => {
+    storeThemeMode(mode);
+    applyThemeClass(mode);
+    set({ themeMode: mode });
+  },
+  updateSettings: (patch) =>
+    set((state) => {
+      const next: AppSettings = {
+        ...state.settings,
+        ...patch,
+        notifications: { ...state.settings.notifications, ...(patch.notifications ?? {}) },
+      };
+      saveSettings(next);
+      return { settings: next };
+    }),
   setActiveTab: (tab) => set({ activeTab: tab }),
   setScanResult: (res) => {
     if (!res) {

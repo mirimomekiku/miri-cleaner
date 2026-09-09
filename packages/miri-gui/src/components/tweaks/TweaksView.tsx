@@ -33,6 +33,8 @@ import { ListSkeleton, TweaksSkeleton } from "../ui/Skeleton";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { useAsyncAction } from "../../lib/useAsyncAction";
 import { useCountUp } from "../../lib/useCountUp";
+import { StatTile } from "../ui/StatTile";
+import { HeroCard } from "../ui/HeroCard";
 import {
   WindowsUpdateState,
   WindowsTweakItem,
@@ -130,7 +132,8 @@ export const TweaksView: React.FC = () => {
   // Casual-mode lesson-screen disclosure state: boot-impact detail and the
   // "more options" bundle (extensions/update profiles/DNS/update shield) are
   // tucked behind these toggles so the hero module stays the one dominant
-  // focal point, mirroring CasualView's `gardenExpanded` pattern.
+  // focal point, mirroring the same collapsible-section pattern used
+  // elsewhere on the casual dashboard.
   const [bootExpanded, setBootExpanded] = useState(false);
   const [moreExpanded, setMoreExpanded] = useState(false);
   // Progressive disclosure for the large flat tweak lists (Windows Essential/
@@ -507,47 +510,43 @@ export const TweaksView: React.FC = () => {
           {/* collapse into a slim stat strip instead of stacking as        */}
           {/* separate parallel cards.                                     */}
           {/* ============================================================= */}
-          <div className="bg-gradient-to-b from-white to-miri-50/60 rounded-[2rem] p-10 sm:p-12 border-2 border-miri-100 shadow-duo text-center space-y-6">
-            <div className="flex justify-center">
-              <Mascot mood={errorAction.error ? "alert" : isProcessing ? "cleaning" : "happy"} size="lg" />
-            </div>
-
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <PixelBadge label={isLinux ? "Fedora Linux" : "Windows 10/11"} variant="pink" />
-              <span className="text-xs font-bold text-slate-600">
-                {isLinux
-                  ? (scanResult?.system_info.os_name || "Fedora Linux 43")
-                  : (winVersionInfo?.display_name || "Windows 10/11")}
-              </span>
-            </div>
-
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-              {isLinux ? "Fedora System Optimizations" : "Windows 10/11 Presets & Tweaks"}
-            </h2>
-            <p className="text-sm font-semibold text-slate-600 max-w-md mx-auto leading-relaxed">
-              {isLinux
+          <HeroCard
+            accent="miri"
+            mascot={<Mascot mood={errorAction.error ? "alert" : isProcessing ? "cleaning" : "happy"} size="lg" />}
+            badgeLabel={isLinux ? "Fedora Linux" : "Windows 10/11"}
+            badgeVariant="pink"
+            badgeSubtitle={
+              isLinux
+                ? (scanResult?.system_info.os_name || "Fedora Linux 43")
+                : (winVersionInfo?.display_name || "Windows 10/11")
+            }
+            heading={isLinux ? "Fedora System Optimizations" : "Windows 10/11 Presets & Tweaks"}
+            description={
+              isLinux
                 ? "Safe 1-click post-install enhancements: faster DNF, multimedia codecs, Flathub, and boot speedups."
-                : "Tune Windows performance, stop telemetry, eliminate search bloat, and protect your privacy."}
-            </p>
-
+                : "Tune Windows performance, stop telemetry, eliminate search bloat, and protect your privacy."
+            }
+          >
             {/* Slim consolidated stat strip -- essentials applied, active DNS,
                 and boot impact as one lightweight row instead of three parallel cards. */}
             <div className="flex items-center justify-center flex-wrap gap-x-8 gap-y-3 pt-1">
-              <div className="text-center">
-                <div className="text-2xl font-black text-miri-500 font-pixel tabular-nums">
-                  {isLinux ? linuxAppliedEssentialCount : winTweaks.filter((t) => t.is_enabled).length}
-                  <span className="text-slate-400">/{isLinux ? linuxEssentialTweaks.length : winEssentialTweaks.length}</span>
-                </div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Essentials Applied</div>
-              </div>
+              <StatTile
+                value={
+                  <>
+                    {isLinux ? linuxAppliedEssentialCount : winTweaks.filter((t) => t.is_enabled).length}
+                    <span className="text-slate-400 dark:text-slate-500">/{isLinux ? linuxEssentialTweaks.length : winEssentialTweaks.length}</span>
+                  </>
+                }
+                label="Essentials Applied"
+                valueClassName="text-miri-500 font-pixel"
+              />
 
               {dnsInfo && (
-                <div className="text-center">
-                  <div className="text-2xl font-black text-slate-800 truncate max-w-[10rem]">
-                    {dnsInfo.display_name}
-                  </div>
-                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Active DNS</div>
-                </div>
+                <StatTile
+                  value={dnsInfo.display_name}
+                  label="Active DNS"
+                  valueClassName="text-slate-800 dark:text-slate-200 truncate max-w-[10rem]"
+                />
               )}
 
               <button
@@ -558,9 +557,9 @@ export const TweaksView: React.FC = () => {
               >
                 <div className="text-2xl font-black text-amber-600 tabular-nums flex items-center gap-1 justify-center">
                   ~{animatedBootSeconds.toFixed(1)}s
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${bootExpanded ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform ${bootExpanded ? "rotate-180" : ""}`} />
                 </div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-slate-700">
+                <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider group-hover:text-slate-700 dark:group-hover:text-slate-300">
                   {bootExpanded ? "Hide Boot Impact" : `Boot Impact (${enabledAutostartItems.length} apps)`}
                 </div>
               </button>
@@ -570,12 +569,12 @@ export const TweaksView: React.FC = () => {
             <div className={`collapsible-rows ${bootExpanded ? "is-expanded" : ""}`}>
               <div className="collapsible-inner">
                 <div className="pt-4 text-left space-y-2">
-                  <p className="text-xs text-slate-500 max-w-md">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
                     Apps that launch automatically when you sign in. Seconds shown are
                     illustrative estimates, not measured boot telemetry.
                   </p>
                   {autostartItems.length === 0 ? (
-                    <div className="text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
+                    <div className="text-center py-6 text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-slate-700">
                       No startup applications detected.
                     </div>
                   ) : (
@@ -586,11 +585,11 @@ export const TweaksView: React.FC = () => {
                             ? "bg-amber-100 text-amber-800 border-amber-200"
                             : item.impact === "medium"
                             ? "bg-sky-100 text-sky-800 border-sky-200"
-                            : "bg-slate-100 text-slate-600 border-slate-200";
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700";
                         return (
                           <div
                             key={item.id}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200"
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700"
                           >
                             <div className="flex items-center gap-3 min-w-0">
                               <PixelCheckbox
@@ -600,8 +599,8 @@ export const TweaksView: React.FC = () => {
                                 disabled={togglingAutostartId === item.id}
                               />
                               <div className="min-w-0">
-                                <div className="font-bold text-slate-800 text-sm truncate">{item.name}</div>
-                                <div className="text-[11px] text-slate-400 font-mono truncate">{item.command}</div>
+                                <div className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{item.name}</div>
+                                <div className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate">{item.command}</div>
                               </div>
                             </div>
                             <span
@@ -637,7 +636,7 @@ export const TweaksView: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleSelectAllEssential}
-                  className="text-slate-500 hover:text-slate-800 underline decoration-dotted underline-offset-4"
+                  className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline decoration-dotted underline-offset-4"
                 >
                   Select Essential
                 </button>
@@ -645,12 +644,12 @@ export const TweaksView: React.FC = () => {
                   type="button"
                   onClick={handleClearAll}
                   disabled={selectedTweakIds.size === 0}
-                  className="text-slate-500 hover:text-slate-800 underline decoration-dotted underline-offset-4 disabled:opacity-50"
+                  className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline decoration-dotted underline-offset-4 disabled:opacity-50"
                 >
                   Clear Selection
                 </button>
                 {isWindows && (
-                  <label className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-800 cursor-pointer">
+                  <label className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer">
                     <PixelCheckbox
                       checked={createRestorePoint}
                       onChange={setCreateRestorePoint}
@@ -661,7 +660,7 @@ export const TweaksView: React.FC = () => {
                 )}
               </div>
             </div>
-          </div>
+          </HeroCard>
 
           {/* ============================================================= */}
           {/* PRIMARY CHECKLIST -- essential tweaks status, always visible  */}
@@ -670,26 +669,26 @@ export const TweaksView: React.FC = () => {
           {isLinux ? (
             <div className="card-duo space-y-3">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm font-black text-slate-900">Essential Repos &amp; Codecs</h3>
+                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">Essential Repos &amp; Codecs</h3>
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
                   {linuxAppliedEssentialCount} of {linuxEssentialTweaks.length} Applied
                 </span>
               </div>
-              <p className="text-xs text-slate-500 max-w-xl">
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
                 Applies the 5 core post-install optimizations: enables RPM Fusion (Free &amp; Non-Free), speeds up DNF with parallel downloads &amp; fastest mirror, configures Flathub, and installs full FFmpeg &amp; multimedia codecs.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
                 {linuxEssentialTweaks.map((t) => (
                   <div
                     key={t.id}
-                    className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                    className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 text-xs"
                   >
-                    <span className="font-bold text-slate-800 truncate pr-2">{t.name}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate pr-2">{t.name}</span>
                     <span
                       className={`shrink-0 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${
                         t.is_applied
                           ? "bg-emerald-100 text-emerald-800"
-                          : "bg-slate-200 text-slate-700"
+                          : "bg-slate-200 text-slate-700 dark:text-slate-300"
                       }`}
                     >
                       {t.is_applied ? "Applied ✓" : "Pending"}
@@ -701,12 +700,12 @@ export const TweaksView: React.FC = () => {
           ) : (
             <div className="card-duo space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm font-black text-slate-900">Windows 10/11 Essential Tweaks Preset</h3>
+                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">Windows 10/11 Essential Tweaks Preset</h3>
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
                   <Shield className="w-3 h-3 text-emerald-600" /> Recommended &amp; Safe
                 </span>
               </div>
-              <p className="text-xs text-slate-500 max-w-xl">
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
                 Applies the {winEssentialTweaks.length} essential tweaks: turns off telemetry and timeline tracking,
                 disables Bing search results in Start Menu, stops sponsored OEM apps, and speeds up File Explorer.
               </p>
@@ -724,7 +723,7 @@ export const TweaksView: React.FC = () => {
               type="button"
               onClick={() => setMoreExpanded((v) => !v)}
               aria-expanded={moreExpanded}
-              className="w-full flex items-center justify-between gap-2 text-xs font-black text-slate-500 hover:text-slate-800 py-1"
+              className="w-full flex items-center justify-between gap-2 text-xs font-black text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 py-1"
             >
               <span>{moreExpanded ? "Hide More Options" : "More Options & Advanced Presets"}</span>
               <ChevronDown className={`w-4 h-4 transition-transform ${moreExpanded ? "rotate-180" : ""}`} />
@@ -741,7 +740,7 @@ export const TweaksView: React.FC = () => {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-lg font-black text-slate-900">
+                            <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
                               GNOME Shell Extensions Suite
                             </h3>
                             <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-pink-100 text-pink-800 border border-pink-200 flex items-center gap-1">
@@ -751,7 +750,7 @@ export const TweaksView: React.FC = () => {
                               {linuxAppliedExtCount} of {linuxExtensions.length} Active
                             </span>
                           </div>
-                          <p className="text-xs text-slate-500 mt-1 max-w-xl">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
                             Curated desktop enhancements for Fedora GNOME Shell: AppIndicator system tray icons, Dash to Dock, Blur My Shell frosted glass, Vitals telemetry, Caffeine sleep inhibitor, Pop Shell auto-tiling, Just Perfection, and native Extension Manager.
                           </p>
                         </div>
@@ -776,14 +775,14 @@ export const TweaksView: React.FC = () => {
                             onClick={handleApplyTweaks}
                             disabled={isProcessing || !linuxExtensions.some((t) => selectedTweakIds.has(t.id))}
                           >
-                            <Sparkles className="w-4 h-4 text-slate-900" />
+                            <Sparkles className="w-4 h-4 text-slate-900 dark:text-slate-100" />
                             Install Selected Extensions ({linuxExtensions.filter((t) => selectedTweakIds.has(t.id)).length})
                           </TactileButton>
                         </div>
                       </div>
 
                       {/* Status checklist */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-700/60">
                         {linuxExtensions.map((t) => {
                           const isChecked = selectedTweakIds.has(t.id);
                           return (
@@ -803,12 +802,12 @@ export const TweaksView: React.FC = () => {
                               className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
                                 isChecked
                                   ? "bg-pink-50/70 border-pink-300"
-                                  : "bg-slate-50 hover:bg-slate-100 border-slate-200"
+                                  : "bg-slate-50 dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700"
                               }`}
                             >
                               <div className="flex items-center gap-2.5 min-w-0 pr-2">
                                 <PixelCheckbox checked={isChecked} presentational />
-                                <span className="font-bold text-slate-800 truncate text-xs">
+                                <span className="font-bold text-slate-800 dark:text-slate-200 truncate text-xs">
                                   {t.name.replace("GNOME Extension - ", "")}
                                 </span>
                               </div>
@@ -817,7 +816,7 @@ export const TweaksView: React.FC = () => {
                                   className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${
                                     t.is_applied
                                       ? "bg-pink-100 text-pink-800 border border-pink-200"
-                                      : "bg-slate-200 text-slate-700"
+                                      : "bg-slate-200 text-slate-700 dark:text-slate-300"
                                   }`}
                                 >
                                   {t.is_applied ? "Active ✓" : "Available"}
@@ -839,7 +838,7 @@ export const TweaksView: React.FC = () => {
                                       command: t.command,
                                     });
                                   }}
-                                  className="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-200 shrink-0"
+                                  className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-200 shrink-0"
                                 >
                                   <HelpCircle className="w-3.5 h-3.5" />
                                 </button>
@@ -851,24 +850,24 @@ export const TweaksView: React.FC = () => {
                     </div>
 
                     {/* Windows Preset Card (Greyed out if running on Fedora) */}
-                    <div className="card-duo space-y-3 border-2 border-slate-200/60 bg-slate-50/50 opacity-60 rounded-3xl p-5">
+                    <div className="card-duo space-y-3 border-2 border-slate-200/60 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/50 opacity-60 rounded-3xl p-5">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-base font-black text-slate-700">
+                            <h3 className="text-base font-black text-slate-700 dark:text-slate-300">
                               Windows 10/11 Essential Tweaks Preset
                             </h3>
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-200 text-slate-600">
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-200 text-slate-600 dark:text-slate-400">
                               Windows Only
                             </span>
                           </div>
-                          <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl">
                             Essential telemetry, Bing search, and privacy suite. Unavailable because current host is Fedora Linux.
                           </p>
                         </div>
                         <button
                           disabled
-                          className="px-3 py-2 rounded-xl text-xs font-black bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300 shrink-0"
+                          className="px-3 py-2 rounded-xl text-xs font-black bg-slate-200 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 shrink-0"
                         >
                           Unavailable on Fedora
                         </button>
@@ -881,14 +880,14 @@ export const TweaksView: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                          <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
                             Windows Update Profiles
                           </h3>
                           <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
                             Windows 10/11
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           Choose how Windows receives updates. Each profile replaces the Windows Update settings.
                         </p>
                       </div>
@@ -899,29 +898,29 @@ export const TweaksView: React.FC = () => {
                       <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${
                         winUpdateState?.active_profile === "recommended"
                           ? "border-emerald-500 bg-emerald-50/30 shadow-md ring-2 ring-emerald-500/20"
-                          : "border-emerald-200/80 bg-white hover:border-emerald-400"
+                          : "border-emerald-200/80 bg-white dark:bg-slate-800 hover:border-emerald-400"
                       }`}>
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <h4 className="text-base font-black text-slate-900">Recommended</h4>
+                            <h4 className="text-base font-black text-slate-900 dark:text-slate-100">Recommended</h4>
                             {winUpdateState?.active_profile === "recommended" && (
                               <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                                 Active ✓
                               </span>
                             )}
                           </div>
-                          <p className="text-xs font-semibold text-slate-600">
+                          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
                             Balanced security and stability
                           </p>
 
-                          <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4 leading-relaxed">
+                          <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1.5 list-disc pl-4 leading-relaxed">
                             <li>Defers feature updates for 365 days</li>
                             <li>Defers quality updates for 4 days</li>
                             <li>Excludes drivers from quality updates</li>
                             <li>Prevents automatic restarts while a user is signed in</li>
                           </ul>
 
-                          <p className="text-[11px] italic text-slate-500 pt-1">
+                          <p className="text-[11px] italic text-slate-500 dark:text-slate-400 pt-1">
                             Available on Windows Pro, Enterprise, and Education editions.
                           </p>
                         </div>
@@ -943,28 +942,28 @@ export const TweaksView: React.FC = () => {
                       <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${
                         winUpdateState?.active_profile === "default" || (!winUpdateState?.active_profile && !winUpdateState?.fully_disabled)
                           ? "border-indigo-400 bg-indigo-50/30 shadow-md ring-2 ring-indigo-400/20"
-                          : "border-slate-200 bg-white hover:border-slate-300"
+                          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300"
                       }`}>
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <h4 className="text-base font-black text-slate-900">Windows Default</h4>
+                            <h4 className="text-base font-black text-slate-900 dark:text-slate-100">Windows Default</h4>
                             {(winUpdateState?.active_profile === "default" || (!winUpdateState?.active_profile && !winUpdateState?.fully_disabled)) && (
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300">
                                 Active ✓
                               </span>
                             )}
                           </div>
-                          <p className="text-xs font-semibold text-slate-600">
+                          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
                             Return control to Windows
                           </p>
 
-                          <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4 leading-relaxed">
+                          <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1.5 list-disc pl-4 leading-relaxed">
                             <li>Removes Windows Update policies applied previously</li>
                             <li>Restores update service startup settings</li>
                             <li>Re-enables update scheduled tasks</li>
                           </ul>
 
-                          <p className="text-[11px] italic text-slate-500 pt-1">
+                          <p className="text-[11px] italic text-slate-500 dark:text-slate-400 pt-1">
                             Use this to undo the Recommended or Disable profile.
                           </p>
                         </div>
@@ -986,7 +985,7 @@ export const TweaksView: React.FC = () => {
                       <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${
                         winUpdateState?.active_profile === "disable" || winUpdateState?.fully_disabled
                           ? "border-red-500 bg-red-50/30 shadow-md ring-2 ring-red-500/20"
-                          : "border-red-200 bg-white hover:border-red-400"
+                          : "border-red-200 bg-white dark:bg-slate-800 hover:border-red-400"
                       }`}>
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
@@ -1001,7 +1000,7 @@ export const TweaksView: React.FC = () => {
                             Advanced use only
                           </p>
 
-                          <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4 leading-relaxed">
+                          <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1.5 list-disc pl-4 leading-relaxed">
                             <li>Disables automatic update policy</li>
                             <li>Stops update services and scheduled tasks</li>
                             <li>Clears downloaded update files</li>
@@ -1027,7 +1026,7 @@ export const TweaksView: React.FC = () => {
                     </div>
 
                     {/* Bottom Notification Banner */}
-                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs font-semibold text-slate-600">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-2xl text-center text-xs font-semibold text-slate-600 dark:text-slate-400">
                       Changes apply system-wide. Restart Windows after switching profiles. Use Restore Defaults to undo update policies.
                     </div>
                   </div>
@@ -1041,7 +1040,7 @@ export const TweaksView: React.FC = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="text-sm font-black text-slate-900">Secure DNS Switcher</h4>
+                        <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">Secure DNS Switcher</h4>
                         {dnsInfo && (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
                             <CheckCircle className="w-3 h-3 text-indigo-500" />
@@ -1049,7 +1048,7 @@ export const TweaksView: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         Speed up DNS queries and block ads with encrypted, privacy-first DNS resolvers.
                         {dnsInfo?.servers && dnsInfo.servers.length > 0 && ` (${dnsInfo.servers.join(", ")})`}
                       </p>
@@ -1061,7 +1060,7 @@ export const TweaksView: React.FC = () => {
                       value={selectedDns}
                       onChange={(e) => setSelectedDns(e.target.value)}
                       aria-label="Select DNS preset"
-                      className="text-xs font-bold text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-400 cursor-pointer"
+                      className="text-xs font-bold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900/40 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 outline-none focus:border-indigo-400 cursor-pointer"
                     >
                       <option value="default">Default (ISP / DHCP Assigned)</option>
                       <option value="cloudflare">Cloudflare (1.1.1.1 — Fast & Private)</option>
@@ -1087,7 +1086,7 @@ export const TweaksView: React.FC = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-base font-black text-slate-900">
+                          <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
                             Windows Update Shield (4 Tiers)
                           </h3>
                           {winUpdateState?.fully_disabled ? (
@@ -1100,7 +1099,7 @@ export const TweaksView: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-500 mt-1 max-w-xl">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
                           Blocks automatic reboots, forced updates, and telemetry across Services, Scheduled Tasks, Metered Connections, and Group Policy.
                         </p>
                       </div>
@@ -1137,18 +1136,18 @@ export const TweaksView: React.FC = () => {
       {viewMode === "power" && (
         <div className="space-y-6">
           {/* Advanced Mode Action Bar */}
-          <div className="bg-white rounded-3xl p-7 border-2 border-slate-100 shadow-duo space-y-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-7 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <PixelBadge label="Advanced" variant="blue" />
-                  <span className="text-xs font-bold text-slate-400">
+                  <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
                     {isLinux
                       ? "Fedora Post-Install Tweaks & Optimizations"
                       : "Essential & Advanced Tweaks Engine"}
                   </span>
                 </div>
-                <h2 className="text-2xl font-black text-slate-900">
+                <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">
                   {isLinux
                     ? "Fedora Post-Install Tweaks & Optimizations"
                     : "Windows 10/11 Tweaks & Customizations"}
@@ -1157,7 +1156,7 @@ export const TweaksView: React.FC = () => {
 
               {/* OS Status */}
               <div className="flex items-center gap-2 flex-wrap">
-                <div className="text-xs font-black bg-slate-100 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-800 flex items-center gap-1.5">
+                <div className="text-xs font-black bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                   <Laptop className="w-4 h-4 text-indigo-500" />
                   <span>
                     {isLinux
@@ -1175,29 +1174,29 @@ export const TweaksView: React.FC = () => {
             </div>
 
             {/* Controls Row: Search, Presets, and Main Action */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-700/60">
               <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
                 <div className="relative w-full sm:w-64">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     placeholder={isLinux ? "Filter Fedora tweaks..." : "Filter Windows tweaks..."}
                     aria-label={isLinux ? "Filter Fedora tweaks" : "Filter Windows tweaks"}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full text-xs font-bold bg-slate-50 border-2 border-slate-200 rounded-xl pl-9 pr-3 py-2 outline-none focus:border-indigo-400 text-slate-800"
+                    className="w-full text-xs font-bold bg-slate-50 dark:bg-slate-900/40 border-2 border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 outline-none focus:border-indigo-400 text-slate-800 dark:text-slate-200"
                   />
                 </div>
 
                 {isLinux && (
-                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-bold">
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
                     <button
                       type="button"
                       onClick={() => setLinuxCategoryFilter("all")}
                       className={`px-2.5 py-1 rounded-lg transition-all ${
                         linuxCategoryFilter === "all"
-                          ? "bg-white text-indigo-700 shadow-sm border border-slate-200"
-                          : "text-slate-600 hover:text-slate-900"
+                          ? "bg-white dark:bg-slate-800 text-indigo-700 shadow-sm border border-slate-200 dark:border-slate-700"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                       }`}
                     >
                       All ({linuxTweaks.length})
@@ -1207,8 +1206,8 @@ export const TweaksView: React.FC = () => {
                       onClick={() => setLinuxCategoryFilter("essential")}
                       className={`px-2.5 py-1 rounded-lg transition-all ${
                         linuxCategoryFilter === "essential"
-                          ? "bg-white text-indigo-700 shadow-sm border border-slate-200"
-                          : "text-slate-600 hover:text-slate-900"
+                          ? "bg-white dark:bg-slate-800 text-indigo-700 shadow-sm border border-slate-200 dark:border-slate-700"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                       }`}
                     >
                       Essential ({linuxEssentialTweaks.length})
@@ -1218,8 +1217,8 @@ export const TweaksView: React.FC = () => {
                       onClick={() => setLinuxCategoryFilter("optimization")}
                       className={`px-2.5 py-1 rounded-lg transition-all ${
                         linuxCategoryFilter === "optimization"
-                          ? "bg-white text-indigo-700 shadow-sm border border-slate-200"
-                          : "text-slate-600 hover:text-slate-900"
+                          ? "bg-white dark:bg-slate-800 text-indigo-700 shadow-sm border border-slate-200 dark:border-slate-700"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                       }`}
                     >
                       Performance ({linuxOptimizations.length})
@@ -1229,8 +1228,8 @@ export const TweaksView: React.FC = () => {
                       onClick={() => setLinuxCategoryFilter("gnome_extension")}
                       className={`px-2.5 py-1 rounded-lg transition-all ${
                         linuxCategoryFilter === "gnome_extension"
-                          ? "bg-white text-indigo-700 shadow-sm border border-slate-200"
-                          : "text-slate-600 hover:text-slate-900"
+                          ? "bg-white dark:bg-slate-800 text-indigo-700 shadow-sm border border-slate-200 dark:border-slate-700"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                       }`}
                     >
                       GNOME Ext ({linuxExtensions.length})
@@ -1278,13 +1277,13 @@ export const TweaksView: React.FC = () => {
               } gap-6 items-start text-xs`}>
                 {/* Column 1: Essential Fedora Tweaks */}
                 {(linuxCategoryFilter === "all" || linuxCategoryFilter === "essential") && (
-                  <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                      <div className="flex items-center gap-2 font-sans font-black text-base text-slate-900">
+                  <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700/60">
+                      <div className="flex items-center gap-2 font-sans font-black text-base text-slate-900 dark:text-slate-100">
                         <Shield className="w-4 h-4 text-emerald-500" />
                         <span>Essential Repos & Codecs</span>
                       </div>
-                      <span className="text-[11px] font-bold text-slate-400">
+                      <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
                         {linuxAppliedEssentialCount} / {linuxEssentialTweaks.length} applied
                       </span>
                     </div>
@@ -1310,12 +1309,12 @@ export const TweaksView: React.FC = () => {
                             className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                               isChecked
                                 ? "bg-indigo-50/50 border-indigo-200"
-                                : "bg-white hover:bg-slate-50 border-slate-100"
+                                : "bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-100 dark:border-slate-700/60"
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0 pr-2">
                               <PixelCheckbox checked={isChecked} presentational />
-                              <span className="truncate text-slate-800 font-medium">
+                              <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
                                 {tweak.name}
                               </span>
                             </div>
@@ -1325,7 +1324,7 @@ export const TweaksView: React.FC = () => {
                                 className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
                                   tweak.is_applied
                                     ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                    : "bg-slate-100 text-slate-600 border border-slate-200"
+                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
                                 }`}
                               >
                                 {tweak.is_applied ? "Applied ✓" : "Not Applied"}
@@ -1347,7 +1346,7 @@ export const TweaksView: React.FC = () => {
                                     command: tweak.command,
                                   });
                                 }}
-                                className="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 shrink-0"
+                                className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 shrink-0"
                               >
                                 <HelpCircle className="w-4 h-4" />
                               </button>
@@ -1361,13 +1360,13 @@ export const TweaksView: React.FC = () => {
 
                 {/* Column 2: System Optimizations & Performance */}
                 {(linuxCategoryFilter === "all" || linuxCategoryFilter === "optimization") && (
-                  <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                      <div className="flex items-center gap-2 font-sans font-black text-base text-slate-900">
+                  <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700/60">
+                      <div className="flex items-center gap-2 font-sans font-black text-base text-slate-900 dark:text-slate-100">
                         <Sliders className="w-4 h-4 text-indigo-500" />
                         <span>System Performance & Tuning</span>
                       </div>
-                      <span className="text-[11px] font-bold text-slate-400">
+                      <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
                         {linuxAppliedOptCount} / {linuxOptimizations.length} applied
                       </span>
                     </div>
@@ -1395,12 +1394,12 @@ export const TweaksView: React.FC = () => {
                             className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                               isChecked
                                 ? "bg-indigo-50/50 border-indigo-200"
-                                : "bg-white hover:bg-slate-50 border-slate-100"
+                                : "bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-100 dark:border-slate-700/60"
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0 pr-2">
                               <PixelCheckbox checked={isChecked} presentational />
-                              <span className="truncate text-slate-800 font-medium">
+                              <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
                                 {tweak.name}
                               </span>
                             </div>
@@ -1410,7 +1409,7 @@ export const TweaksView: React.FC = () => {
                                 className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
                                   tweak.is_applied
                                     ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                    : "bg-slate-100 text-slate-600 border border-slate-200"
+                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
                                 }`}
                               >
                                 {tweak.is_applied ? "Applied ✓" : "Not Applied"}
@@ -1432,7 +1431,7 @@ export const TweaksView: React.FC = () => {
                                     command: tweak.command,
                                   });
                                 }}
-                                className="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 shrink-0"
+                                className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 shrink-0"
                               >
                                 <HelpCircle className="w-4 h-4" />
                               </button>
@@ -1458,13 +1457,13 @@ export const TweaksView: React.FC = () => {
 
                 {/* Column 3: GNOME Shell Extensions Suite */}
                 {(linuxCategoryFilter === "all" || linuxCategoryFilter === "gnome_extension") && (
-                  <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                      <div className="flex items-center gap-2 font-sans font-black text-base text-slate-900">
+                  <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700/60">
+                      <div className="flex items-center gap-2 font-sans font-black text-base text-slate-900 dark:text-slate-100">
                         <Puzzle className="w-4 h-4 text-pink-500" />
                         <span>GNOME Shell Extensions Suite</span>
                       </div>
-                      <span className="text-[11px] font-bold text-slate-400">
+                      <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
                         {linuxAppliedExtCount} / {linuxExtensions.length} active
                       </span>
                     </div>
@@ -1492,12 +1491,12 @@ export const TweaksView: React.FC = () => {
                             className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
                               isChecked
                                 ? "bg-pink-50/50 border-pink-200"
-                                : "bg-white hover:bg-slate-50 border-slate-100"
+                                : "bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-100 dark:border-slate-700/60"
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0 pr-2">
                               <PixelCheckbox checked={isChecked} presentational />
-                              <span className="truncate text-slate-800 font-medium">
+                              <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
                                 {tweak.name}
                               </span>
                             </div>
@@ -1507,7 +1506,7 @@ export const TweaksView: React.FC = () => {
                                 className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
                                   tweak.is_applied
                                     ? "bg-pink-100 text-pink-800 border border-pink-200"
-                                    : "bg-slate-100 text-slate-600 border border-slate-200"
+                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
                                 }`}
                               >
                                 {tweak.is_applied ? "Active ✓" : "Available"}
@@ -1529,7 +1528,7 @@ export const TweaksView: React.FC = () => {
                                     command: tweak.command,
                                   });
                                 }}
-                                className="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 shrink-0"
+                                className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 shrink-0"
                               >
                                 <HelpCircle className="w-4 h-4" />
                               </button>
@@ -1555,15 +1554,15 @@ export const TweaksView: React.FC = () => {
               </div>
 
               {/* Bottom DNS Bar for Linux */}
-              <div className="bg-white rounded-2xl p-4 border-2 border-slate-100 shadow-duo-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span className="text-slate-800 font-bold font-sans">Secure DNS Switcher:</span>
+                  <span className="text-slate-800 dark:text-slate-200 font-bold font-sans">Secure DNS Switcher:</span>
                   <select
                     value={selectedDns}
                     onChange={(e) => setSelectedDns(e.target.value)}
                     aria-label="Select DNS preset"
-                    className="font-bold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-800 outline-none focus:border-indigo-400 cursor-pointer"
+                    className="font-bold bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-400 cursor-pointer"
                   >
                     <option value="default">Default (DHCP / Systemd-Resolved)</option>
                     <option value="cloudflare">Cloudflare (1.1.1.1 - Fast & Private)</option>
@@ -1581,13 +1580,13 @@ export const TweaksView: React.FC = () => {
             /* WINDOWS TWEAKS GRID */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start text-xs">
               {/* Left Column: Essential Tweaks */}
-              <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                  <div className="flex items-center gap-2 font-sans font-black text-base text-slate-900">
+              <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700/60">
+                  <div className="flex items-center gap-2 font-sans font-black text-base text-slate-900 dark:text-slate-100">
                     <Shield className="w-4 h-4 text-emerald-500" />
                     <span>Essential Windows Tweaks</span>
                   </div>
-                  <span className="text-[11px] font-bold text-slate-400">
+                  <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
                     {winEssentialTweaks.length} items
                   </span>
                 </div>
@@ -1618,12 +1617,12 @@ export const TweaksView: React.FC = () => {
                         className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                           isChecked
                             ? "bg-indigo-50/60 hover:bg-indigo-50"
-                            : "hover:bg-slate-50"
+                            : "hover:bg-slate-50 dark:hover:bg-slate-700"
                         } ${isUnsupported ? "opacity-40 cursor-not-allowed" : ""}`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 pr-2">
                           <PixelCheckbox checked={isChecked} disabled={isUnsupported} presentational />
-                          <span className="truncate text-slate-800 font-medium">
+                          <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
                             {tweak.name}
                           </span>
                           {isWin11Only && (
@@ -1650,7 +1649,7 @@ export const TweaksView: React.FC = () => {
                               min_windows_version: tweak.min_windows_version,
                             });
                           }}
-                          className="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 shrink-0"
+                          className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 shrink-0"
                         >
                           <HelpCircle className="w-3.5 h-3.5" />
                         </button>
@@ -1673,13 +1672,13 @@ export const TweaksView: React.FC = () => {
               </div>
 
               {/* Right Column: Advanced Tweaks */}
-              <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                  <div className="flex items-center gap-2 font-sans font-black text-base text-slate-900">
+              <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700/60">
+                  <div className="flex items-center gap-2 font-sans font-black text-base text-slate-900 dark:text-slate-100">
                     <AlertCircle className="w-4 h-4 text-amber-500" />
                     <span>Advanced Tweaks — CAUTION</span>
                   </div>
-                  <span className="text-[11px] font-bold text-slate-400">
+                  <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
                     {winAdvancedTweaks.length} items
                   </span>
                 </div>
@@ -1710,12 +1709,12 @@ export const TweaksView: React.FC = () => {
                         className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
                           isChecked
                             ? "bg-amber-50/60 hover:bg-amber-50"
-                            : "hover:bg-slate-50"
+                            : "hover:bg-slate-50 dark:hover:bg-slate-700"
                         } ${isUnsupported ? "opacity-40 cursor-not-allowed" : ""}`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 pr-2">
                           <PixelCheckbox checked={isChecked} disabled={isUnsupported} presentational />
-                          <span className="truncate text-slate-800 font-medium">
+                          <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
                             {tweak.name}
                           </span>
                           {isWin11Only && (
@@ -1746,7 +1745,7 @@ export const TweaksView: React.FC = () => {
                                 min_windows_version: tweak.min_windows_version,
                               });
                             }}
-                            className="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100"
+                            className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700"
                           >
                             <HelpCircle className="w-3.5 h-3.5" />
                           </button>
@@ -1769,7 +1768,7 @@ export const TweaksView: React.FC = () => {
                 )}
 
                 {/* Bottom Controls: ShutUp10 & DNS */}
-                <div className="pt-4 border-t border-slate-100 space-y-3">
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-700/60 space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap">
                     <button
                       type="button"
@@ -1797,20 +1796,20 @@ export const TweaksView: React.FC = () => {
                       }}
                       className={`text-xs font-black px-3 py-2 rounded-xl border transition-all ${
                         isShutUp10Installed
-                          ? "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300"
-                          : "bg-slate-100 text-slate-400 border-slate-200 opacity-50 cursor-not-allowed"
+                          ? "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 border-slate-300"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 opacity-50 cursor-not-allowed"
                       }`}
                     >
                       O&O ShutUp10++ - Run
                     </button>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-slate-700 font-bold font-sans text-xs">DNS - Set to:</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-bold font-sans text-xs">DNS - Set to:</span>
                       <select
                         value={selectedDns}
                         onChange={(e) => setSelectedDns(e.target.value)}
                         aria-label="Select DNS preset"
-                        className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-800 outline-none focus:border-indigo-400"
+                        className="text-xs font-bold bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-400"
                       >
                         <option value="default">Default</option>
                         <option value="cloudflare">Cloudflare (1.1.1.1)</option>
@@ -1825,9 +1824,9 @@ export const TweaksView: React.FC = () => {
                   </div>
 
                   {/* Windows Update Profiles Row */}
-                  <div className="pt-3 border-t border-slate-100 space-y-2">
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800">Windows Update Profile:</span>
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Windows Update Profile:</span>
                       <span className="text-[10px] font-black px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
                         {winUpdateState?.active_profile ? `Active: ${winUpdateState.active_profile.toUpperCase()}` : (winUpdateState?.fully_disabled ? "DISABLED" : "DEFAULT")}
                       </span>
@@ -1883,18 +1882,18 @@ export const TweaksView: React.FC = () => {
           <div
             ref={infoModalRef}
             tabIndex={-1}
-            className="bg-white rounded-3xl max-w-xl w-full p-6 border-2 border-slate-100 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-slate-800 rounded-3xl max-w-xl w-full p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700/60">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
                   <HelpCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 id="tweak-info-modal-title" className="font-black text-slate-900 text-base leading-snug">
+                  <h3 id="tweak-info-modal-title" className="font-black text-slate-900 dark:text-slate-100 text-base leading-snug">
                     {activeInfoModal.name}
                   </h3>
-                  <span className="text-[10px] font-bold text-slate-400">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
                     {activeInfoModal.category}
                   </span>
                 </div>
@@ -1903,29 +1902,29 @@ export const TweaksView: React.FC = () => {
                 type="button"
                 aria-label="Close details"
                 onClick={() => setActiveInfoModal(null)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100"
+                className="text-slate-400 dark:text-slate-500 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3.5 text-xs text-slate-600 leading-relaxed font-sans">
+            <div className="space-y-3.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-sans">
               <div>
-                <span className="font-bold text-slate-800">Description:</span>
-                <p className="mt-0.5 text-slate-700">{activeInfoModal.description}</p>
+                <span className="font-bold text-slate-800 dark:text-slate-200">Description:</span>
+                <p className="mt-0.5 text-slate-700 dark:text-slate-300">{activeInfoModal.description}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-1">
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  <div className="font-bold text-slate-500 text-[10px] uppercase">Risk Level</div>
+                <div className="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <div className="font-bold text-slate-500 dark:text-slate-400 text-[10px] uppercase">Risk Level</div>
                   <div className="mt-1">
                     <RiskPill level={activeInfoModal.danger_level} />
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  <div className="font-bold text-slate-500 text-[10px] uppercase">Privileges Required</div>
-                  <div className="font-black text-slate-800 mt-1">
+                <div className="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <div className="font-bold text-slate-500 dark:text-slate-400 text-[10px] uppercase">Privileges Required</div>
+                  <div className="font-black text-slate-800 dark:text-slate-200 mt-1">
                     {activeInfoModal.requiresElevation ? "Root / Administrator" : "Standard User"}
                   </div>
                 </div>
@@ -1941,7 +1940,7 @@ export const TweaksView: React.FC = () => {
               {activeInfoModal.command && (
                 <div className="space-y-1.5 pt-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-700 text-xs flex items-center gap-1.5">
+                    <span className="font-bold text-slate-700 dark:text-slate-300 text-xs flex items-center gap-1.5">
                       <Terminal className="w-3.5 h-3.5 text-indigo-600" />
                       Command / Script Executed:
                     </span>
@@ -1970,7 +1969,7 @@ export const TweaksView: React.FC = () => {
               )}
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex justify-end">
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60 flex justify-end">
               <TactileButton
                 variant="secondary"
                 size="sm"

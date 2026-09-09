@@ -21,7 +21,7 @@ export const PixelCheckbox: React.FC<PixelCheckboxProps> = ({
   const commonClasses = `relative before:content-[''] before:absolute before:-inset-2 w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all select-none ${
     checked
       ? "bg-[#58CC02] border-[#46A302] text-white shadow-[0_2px_0_0_#3B8702]"
-      : "bg-white border-slate-300 hover:border-slate-400"
+      : "bg-white dark:bg-slate-800 border-slate-300 hover:border-slate-400"
   } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`;
 
   if (presentational) {

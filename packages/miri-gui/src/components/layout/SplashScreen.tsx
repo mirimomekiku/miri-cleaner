@@ -38,10 +38,10 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onDone }) => {
       </div>
       <div className="flex flex-col items-center gap-1.5">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Miri Cleaner</h1>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Miri Cleaner</h1>
         </div>
-        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest font-pixel">
-          Zero-Trust Safe &amp; Playful System Optimizer
+        <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest font-pixel">
+          Safe &amp; Playful System Cleanup
         </p>
       </div>
     </div>

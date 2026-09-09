@@ -13,7 +13,7 @@
   }
 
   .btn-duo-secondary {
-    @apply bg-white hover:bg-slate-50 text-slate-700 font-extrabold px-5 py-2.5 rounded-2xl border border-slate-200 shadow-[0_3px_0_0_#CBD5E1] active:shadow-[0_1px_0_0_#CBD5E1] active:translate-y-0.5 transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/60;
+    @apply bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-extrabold px-5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-[0_3px_0_0_#CBD5E1] active:shadow-[0_1px_0_0_#CBD5E1] active:translate-y-0.5 transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/60;
   }
 
   .btn-duo-danger {
@@ -23,7 +23,7 @@
   /* Bumped padding site-wide as part of the Duolingo-lesson-screen redesign:
      more breathing room per card without touching every call site. */
   .card-duo {
-    @apply bg-white rounded-3xl p-7 border-2 border-slate-100 shadow-duo hover:border-miri-200 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-miri-400/60;
+    @apply bg-white dark:bg-slate-800 rounded-3xl p-7 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo hover:border-miri-200 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-miri-400/60;
   }
 
   .pixel-tag {
@@ -263,6 +263,9 @@
   background-size: 250% 100%;
   animation: pixelShimmerSweep 1.6s steps(10, jump-end) infinite;
 }
+.dark .skeleton-pixel {
+  background-color: rgba(51, 65, 85, 0.7);
+}
 
 /* Restrained pixel-dust accents on skeleton "cards" -- echoes the mascot's
    sparkle motif, kept static and low-opacity so it reads as texture, not
@@ -363,4 +366,13 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #FF9D9D;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #1E293B;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748B;
 }

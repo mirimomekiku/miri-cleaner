@@ -2,7 +2,7 @@ import React from "react";
 
 interface PixelBadgeProps {
   label: string;
-  variant?: "pink" | "green" | "yellow" | "blue" | "gray";
+  variant?: "pink" | "green" | "yellow" | "blue" | "gray" | "red";
   icon?: string;
 }
 
@@ -16,7 +16,8 @@ export const PixelBadge: React.FC<PixelBadgeProps> = ({
     green: "bg-emerald-50 text-emerald-800 border-emerald-300",
     yellow: "bg-amber-50 text-amber-800 border-amber-300",
     blue: "bg-sky-50 text-sky-800 border-sky-300",
-    gray: "bg-slate-100 text-slate-700 border-slate-300",
+    gray: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300",
+    red: "bg-rose-50 text-rose-800 border-rose-300",
   };
 
   return (

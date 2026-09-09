@@ -70,7 +70,7 @@ export const BatteryHealthCard: React.FC<BatteryHealthCardProps> = ({ battery, h
     history.length >= 2 ? history[history.length - 1].healthPercentage - history[0].healthPercentage : 0;
 
   return (
-    <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo-sm space-y-4">
+    <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm space-y-4">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
@@ -78,10 +78,10 @@ export const BatteryHealthCard: React.FC<BatteryHealthCardProps> = ({ battery, h
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h4 className="text-sm font-black text-slate-900">Battery Health</h4>
+              <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">Battery Health</h4>
               <PixelBadge label={battery.status} variant={statusBadgeVariant} />
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {battery.percentage}% charged
               {battery.cycle_count != null ? ` · ${battery.cycle_count} charge cycles` : ""}
             </p>
@@ -90,8 +90,8 @@ export const BatteryHealthCard: React.FC<BatteryHealthCardProps> = ({ battery, h
 
         {health != null && (
           <div className="text-right shrink-0">
-            <div className="text-2xl font-black text-slate-900">{health}%</div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            <div className="text-2xl font-black text-slate-900 dark:text-slate-100">{health}%</div>
+            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               Design Capacity
             </div>
           </div>
@@ -99,13 +99,13 @@ export const BatteryHealthCard: React.FC<BatteryHealthCardProps> = ({ battery, h
       </div>
 
       {history.length < 3 ? (
-        <div className="text-center py-5 text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
+        <div className="text-center py-5 text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-slate-700">
           Still collecting data -- check back after a few more days of use to see a health trend.
         </div>
       ) : (
-        <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80">
+        <div className="bg-slate-50 dark:bg-slate-900/40 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-700/80">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold text-slate-500">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
               Health trend ({history.length} {history.length === 1 ? "day" : "days"} tracked)
             </span>
             {trendDelta !== 0 && (

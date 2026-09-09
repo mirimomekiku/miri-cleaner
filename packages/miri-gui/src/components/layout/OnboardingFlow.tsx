@@ -121,14 +121,14 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onDone }) => {
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-3xl max-w-md w-full p-7 shadow-2xl border-4 border-miri-300 relative animate-pop"
+        className="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-7 shadow-2xl border-4 border-miri-300 relative animate-pop"
       >
         {/* Skip is available from step one, per onboarding practice: never
             hide or bury the escape hatch for users who'd rather explore. */}
         <button
           onClick={finish}
           aria-label="Skip introduction"
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400"
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400"
         >
           <X className="w-5 h-5" />
         </button>
@@ -141,11 +141,11 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onDone }) => {
           </div>
 
           <div>
-            <h3 id="onboarding-title" className="text-xl font-black text-slate-900 flex items-center justify-center gap-2">
+            <h3 id="onboarding-title" className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center justify-center gap-2">
               {step.icon}
               <span>{step.title}</span>
             </h3>
-            <p className="text-sm font-semibold text-slate-600 mt-2 leading-relaxed">
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
               {step.body}
             </p>
           </div>
@@ -166,7 +166,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onDone }) => {
         <div className="flex items-center justify-between gap-3 mt-6">
           <button
             onClick={finish}
-            className="text-xs font-bold text-slate-400 hover:text-slate-700 px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400 rounded"
+            className="text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400 rounded"
           >
             Skip
           </button>
