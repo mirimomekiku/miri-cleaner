@@ -42,6 +42,10 @@ It combines a **Duolingo-inspired playful desktop GUI** (`#FF9D9D` coral theme, 
   - Go build caches (`go clean -cache`).
   - Node.js global caches (`~/.npm/_cacache`, `~/.yarn/cache`, `pnpm store prune`).
 - **Audit & Rollback Journal**: All actions are logged to `audit.json` with snapshot references and undo payloads. The desktop GUI's Safety & Vitals tab surfaces this journal directly, with a working one-tap rollback per entry.
+- **SMART Disk Health Monitoring**: Reads real SMART attributes via `smartctl` (temperature, power-on hours, reallocated/pending sectors, NVMe wear) for every detected drive, with an explicit elevated re-check when an unprivileged read is refused.
+- **Browser Data Breakdown**: Per-browser, per-profile storage breakdown (Chrome, Edge, Brave, Chromium, Firefox) split into cache, cookies, local storage, IndexedDB, and service worker data, with selective clearing to the OS trash instead of one all-or-nothing "clear browser cache" button.
+- **Big File Finder**: Filters by minimum size, file category, last-modified age, and "not opened in N days," with an honest caveat when access-time filtering is unreliable (Windows doesn't track it by default; some Linux mounts use `noatime`).
+- **Native Desktop Notifications**: Low-disk-space warnings, drive-health alerts, cleanup-complete confirmations, and unused-app nudges, each with its own on/off toggle in Settings.
 
 ---
 
@@ -50,12 +54,13 @@ It combines a **Duolingo-inspired playful desktop GUI** (`#FF9D9D` coral theme, 
 Beyond the core cleanup engine, the Tauri/React desktop app adds a few things worth calling out:
 
 - **A lesson-screen dashboard, not a control panel**: one dominant focal card per screen, the horse mascot large at key moments, one obvious pill-shaped primary action, and secondary detail tucked behind an expand toggle instead of everything competing for attention at once.
-- **Cleaning streaks & garden growth**: a daily streak tracker with a tiered garden visualization and milestone badges for streak length and cumulative space freed.
 - **Smart Clean**: a guided wizard that ranks safe targets by size, folds in any removable orphaned app leftovers, and cleans them in one pass.
-- **Weekly digest**: a once-a-week summary of what was actually freed, how many cleanups ran, and how many safety snapshots were registered — computed from the real audit journal, not a claim.
-- **Usage-based uninstall suggestions**: flags installed apps you haven't opened in 90+ days, with the space they'd reclaim.
+- **Usage-based uninstall suggestions**: flags installed apps unused past a configurable threshold (default 90 days), with the space they'd reclaim, a Sidebar badge, and an optional notification.
 - **Boot impact scoring**: surfaces enabled startup apps with an estimated boot-time cost and a one-tap toggle.
 - **Battery health trend**: a small sparkline tracking battery health over time on laptops (nothing shown on battery-less desktops).
+- **Right-click file actions**: Delete, Properties, and Show in File Explorer on any file/folder listed in Storage & Duplicates (heavyweight files, largest folders, Big File Finder results); deletes always go to the OS trash, never a permanent unlink.
+- **Dark mode**: a first-class light/dark/system theme choice, keeping the same brand accent colors at a muted slate palette rather than inverting colors or adding a neon look.
+- **Settings page**: theme, per-category notification toggles, and the unused-app / low-disk-space suggestion thresholds, all in one place.
 - **Branded splash + first-run onboarding**: a brief animated splash on launch, followed (once, on first run) by a skippable step-by-step orientation explaining what a dry-run scan is, what the automatic safety snapshot does, and where rollback lives.
 - **Resilient error surfacing**: every scan/clean/tweak/rollback action shows a visible on-brand error banner with Retry on failure, instead of only logging to the activity console.
 - **Dynamic, locale-aware byte formatting**: sizes are never hardcoded to one unit — a 107 KB cache and a 35 GB toolchain store each render in the unit that actually fits.
@@ -89,17 +94,19 @@ miri-cleaner/
 - Linux: `pkg-config`, `polkit` (optional: `snapper` or `timeshift`)
 - Windows: PowerShell 5.1+
 
-### Running the Desktop GUI (Tauri / React)
+### Running the Desktop GUI (Tauri / Electron / React)
+
+Miri Cleaner is a native desktop app only — there is no browser/web version. `npm run dev` starts the Vite dev server that a desktop shell (Tauri or Electron) loads; opening it directly in an ordinary browser tab shows error banners instead of working data, by design.
 
 ```bash
 cd packages/miri-gui
 npm install
 
-# Run in web preview mode (with simulated IPC bridge):
-npm run dev
-
-# Run native Tauri desktop window:
+# Run the native Tauri desktop window (the packaged installer target):
 npm run tauri dev
+
+# Or launch via the Electron shell (what ./miri.sh gui / .\miri.ps1 gui use):
+npm run desktop
 ```
 
 ### Running the TUI & Headless CLI
@@ -132,6 +139,15 @@ cargo run -p miri-cli -- dev-cache --all
 
 # View rollback journal:
 cargo run -p miri-cli -- rollback
+
+# SMART disk health (add --elevated to retry with admin/root access):
+cargo run -p miri-cli -- disk-health --json
+
+# Filtered big-file finder:
+cargo run -p miri-cli -- big-files --min-mb 500 --json
+
+# Per-browser storage breakdown (add --clear <comma-separated paths> to clear):
+cargo run -p miri-cli -- browser-data --json
 ```
 
 ---

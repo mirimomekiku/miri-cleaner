@@ -4,7 +4,9 @@
 
 ## Platform
 
-adaptive
+web
+
+Native-shell caveat: the UI is plain React/TypeScript/Tailwind rendered inside a webview (Tauri v2's WebKitGTK/WebView2, or Electron/Chromium as the secondary dev shell) -- audit and design guidance should use the standard web rubric, not the iOS/Android/React Native native-platform checklists.
 
 ## Stack
 
