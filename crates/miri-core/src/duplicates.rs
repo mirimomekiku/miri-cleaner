@@ -31,14 +31,12 @@ pub struct DuplicateFinder;
 impl DuplicateFinder {
     /// High-performance duplicate file finder with Btrfs Reflink detection
     pub fn scan_duplicates(target_dir: Option<&str>) -> Vec<DuplicateGroup> {
-        let dir = target_dir
-            .map(|d| RuleEngine::expand_path(d))
-            .unwrap_or_else(|| {
-                let home = std::env::var("HOME")
-                    .or_else(|_| std::env::var("USERPROFILE"))
-                    .unwrap_or_else(|_| ".".to_string());
-                format!("{}/Downloads", home.trim_end_matches('/'))
-            });
+        let dir = target_dir.map(|d| RuleEngine::expand_path(d)).unwrap_or_else(|| {
+            let home = RuleEngine::home_dir()
+                .map(|h| h.to_string_lossy().to_string())
+                .unwrap_or_else(|| ".".to_string());
+            format!("{}/Downloads", home.trim_end_matches('/'))
+        });
 
         let p = Path::new(&dir);
         if !p.exists() {

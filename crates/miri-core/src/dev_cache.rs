@@ -48,8 +48,8 @@ impl DevCacheCleaner {
 
     /// Prunes Docker dangling images via docker CLI
     pub fn clean_docker_images() -> DevCacheReport {
-        if let Ok(which) = Command::new("which").arg("docker").output() {
-            if which.status.success() {
+        if RuleEngine::command_exists("docker") {
+            {
                 let output = Command::new("docker")
                     .args(["image", "prune", "-f"])
                     .output();
@@ -81,8 +81,8 @@ impl DevCacheCleaner {
 
     /// Cleans Go build cache
     pub fn clean_go_cache() -> DevCacheReport {
-        if let Ok(which) = Command::new("which").arg("go").output() {
-            if which.status.success() {
+        if RuleEngine::command_exists("go") {
+            {
                 let output = Command::new("go")
                     .args(["clean", "-cache"])
                     .output();
@@ -136,8 +136,8 @@ impl DevCacheCleaner {
 
     /// Prunes Podman containers, dangling images, and build cache (Fedora default container engine)
     pub fn clean_podman_cache() -> DevCacheReport {
-        if let Ok(which) = Command::new("which").arg("podman").output() {
-            if which.status.success() {
+        if RuleEngine::command_exists("podman") {
+            {
                 let output = Command::new("podman")
                     .args(["system", "prune", "-f"])
                     .output();
@@ -172,10 +172,10 @@ impl DevCacheCleaner {
         let mut messages = Vec::new();
 
         // 1. pip cache purge
-        let has_pip = Command::new("which").arg("pip").output().map(|o| o.status.success()).unwrap_or(false)
-            || Command::new("which").arg("pip3").output().map(|o| o.status.success()).unwrap_or(false);
+        let has_pip = RuleEngine::command_exists("pip")
+            || RuleEngine::command_exists("pip3");
         if has_pip {
-            let pip_cmd = if Command::new("which").arg("pip").output().map(|o| o.status.success()).unwrap_or(false) {
+            let pip_cmd = if RuleEngine::command_exists("pip") {
                 "pip"
             } else {
                 "pip3"
@@ -198,8 +198,8 @@ impl DevCacheCleaner {
         }
 
         // 2. uv cache clean
-        if let Ok(which) = Command::new("which").arg("uv").output() {
-            if which.status.success() {
+        if RuleEngine::command_exists("uv") {
+            {
                 if let Ok(out) = Command::new("uv").args(["cache", "clean"]).output() {
                     if out.status.success() {
                         messages.push("uv cache cleaned".to_string());
@@ -246,8 +246,8 @@ impl DevCacheCleaner {
         let mut messages = Vec::new();
 
         // pnpm store prune
-        if let Ok(which) = Command::new("which").arg("pnpm").output() {
-            if which.status.success() {
+        if RuleEngine::command_exists("pnpm") {
+            {
                 if let Ok(out) = Command::new("pnpm").args(["store", "prune"]).output() {
                     if out.status.success() {
                         messages.push("pnpm store pruned".to_string());
@@ -257,8 +257,8 @@ impl DevCacheCleaner {
         }
 
         // Yarn cache clean
-        if let Ok(which) = Command::new("which").arg("yarn").output() {
-            if which.status.success() {
+        if RuleEngine::command_exists("yarn") {
+            {
                 let _ = Command::new("yarn").args(["cache", "clean"]).output();
                 messages.push("yarn cache cleaned".to_string());
             }
@@ -304,8 +304,8 @@ impl DevCacheCleaner {
     pub fn clean_ccache() -> DevCacheReport {
         let mut messages = Vec::new();
 
-        if let Ok(which) = Command::new("which").arg("ccache").output() {
-            if which.status.success() {
+        if RuleEngine::command_exists("ccache") {
+            {
                 if let Ok(out) = Command::new("ccache").arg("-C").output() {
                     if out.status.success() {
                         messages.push("ccache cleared".to_string());

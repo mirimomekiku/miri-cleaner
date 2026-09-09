@@ -1,6 +1,6 @@
 use crate::models::{CleanCategory, CleanTarget, OsType, RiskLevel};
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub struct RuleEngine;
 
@@ -379,6 +379,30 @@ impl RuleEngine {
             }
         }
         input.to_string()
+    }
+
+    /// The current user's home directory (`$HOME` on Linux/macOS,
+    /// `%USERPROFILE%` on Windows), as a `PathBuf`. The single shared
+    /// resolver every scanner/finder that needs "the user's home" should
+    /// call, instead of each re-deriving the same `HOME`/`USERPROFILE`
+    /// fallback independently.
+    pub fn home_dir() -> Option<PathBuf> {
+        env::var_os("HOME")
+            .or_else(|| env::var_os("USERPROFILE"))
+            .map(PathBuf::from)
+    }
+
+    /// Whether a binary is on `PATH` -- `where` on Windows, `which`
+    /// everywhere else. The single shared "is this tool installed" check;
+    /// every caller that used to shell out to a Linux-only `which` directly
+    /// (silently always false on Windows) should go through this instead.
+    pub fn command_exists(bin: &str) -> bool {
+        let checker = if cfg!(target_os = "windows") { "where" } else { "which" };
+        std::process::Command::new(checker)
+            .arg(bin)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
     }
 
     /// Hardcoded, immutable blocklist explicitly prohibiting matching or recursing

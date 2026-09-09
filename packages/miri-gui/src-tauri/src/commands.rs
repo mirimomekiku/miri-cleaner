@@ -1,10 +1,12 @@
 use miri_core::{
     AppDefinition, AppLeftover, AppManager, AuditEntry, AuditJournal, AutostartItem,
-    AutostartManager, CleanExecutionPlan, CleanExecutionResult, DnsInfo, DuplicateFinder,
-    DuplicateGroup, InstalledAppUsage, LeftoversScanner, LinuxTweakItem, LinuxTweaks, RuleEngine,
-    ScanResult, Scanner, SnapshotManager, SnapshotStatus, SpaceXRay, SystemVitals,
-    SystemVitalsReport, TweakActionReport, WindowsTweakItem, WindowsTweaks, WindowsUpdateState,
-    WindowsVersionInfo, XRayReport,
+    AutostartManager, BigFileFinder, BigFileQuery, BigFileReport, BrowserCleanupReport,
+    BrowserCleanupScanner, CleanExecutionPlan, CleanExecutionResult, DiskHealthMonitor,
+    DiskHealthReport, DnsInfo, DuplicateFinder, DuplicateGroup, InstalledAppUsage,
+    LeftoversScanner, LinuxTweakItem, LinuxTweaks, RuleEngine, ScanResult, Scanner,
+    SnapshotManager, SnapshotStatus, SpaceXRay, SystemVitals, SystemVitalsReport,
+    TweakActionReport, WindowsTweakItem, WindowsTweaks, WindowsUpdateState, WindowsVersionInfo,
+    XRayReport,
 };
 use serde::Serialize;
 use std::path::Path;
@@ -352,4 +354,54 @@ pub fn set_power_profile(profile: String) -> Result<String, String> {
 #[tauri::command]
 pub fn compact_snapshots(days: u32) -> Result<String, String> {
     SystemVitals::prune_old_snapshots(days)
+}
+
+#[tauri::command]
+pub fn get_disk_health() -> Result<DiskHealthReport, String> {
+    Ok(DiskHealthMonitor::get_report())
+}
+
+/// Explicit, user-triggered retry that reads SMART data through the same
+/// pkexec/UAC elevation path used elsewhere -- the unprivileged read in
+/// `get_disk_health` is refused by default on Windows and on many Linux
+/// setups.
+#[tauri::command]
+pub fn get_disk_health_elevated() -> Result<DiskHealthReport, String> {
+    Ok(DiskHealthMonitor::get_report_elevated())
+}
+
+// ==========================================
+// Storage & Duplicates: Big File Finder
+// ==========================================
+
+#[tauri::command]
+pub fn find_big_files(query: BigFileQuery) -> Result<BigFileReport, String> {
+    Ok(BigFileFinder::find(query))
+}
+
+// ==========================================
+// Storage & Duplicates: Browser Data Breakdown
+// ==========================================
+
+#[tauri::command]
+pub fn scan_browser_data() -> Result<BrowserCleanupReport, String> {
+    Ok(BrowserCleanupScanner::scan())
+}
+
+// ==========================================
+// Native Notifications
+// ==========================================
+
+/// Shows a native desktop notification (D-Bus on Fedora/Linux, a Windows
+/// toast on Windows). Purely a courtesy signal -- a failure here (no
+/// notification daemon running, permission denied) is reported back but
+/// never treated as fatal by callers.
+#[tauri::command]
+pub fn show_notification(title: String, body: String) -> Result<(), String> {
+    notify_rust::Notification::new()
+        .summary(&title)
+        .body(&body)
+        .show()
+        .map_err(|e| format!("Failed to show notification: {e}"))?;
+    Ok(())
 }

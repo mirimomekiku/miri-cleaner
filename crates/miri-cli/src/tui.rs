@@ -25,6 +25,7 @@ pub enum TuiView {
     Inspection,
     Tweaks,
     ConfirmDialog,
+    Diagnostics,
 }
 
 pub fn run_interactive_tui() -> Result<(), Box<dyn std::error::Error>> {
@@ -37,9 +38,12 @@ pub fn run_interactive_tui() -> Result<(), Box<dyn std::error::Error>> {
     let mut current_view = TuiView::Dashboard;
     let mut scan_result = Scanner::scan_all();
     let snapshot_status = SnapshotManager::get_status();
-    let mut status_message = "Ready. Press [S] to Scan, [C] to Clean, [T] for Tweaks, [Q] to Quit.".to_string();
+    let mut status_message = "Ready. Press [S] to Scan, [C] to Clean, [T] for Tweaks, [D] for Diagnostics, [Q] to Quit.".to_string();
     let mut selected_index = 0usize;
     let mut confirm_prompt = String::new();
+    let mut disk_health: Option<DiskHealthReport> = None;
+    let mut browser_data: Option<BrowserCleanupReport> = None;
+    let mut big_files: Option<BigFileReport> = None;
 
     loop {
         terminal.draw(|f| {
@@ -151,6 +155,73 @@ pub fn run_interactive_tui() -> Result<(), Box<dyn std::error::Error>> {
                     let p = Paragraph::new(tweak_text).block(Block::default().title(" Tweaks ").borders(Borders::ALL));
                     f.render_widget(p, chunks[1]);
                 }
+                TuiView::Diagnostics => {
+                    let mut lines = vec![
+                        Line::from(vec![Span::styled("Diagnostics: Disk Health, Browser Data & Big Files", Style::default().fg(PINK_ACCENT).add_modifier(Modifier::BOLD))]),
+                        Line::from(""),
+                    ];
+
+                    lines.push(Line::from(vec![Span::styled("Drive Health (SMART):", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))]));
+                    match &disk_health {
+                        None => lines.push(Line::from("  Loading...")),
+                        Some(rep) if !rep.smartctl_installed => {
+                            lines.push(Line::from("  smartctl not installed -- install smartmontools to see this."))
+                        }
+                        Some(rep) if rep.disks.is_empty() => lines.push(Line::from("  No SMART-capable disks detected.")),
+                        Some(rep) => {
+                            for disk in &rep.disks {
+                                if !disk.available {
+                                    lines.push(Line::from(format!("  • {}: {}", disk.device, disk.unavailable_reason.as_deref().unwrap_or("Unavailable"))));
+                                    continue;
+                                }
+                                let color = match disk.overall_status.as_str() {
+                                    "healthy" => MINT_SAFE,
+                                    "warning" => Color::Yellow,
+                                    "critical" => DANGER_RED,
+                                    _ => Color::Gray,
+                                };
+                                lines.push(Line::from(vec![
+                                    Span::raw(format!("  • {:<28} ", disk.model)),
+                                    Span::styled(format!("[{}]", disk.overall_status.to_uppercase()), Style::default().fg(color)),
+                                ]));
+                            }
+                        }
+                    }
+
+                    lines.push(Line::from(""));
+                    lines.push(Line::from(vec![Span::styled("Browser Data:", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))]));
+                    match &browser_data {
+                        None => lines.push(Line::from("  Loading...")),
+                        Some(rep) if rep.browsers.is_empty() => lines.push(Line::from("  No browser data detected.")),
+                        Some(rep) => {
+                            for browser in rep.browsers.iter().take(4) {
+                                lines.push(Line::from(format!(
+                                    "  • {} ({}): {:.1} MB",
+                                    browser.browser_name, browser.profile_name,
+                                    browser.total_bytes as f64 / (1024.0 * 1024.0)
+                                )));
+                            }
+                        }
+                    }
+
+                    lines.push(Line::from(""));
+                    lines.push(Line::from(vec![Span::styled("Big Files (>50MB):", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))]));
+                    match &big_files {
+                        None => lines.push(Line::from("  Loading...")),
+                        Some(rep) if rep.files.is_empty() => lines.push(Line::from("  No big files matched.")),
+                        Some(rep) => {
+                            for f in rep.files.iter().take(6) {
+                                lines.push(Line::from(format!("  • {:<40} {:>8.1} MB", f.name, f.size_bytes as f64 / (1024.0 * 1024.0))));
+                            }
+                        }
+                    }
+
+                    lines.push(Line::from(""));
+                    lines.push(Line::from("Press [R] to refresh, [ESC] to return to Dashboard."));
+
+                    let p = Paragraph::new(lines).wrap(Wrap { trim: true }).block(Block::default().title(" Diagnostics ").borders(Borders::ALL));
+                    f.render_widget(p, chunks[1]);
+                }
                 TuiView::ConfirmDialog => {
                     let dialog_text = vec![
                         Line::from(vec![Span::styled("⚠ SAFETY CHECKPOINT & CONFIRMATION ⚠", Style::default().fg(DANGER_RED).add_modifier(Modifier::BOLD))]),
@@ -205,6 +276,21 @@ pub fn run_interactive_tui() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         KeyCode::Char('t') | KeyCode::Char('T') => {
                             current_view = TuiView::Tweaks;
+                        }
+                        KeyCode::Char('d') | KeyCode::Char('D') => {
+                            disk_health = Some(DiskHealthMonitor::get_report());
+                            browser_data = Some(BrowserCleanupScanner::scan());
+                            big_files = Some(BigFileFinder::find(BigFileQuery::default()));
+                            current_view = TuiView::Diagnostics;
+                        }
+                        _ => {}
+                    },
+                    TuiView::Diagnostics => match key.code {
+                        KeyCode::Esc => current_view = TuiView::Dashboard,
+                        KeyCode::Char('r') | KeyCode::Char('R') => {
+                            disk_health = Some(DiskHealthMonitor::get_report());
+                            browser_data = Some(BrowserCleanupScanner::scan());
+                            big_files = Some(BigFileFinder::find(BigFileQuery::default()));
                         }
                         _ => {}
                     },
