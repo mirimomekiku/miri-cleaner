@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Miri Cleaner - Windows PowerShell Command Runner (•◡•)
 .DESCRIPTION

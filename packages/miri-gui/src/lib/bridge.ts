@@ -1330,6 +1330,18 @@ export const bridge = {
     };
   },
 
+  /** Takes a real, on-demand safety snapshot right now (Snapper/Timeshift on
+   * Linux, a VSS System Restore point on Windows) instead of only ever
+   * getting one as a side effect of a clean. Returns the resulting
+   * snapshot/checkpoint id. */
+  async createManualSnapshot(): Promise<string> {
+    if (isTauri() || isElectron()) {
+      return await invokeNative<string>("create_manual_snapshot");
+    }
+    await new Promise((r) => setTimeout(r, 900));
+    return `btrfs-snap-${Date.now()}`;
+  },
+
   async getWindowsUpdateState(): Promise<WindowsUpdateState> {
     if (isTauri() || isElectron()) {
       const raw = await invokeNative<unknown>("get_windows_update_state");

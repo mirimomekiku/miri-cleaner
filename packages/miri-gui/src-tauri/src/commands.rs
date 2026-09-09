@@ -32,6 +32,15 @@ pub fn get_snapshot_status() -> Result<SnapshotStatus, String> {
     Ok(SnapshotManager::get_status())
 }
 
+/// Takes a real, on-demand safety snapshot right now (Snapper/Timeshift on
+/// Linux, a VSS System Restore point on Windows) rather than only ever
+/// creating one as a side effect of `execute_clean`. Returns the resulting
+/// snapshot/checkpoint id so the caller can display or later reference it.
+#[tauri::command]
+pub fn create_manual_snapshot() -> Result<String, String> {
+    SnapshotManager::create_safety_checkpoint("manual-checkpoint")
+}
+
 #[tauri::command]
 pub fn get_windows_update_state() -> Result<WindowsUpdateState, String> {
     Ok(WindowsTweaks::get_update_state())

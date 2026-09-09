@@ -10,6 +10,7 @@ fn main() {
             commands::scan_all,
             commands::execute_clean,
             commands::get_snapshot_status,
+            commands::create_manual_snapshot,
             commands::get_windows_update_state,
             commands::set_windows_updates,
             commands::execute_linux_tweak,

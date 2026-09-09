@@ -76,6 +76,7 @@ export const StorageView: React.FC = () => {
       description: "This uses Btrfs Copy-on-Write to share identical data extents across all duplicate files. Zero files are deleted, and no data is lost.",
       requiresElevation: false,
       riskLevel: "safe",
+      confirmWord: "DEDUPLICATE",
       onConfirm: async () => {
         setIsReflinking(true);
         addLog("Reflinking duplicate extents on Btrfs...");

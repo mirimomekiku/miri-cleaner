@@ -123,6 +123,11 @@ export const SmartCleanWizard: React.FC<SmartCleanWizardProps> = ({ onClose }) =
 
   const selectedTargets = recommendations.filter((t) => reviewedIds.has(t.id));
   const selectedBytes = selectedTargets.reduce((acc, t) => acc + t.estimated_bytes, 0);
+  const leftoverBytes = leftovers.reduce((acc, l) => acc + l.total_bytes, 0);
+  // The CTA must reflect the full amount this click actually removes,
+  // leftovers included, not just the reviewed-target subtotal -- otherwise
+  // the button understates a bundled, default-on deletion.
+  const totalCleanBytes = selectedBytes + (includeLeftovers ? leftoverBytes : 0);
 
   const runClean = async () => {
     const ids = Array.from(reviewedIds);
@@ -188,8 +193,8 @@ export const SmartCleanWizard: React.FC<SmartCleanWizardProps> = ({ onClose }) =
       openDangerModal({
         title: "Confirm Smart Clean Plan",
         description: `Miri picked ${selectedTargets.length} safe categories (${
-          formatBytes(selectedBytes).formatted
-        }) to prune. A pre-execution safety checkpoint will be verified.`,
+          formatBytes(totalCleanBytes).formatted
+        }${includeLeftovers && leftoverBytes > 0 ? ", including orphaned app leftovers" : ""}) to prune. A pre-execution safety checkpoint will be verified.`,
         targets: selectedTargets,
         requiresElevation: hasElevation,
         riskLevel: hasDangerous ? "dangerous" : "moderate",
@@ -310,7 +315,7 @@ export const SmartCleanWizard: React.FC<SmartCleanWizardProps> = ({ onClose }) =
                     <span className="text-xs font-semibold text-amber-900">
                       Also found {leftovers.length} orphaned app leftover
                       {leftovers.length === 1 ? "" : "s"} (
-                      {formatBytes(leftovers.reduce((acc, l) => acc + l.total_bytes, 0)).formatted}
+                      {formatBytes(leftoverBytes).formatted}
                       ). Include them in this Smart Clean?
                     </span>
                   </label>
@@ -318,7 +323,8 @@ export const SmartCleanWizard: React.FC<SmartCleanWizardProps> = ({ onClose }) =
 
                 <div className="flex flex-col items-center gap-3 pt-3 border-t border-slate-100">
                   <span className="text-xs font-bold text-slate-500">
-                    {selectedTargets.length} selected · {formatBytes(selectedBytes).formatted}
+                    {selectedTargets.length} selected · {formatBytes(totalCleanBytes).formatted}
+                    {includeLeftovers && leftoverBytes > 0 && " (incl. leftovers)"}
                   </span>
                   <TactileButton
                     variant="primary"
@@ -328,7 +334,7 @@ export const SmartCleanWizard: React.FC<SmartCleanWizardProps> = ({ onClose }) =
                     disabled={selectedTargets.length === 0}
                   >
                     <Sparkles className="w-5 h-5" />
-                    Clean {formatBytes(selectedBytes).formatted}
+                    Clean {formatBytes(totalCleanBytes).formatted}
                     <ArrowRight className="w-5 h-5" />
                   </TactileButton>
                 </div>

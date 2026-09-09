@@ -16,6 +16,12 @@ export interface DangerModalConfig {
   targets?: CleanTarget[];
   requiresElevation: boolean;
   riskLevel: RiskLevel;
+  /** The word the user must type to confirm this specific action (defaults to
+   * "CLEAN" when omitted). Type-to-confirm only works as a safety mechanism
+   * when the word matches the actual verb -- reusing "CLEAN" for every kind
+   * of confirmed action (installs, tweaks, DNS changes, rollbacks) trains
+   * users to type a meaningless string regardless of what it does. */
+  confirmWord?: string;
   onConfirm: () => void;
 }
 

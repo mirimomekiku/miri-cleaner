@@ -71,6 +71,7 @@ export const AppsView: React.FC = () => {
       description: `${app.name} hasn't been opened in ${app.last_used_days_ago} days and takes up ${formatBytes(app.install_size_bytes).formatted}. This removes it from your system; user data files are preserved.`,
       requiresElevation: isWindows,
       riskLevel: "moderate",
+      confirmWord: "UNINSTALL",
       onConfirm: async () => {
         setIsProcessing(true);
         addLog(`[Suggested Uninstalls] Uninstalling ${app.name} (unused ${app.last_used_days_ago}d)...`);
@@ -216,6 +217,7 @@ export const AppsView: React.FC = () => {
       description,
       requiresElevation: isWindows || linuxBackend === "dnf",
       riskLevel: "safe",
+      confirmWord: "INSTALL",
       onConfirm: async () => {
         setIsProcessing(true);
         addLog(`[App Downloader] Initiating installation of ${ids.length} apps via ${backendLabel}...`);
@@ -253,6 +255,7 @@ export const AppsView: React.FC = () => {
       description: `This will remove ${app.name} from your system using ${backendLabel}. User data files will be preserved.`,
       requiresElevation: isWindows,
       riskLevel: "moderate",
+      confirmWord: "UNINSTALL",
       onConfirm: async () => {
         setIsProcessing(true);
         addLog(`[App Downloader] Uninstalling ${app.name}...`);
@@ -285,6 +288,7 @@ export const AppsView: React.FC = () => {
       description: `Runs '${backendLabel} install ${pkg}' directly.`,
       requiresElevation: isWindows || linuxBackend === "dnf",
       riskLevel: "safe",
+      confirmWord: "INSTALL",
       onConfirm: async () => {
         setIsProcessing(true);
         addLog(`[Custom App] Installing package ID: ${pkg}...`);
@@ -721,8 +725,18 @@ export const AppsView: React.FC = () => {
             return (
               <div
                 key={app.id}
+                role="checkbox"
+                aria-checked={isSelected}
+                aria-label={`Select ${app.name}`}
+                tabIndex={0}
                 onClick={() => toggleApp(app.id)}
-                className={`card-duo flex flex-col justify-between transition-all cursor-pointer select-none p-5 ${
+                onKeyDown={(e) => {
+                  if (e.key === " " || e.key === "Enter") {
+                    e.preventDefault();
+                    toggleApp(app.id);
+                  }
+                }}
+                className={`card-duo flex flex-col justify-between transition-all cursor-pointer select-none p-5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-miri-400/60 ${
                   isSelected
                     ? "border-2 border-miri-400 bg-miri-50/25 shadow-duo"
                     : "border-2 border-slate-100 hover:border-slate-200 shadow-duo-sm"
@@ -731,11 +745,7 @@ export const AppsView: React.FC = () => {
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2.5">
-                      <PixelCheckbox
-                        checked={isSelected}
-                        onChange={() => toggleApp(app.id)}
-                        label={`Select ${app.name}`}
-                      />
+                      <PixelCheckbox checked={isSelected} presentational />
                       <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
                         {getCategoryIcon(app.category)}
                       </div>
@@ -784,7 +794,7 @@ export const AppsView: React.FC = () => {
 
       {/* Sticky Bottom Execution Bar */}
       {selectedAppIds.size > 0 && (
-        <div className="sticky bottom-4 z-20 bg-slate-900 text-white rounded-3xl p-5 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-bottom-2">
+        <div className="sticky bottom-4 z-20 bg-slate-900 text-white rounded-3xl p-5 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-up">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-2xl bg-[#58CC02] text-white flex items-center justify-center font-bold">
               <Download className="w-5 h-5 stroke-[2.5]" />

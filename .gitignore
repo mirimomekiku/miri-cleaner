@@ -11,6 +11,7 @@ dist-ssr/
 
 # Tauri
 packages/miri-gui/src-tauri/target/
+packages/miri-gui/src-tauri/gen/
 
 # Logs
 *.log

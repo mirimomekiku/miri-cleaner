@@ -16,6 +16,7 @@ export const DangerConfirmationModal: React.FC = () => {
   useEffect(() => {
     if (!dangerModal.isOpen) return;
     setPreviewExpanded(false);
+    setConfirmInput("");
 
     // Auto-focus input on open
     const timer = setTimeout(() => inputRef.current?.focus(), 50);
@@ -57,7 +58,8 @@ export const DangerConfirmationModal: React.FC = () => {
 
   if (!dangerModal.isOpen) return null;
 
-  const isConfirmed = confirmInput.trim().toUpperCase() === "CLEAN";
+  const confirmWord = dangerModal.confirmWord ?? "CLEAN";
+  const isConfirmed = confirmInput.trim().toUpperCase() === confirmWord;
 
   const handleConfirm = () => {
     if (!isConfirmed) return;
@@ -196,7 +198,7 @@ export const DangerConfirmationModal: React.FC = () => {
         {/* Type-to-Confirm Gate */}
         <div className="mb-6">
           <label htmlFor="danger-confirm-input" className="block text-xs font-bold text-slate-700 mb-1.5">
-            To proceed, type <span className="font-mono font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded">CLEAN</span> below:
+            To proceed, type <span className="font-mono font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded">{confirmWord}</span> below:
           </label>
           <input
             id="danger-confirm-input"
@@ -204,8 +206,8 @@ export const DangerConfirmationModal: React.FC = () => {
             type="text"
             value={confirmInput}
             onChange={(e) => setConfirmInput(e.target.value)}
-            placeholder="CLEAN"
-            aria-label="Type CLEAN to confirm execution"
+            placeholder={confirmWord}
+            aria-label={`Type ${confirmWord} to confirm execution`}
             className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 font-mono text-center tracking-widest text-lg font-black focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 uppercase"
           />
         </div>

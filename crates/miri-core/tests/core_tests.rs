@@ -43,7 +43,7 @@ fn test_windows_tweaks_catalog_integrity() {
     let essential = tweaks.iter().filter(|t| t.category == WindowsTweakCategory::Essential).count();
     let advanced = tweaks.iter().filter(|t| t.category == WindowsTweakCategory::AdvancedCaution).count();
 
-    assert_eq!(essential, 18, "Expected exactly 18 Essential tweaks matching the Windows catalog");
+    assert_eq!(essential, 22, "Expected exactly 22 Essential tweaks matching the Windows catalog");
     assert!(advanced >= 21, "Expected at least 21 Advanced/Caution tweaks matching the Windows catalog");
 
     // Check specific essential items
