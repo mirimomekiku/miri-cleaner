@@ -222,6 +222,17 @@ export const XRayReportSchema = z.object({
 });
 export type XRayReport = z.infer<typeof XRayReportSchema>;
 
+export const FilePropertiesSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  is_dir: z.boolean(),
+  size_bytes: z.number(),
+  modified_ms: z.number().nullable(),
+  created_ms: z.number().nullable(),
+  readonly: z.boolean(),
+});
+export type FileProperties = z.infer<typeof FilePropertiesSchema>;
+
 // 2. Orphaned App Leftovers
 export const AppLeftoverSchema = z.object({
   id: z.string(),
@@ -307,5 +318,102 @@ export const SystemVitalsReportSchema = z.object({
   snapshot_compactor: SnapshotCompactorInfoSchema,
 });
 export type SystemVitalsReport = z.infer<typeof SystemVitalsReportSchema>;
+
+// 8. SMART Disk Health
+export const SmartAttributeSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  value: z.number(),
+  worst: z.number(),
+  threshold: z.number(),
+  raw: z.string(),
+  status: z.enum(["ok", "warning", "critical"]),
+});
+export type SmartAttribute = z.infer<typeof SmartAttributeSchema>;
+
+export const DiskHealthInfoSchema = z.object({
+  device: z.string(),
+  model: z.string(),
+  serial: z.string(),
+  interface: z.string(),
+  overall_status: z.enum(["healthy", "warning", "critical", "unknown"]),
+  temperature_celsius: z.number().nullable(),
+  power_on_hours: z.number().nullable(),
+  power_cycle_count: z.number().nullable(),
+  reallocated_sectors: z.number().nullable(),
+  pending_sectors: z.number().nullable(),
+  uncorrectable_errors: z.number().nullable(),
+  percentage_used: z.number().nullable(),
+  attributes: z.array(SmartAttributeSchema),
+  available: z.boolean(),
+  unavailable_reason: z.string().nullable(),
+});
+export type DiskHealthInfo = z.infer<typeof DiskHealthInfoSchema>;
+
+export const DiskHealthReportSchema = z.object({
+  disks: z.array(DiskHealthInfoSchema),
+  smartctl_installed: z.boolean(),
+});
+export type DiskHealthReport = z.infer<typeof DiskHealthReportSchema>;
+
+// 9. Big File Finder
+export interface BigFileQuery {
+  root_path?: string;
+  min_size_bytes?: number;
+  categories?: string[];
+  modified_before_days?: number;
+  modified_within_days?: number;
+  unopened_for_days?: number;
+  sort_by?: "size" | "oldest_modified" | "oldest_accessed";
+  limit?: number;
+}
+
+export const BigFileItemSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  size_bytes: z.number(),
+  category: z.string(),
+  modified_time: z.string(),
+  modified_days_ago: z.number(),
+  accessed_time: z.string().nullable(),
+  accessed_days_ago: z.number().nullable(),
+});
+export type BigFileItem = z.infer<typeof BigFileItemSchema>;
+
+export const BigFileReportSchema = z.object({
+  root_path: z.string(),
+  total_matched: z.number(),
+  total_matched_bytes: z.number(),
+  files: z.array(BigFileItemSchema),
+  access_time_note: z.string().nullable(),
+});
+export type BigFileReport = z.infer<typeof BigFileReportSchema>;
+
+// 10. Browser Cleanup Detail
+export const BrowserDataCategorySchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  description: z.string(),
+  size_bytes: z.number(),
+  file_count: z.number(),
+  paths: z.array(z.string()),
+  safe_to_clear: z.boolean(),
+});
+export type BrowserDataCategory = z.infer<typeof BrowserDataCategorySchema>;
+
+export const BrowserProfileSchema = z.object({
+  browser_id: z.string(),
+  browser_name: z.string(),
+  profile_name: z.string(),
+  categories: z.array(BrowserDataCategorySchema),
+  total_bytes: z.number(),
+});
+export type BrowserProfile = z.infer<typeof BrowserProfileSchema>;
+
+export const BrowserCleanupReportSchema = z.object({
+  browsers: z.array(BrowserProfileSchema),
+  total_bytes: z.number(),
+});
+export type BrowserCleanupReport = z.infer<typeof BrowserCleanupReportSchema>;
 
 

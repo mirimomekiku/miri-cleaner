@@ -217,12 +217,12 @@ export const SmartCleanWizard: React.FC<SmartCleanWizardProps> = ({ onClose }) =
     >
       <div
         ref={modalRef}
-        className="bg-gradient-to-b from-white to-miri-50/60 rounded-[2rem] max-w-lg w-full p-8 sm:p-10 shadow-duo border-2 border-miri-100 relative animate-pop max-h-[85vh] overflow-y-auto"
+        className="bg-gradient-to-b from-white dark:from-slate-800 to-miri-50/60 rounded-[2rem] max-w-lg w-full p-8 sm:p-10 shadow-duo border-2 border-miri-100 relative animate-pop max-h-[85vh] overflow-y-auto"
       >
         <button
           onClick={onClose}
           aria-label="Close Smart Clean wizard"
-          className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400"
+          className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400"
         >
           <X className="w-5 h-5" />
         </button>
@@ -231,7 +231,7 @@ export const SmartCleanWizard: React.FC<SmartCleanWizardProps> = ({ onClose }) =
           <Mascot mood={step === "cleaning" ? "cleaning" : step === "done" ? "celebrate" : "scanning"} size="sm" />
           <div>
             <PixelBadge label="Smart Clean" variant="pink" />
-            <h3 id="smart-clean-title" className="text-2xl font-black text-slate-900 tracking-tight mt-1.5">
+            <h3 id="smart-clean-title" className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight mt-1.5">
               {step === "analyzing" && "Analyzing your system..."}
               {step === "recommendations" && "Here's what I'd prune"}
               {step === "cleaning" && "Pruning safely..."}
@@ -248,7 +248,7 @@ export const SmartCleanWizard: React.FC<SmartCleanWizardProps> = ({ onClose }) =
 
         {step === "analyzing" && (
           <div className="py-10 text-center animate-fade-in">
-            <p className="text-sm font-semibold text-slate-500">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
               Running a non-destructive inspection to find the safest, highest-impact
               things to clean...
             </p>
@@ -258,12 +258,12 @@ export const SmartCleanWizard: React.FC<SmartCleanWizardProps> = ({ onClose }) =
         {step === "recommendations" && (
           <div className="space-y-5 animate-slide-up">
             {recommendations.length === 0 ? (
-              <p className="text-sm font-semibold text-slate-500 text-center py-6">
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 text-center py-6">
                 Nothing safe to recommend right now -- your system is already tidy.
               </p>
             ) : (
               <>
-                <p className="text-xs font-semibold text-slate-500">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Ranked by size, safe-risk targets only. Uncheck anything you'd rather keep.
                 </p>
                 <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
@@ -285,19 +285,19 @@ export const SmartCleanWizard: React.FC<SmartCleanWizardProps> = ({ onClose }) =
                         className={`flex items-center justify-between gap-3 p-3 rounded-2xl border-2 cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-miri-400/60 ${
                           checked
                             ? "border-miri-400 bg-miri-50/40"
-                            : "border-slate-100 hover:border-slate-200 opacity-70"
+                            : "border-slate-100 dark:border-slate-700/60 hover:border-slate-200 opacity-70"
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <PixelCheckbox checked={checked} presentational label={`Toggle ${target.name}`} />
                           <div className="min-w-0">
-                            <div className="font-black text-slate-900 text-sm truncate">{target.name}</div>
-                            <div className="text-[11px] text-slate-500 font-semibold truncate">
+                            <div className="font-black text-slate-900 dark:text-slate-100 text-sm truncate">{target.name}</div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold truncate">
                               {target.description}
                             </div>
                           </div>
                         </div>
-                        <div className="font-pixel text-xs font-bold text-slate-800 shrink-0">
+                        <div className="font-pixel text-xs font-bold text-slate-800 dark:text-slate-200 shrink-0">
                           {formatBytes(target.estimated_bytes).formatted}
                         </div>
                       </div>
@@ -321,8 +321,8 @@ export const SmartCleanWizard: React.FC<SmartCleanWizardProps> = ({ onClose }) =
                   </label>
                 )}
 
-                <div className="flex flex-col items-center gap-3 pt-3 border-t border-slate-100">
-                  <span className="text-xs font-bold text-slate-500">
+                <div className="flex flex-col items-center gap-3 pt-3 border-t border-slate-100 dark:border-slate-700/60">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                     {selectedTargets.length} selected · {formatBytes(totalCleanBytes).formatted}
                     {includeLeftovers && leftoverBytes > 0 && " (incl. leftovers)"}
                   </span>
@@ -345,10 +345,10 @@ export const SmartCleanWizard: React.FC<SmartCleanWizardProps> = ({ onClose }) =
 
         {step === "cleaning" && (
           <div className="py-10 text-center space-y-3 animate-fade-in">
-            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-miri-400 via-miri-300 to-miri-500 w-1/2 rounded-full animate-sweep" />
             </div>
-            <p className="text-sm font-semibold text-slate-500">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
               Verifying a safety snapshot, then pruning the selected targets...
             </p>
           </div>
@@ -360,11 +360,11 @@ export const SmartCleanWizard: React.FC<SmartCleanWizardProps> = ({ onClose }) =
               <Mascot mood="celebrate" size="lg" />
               <ConfettiBurst tier={celebrationTier(result.freed_bytes)} />
             </div>
-            <p className="text-3xl font-black text-slate-900 tracking-tight">
+            <p className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
               Freed {formatBytes(result.freed_bytes).formatted}!
             </p>
-            <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-700 flex-wrap">
-              <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-700 dark:text-slate-300 flex-wrap">
+              <span className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700">
                 <Trash2 className="w-3.5 h-3.5 text-rose-500" /> {result.deleted_files} files pruned
               </span>
               <span className="flex items-center gap-1.5 bg-emerald-100/80 text-emerald-900 px-2.5 py-1 rounded-xl border border-emerald-300">

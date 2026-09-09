@@ -23,7 +23,7 @@ show_help() {
     echo -e "${BOLD}Usage:${NC} ./miri.sh <command> [options...]"
     echo ""
     echo -e "${BOLD}Commands:${NC}"
-    echo -e "  ${PINK}gui${NC}            Launch the desktop GUI (React / Tauri dev server)"
+    echo -e "  ${PINK}gui${NC}            Launch the native desktop GUI (React / Electron shell)"
     echo -e "  ${PINK}tui${NC}            Launch the interactive terminal UI (Ratatui)"
     echo -e "  ${PINK}scan${NC}           Run non-destructive scan (pass --json for JSON format)"
     echo -e "  ${PINK}clean${NC}          Clean system targets (pass --dry-run for simulation)"
@@ -86,7 +86,7 @@ case "$CMD" in
     menu|"")
         show_banner
         echo -e "Please select an action:"
-        echo -e "  1) Launch Desktop GUI (Web/Tauri)"
+        echo -e "  1) Launch Desktop GUI"
         echo -e "  2) Launch Terminal TUI"
         echo -e "  3) Run Non-Destructive Scan"
         echo -e "  4) Run Dry-Run Cleanup Simulation"

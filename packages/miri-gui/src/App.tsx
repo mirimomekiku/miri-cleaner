@@ -11,14 +11,28 @@ import { StorageView } from "./components/storage/StorageView";
 import { PackagesView } from "./components/packages/PackagesView";
 import { TweaksView } from "./components/tweaks/TweaksView";
 import { SnapshotsView } from "./components/snapshots/SnapshotsView";
+import { SettingsView } from "./components/settings/SettingsView";
 import { LogDrawer } from "./components/layout/LogDrawer";
 import { DangerConfirmationModal } from "./components/layout/DangerConfirmationModal";
 import { bridge } from "./lib/bridge";
 import { formatBytes } from "./lib/formatters";
-import { recordActivity } from "./lib/streakTracker";
+import { applyThemeClass } from "./lib/theme";
+import { notify } from "./lib/notify";
 
 export const App: React.FC = () => {
-  const { viewMode, activeTab, setScanResult, setIsScanning, addLog } = useCleanerStore();
+  const { viewMode, themeMode, settings, activeTab, setScanResult, setIsScanning, addLog } = useCleanerStore();
+
+  // Keeps "system" mode honest if the OS theme changes while the app is
+  // open, and re-applies on every themeMode change (redundant with main.tsx's
+  // pre-paint application on first mount, but the only path for later ones).
+  useEffect(() => {
+    applyThemeClass(themeMode);
+    if (themeMode !== "system" || typeof window.matchMedia !== "function") return;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = () => applyThemeClass(themeMode);
+    mql.addEventListener("change", handleChange);
+    return () => mql.removeEventListener("change", handleChange);
+  }, [themeMode]);
 
   const [showSplash, setShowSplash] = useState(true);
   // Only ever computed once: reading localStorage on the initial render
@@ -50,10 +64,20 @@ export const App: React.FC = () => {
             formatBytes(res.total_reclaimable_bytes).formatted
           } discovered across ${res.targets.length} targets.`
         );
-        // A successful scan is the one activity signal every session
-        // produces, regardless of which tab the user lands on -- the
-        // single integration point for the cleaning-streak tracker.
-        recordActivity();
+
+        const { total_disk_space, free_disk_space } = res.system_info;
+        if (total_disk_space > 0) {
+          const freePercent = (free_disk_space / total_disk_space) * 100;
+          if (freePercent < settings.lowDiskSpaceThresholdPercent) {
+            notify(
+              "lowDiskSpace",
+              "Low disk space",
+              `Only ${formatBytes(free_disk_space).formatted} free (${freePercent.toFixed(1)}% of ${
+                formatBytes(total_disk_space).formatted
+              }). Open Miri Cleaner to free up space.`
+            );
+          }
+        }
       })
       .catch((err) => {
         addLog(`Scan failed: ${err}`);
@@ -61,6 +85,9 @@ export const App: React.FC = () => {
       .finally(() => {
         setIsScanning(false);
       });
+    // Runs once at startup; re-reading `settings` here would refire the scan
+    // whenever a Settings toggle changes, which isn't the point of this effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setScanResult, setIsScanning, addLog]);
 
   return (
@@ -72,7 +99,7 @@ export const App: React.FC = () => {
         <OnboardingFlow onDone={() => setShowOnboarding(false)} />
       )}
 
-      <div className="h-screen w-screen flex flex-col bg-miri-bg text-slate-800 overflow-hidden select-none">
+      <div className="h-screen w-screen flex flex-col bg-miri-bg dark:bg-slate-900 text-slate-800 dark:text-slate-200 overflow-hidden select-none">
         {/* Top Header */}
         <Header />
 
@@ -94,6 +121,7 @@ export const App: React.FC = () => {
             {activeTab === "packages" && <PackagesView />}
             {activeTab === "tweaks" && <TweaksView />}
             {activeTab === "snapshots" && <SnapshotsView />}
+            {activeTab === "settings" && <SettingsView />}
           </main>
         </div>
 

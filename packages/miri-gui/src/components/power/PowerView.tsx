@@ -39,13 +39,13 @@ export const PowerView: React.FC = () => {
       )}
 
       {/* Advanced Header */}
-      <div className="bg-white rounded-3xl p-7 border-2 border-slate-100 shadow-duo flex items-center justify-between">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl p-7 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <PixelBadge label="Advanced" variant="blue" />
-            <span className="text-xs font-bold text-slate-400">Granular OS Control</span>
+            <span className="text-xs font-bold text-slate-400 dark:text-slate-500">Granular OS Control</span>
           </div>
-          <h2 className="text-2xl font-black text-slate-900">Detailed Target Inspection</h2>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">Detailed Target Inspection</h2>
         </div>
 
         {/* Snapshot Readiness Pill */}
@@ -63,19 +63,19 @@ export const PowerView: React.FC = () => {
       {/* Granular Target Inspection List */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="text-xs font-bold text-slate-500">
+          <div className="text-xs font-bold text-slate-500 dark:text-slate-400">
             Select items for dry-run simulation or execution:
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={selectAll}
-              className="text-xs font-bold px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
+              className="text-xs font-bold px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300"
             >
               Select All
             </button>
             <button
               onClick={deselectAll}
-              className="text-xs font-bold px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
+              className="text-xs font-bold px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300"
             >
               Deselect All
             </button>
@@ -93,8 +93,8 @@ export const PowerView: React.FC = () => {
               return (
                 <div
                   key={target.id}
-                  className={`bg-white rounded-2xl p-4 border-2 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${
-                    isSelected ? "border-miri-400 shadow-duo-sm" : "border-slate-100 hover:border-slate-200"
+                  className={`bg-white dark:bg-slate-800 rounded-2xl p-4 border-2 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${
+                    isSelected ? "border-miri-400 shadow-duo-sm" : "border-slate-100 dark:border-slate-700/60 hover:border-slate-200"
                   }`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
@@ -105,7 +105,7 @@ export const PowerView: React.FC = () => {
                     />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-black text-slate-800 text-sm">{target.name}</h4>
+                        <h4 className="font-black text-slate-800 dark:text-slate-200 text-sm">{target.name}</h4>
                         <RiskPill level={target.risk_level} />
                         {target.requires_elevation && (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 shrink-0">
@@ -113,13 +113,13 @@ export const PowerView: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{target.description}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">{target.description}</p>
                     </div>
                   </div>
 
                   <div className="text-right shrink-0 pl-8 sm:pl-0">
-                    <div className="font-pixel text-xs text-slate-800 font-bold">{sizeFormatted}</div>
-                    <div className="text-xs text-slate-400">{target.file_count} files</div>
+                    <div className="font-pixel text-xs text-slate-800 dark:text-slate-200 font-bold">{sizeFormatted}</div>
+                    <div className="text-xs text-slate-400 dark:text-slate-500">{target.file_count} files</div>
                   </div>
                 </div>
               );

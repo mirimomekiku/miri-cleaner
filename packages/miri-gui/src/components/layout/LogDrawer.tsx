@@ -52,7 +52,7 @@ export const LogDrawer: React.FC = () => {
             <Terminal className="w-3.5 h-3.5 text-miri-400" />
           </div>
           <span className="font-bold text-slate-200 font-sans truncate">
-            Live Execution &amp; Dry-Run Activity Stream
+            Activity Log
           </span>
           <span className="pixel-tag bg-slate-800 text-miri-300 border-slate-700 shrink-0">
             {logs.length} {logs.length === 1 ? "event" : "events"}
@@ -61,7 +61,7 @@ export const LogDrawer: React.FC = () => {
 
         <div className="flex items-center gap-1.5 shrink-0">
           <div className="relative hidden sm:block">
-            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={query}
@@ -76,7 +76,7 @@ export const LogDrawer: React.FC = () => {
             disabled={logs.length === 0}
             aria-label="Copy all activity logs"
             title="Copy All"
-            className="chip-press w-9 h-9 flex items-center justify-center shrink-0 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400/60"
+            className="chip-press w-9 h-9 flex items-center justify-center shrink-0 text-slate-400 dark:text-slate-500 hover:text-white rounded-lg hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400/60"
           >
             {copied ? (
               <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -89,15 +89,15 @@ export const LogDrawer: React.FC = () => {
             disabled={logs.length === 0}
             aria-label="Clear activity logs"
             title="Clear Logs"
-            className="chip-press w-9 h-9 flex items-center justify-center shrink-0 text-slate-400 hover:text-red-300 rounded-lg hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400/60"
+            className="chip-press w-9 h-9 flex items-center justify-center shrink-0 text-slate-400 dark:text-slate-500 hover:text-red-300 rounded-lg hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400/60"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={toggleLogDrawer}
-            aria-label="Close terminal activity drawer"
+            aria-label="Close activity log drawer"
             title="Close Drawer"
-            className="chip-press w-9 h-9 flex items-center justify-center shrink-0 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400/60"
+            className="chip-press w-9 h-9 flex items-center justify-center shrink-0 text-slate-400 dark:text-slate-500 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400/60"
           >
             <X className="w-4 h-4" />
           </button>
@@ -107,16 +107,16 @@ export const LogDrawer: React.FC = () => {
       {/* Streaming Terminal Output */}
       <div className="flex-1 p-4 overflow-y-auto space-y-1.5">
         {logs.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center gap-1.5 text-center text-slate-500 select-none">
-            <Terminal className="w-6 h-6 text-slate-700" />
-            <p className="font-sans font-bold text-slate-400">Console is quiet</p>
+          <div className="h-full flex flex-col items-center justify-center gap-1.5 text-center text-slate-500 dark:text-slate-400 select-none">
+            <Terminal className="w-6 h-6 text-slate-700 dark:text-slate-300" />
+            <p className="font-sans font-bold text-slate-400 dark:text-slate-500">All quiet here</p>
             <p className="font-sans text-[11px] max-w-xs">
-              Scans, cleans, and tweak actions will stream their activity here.
+              Scans, cleanups, and other actions will show up here as they happen.
             </p>
           </div>
         ) : filteredLogs.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center gap-1 text-center text-slate-500 select-none font-sans">
-            <p className="font-bold text-slate-400">No events match &ldquo;{query}&rdquo;</p>
+          <div className="h-full flex flex-col items-center justify-center gap-1 text-center text-slate-500 dark:text-slate-400 select-none font-sans">
+            <p className="font-bold text-slate-400 dark:text-slate-500">No events match &ldquo;{query}&rdquo;</p>
             <p className="text-[11px]">Try a different filter term.</p>
           </div>
         ) : (

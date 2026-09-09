@@ -19,19 +19,17 @@ import {
   Search,
   Wand2,
   Lock,
-  ChevronDown,
-  Flame,
 } from "lucide-react";
 import { CardSkeleton } from "../ui/Skeleton";
 import { ErrorBanner } from "../ui/ErrorBanner";
-import { GardenGrowth } from "./GardenGrowth";
-import { WeeklyDigestCard } from "./WeeklyDigestCard";
 import { SmartCleanWizard } from "./SmartCleanWizard";
 import { bridge } from "../../lib/bridge";
 import { CleanExecutionResult, CleanTarget } from "../../types";
 import { formatBytes, formatNumber, calculateHealthScore } from "../../lib/formatters";
 import { useCountUp } from "../../lib/useCountUp";
 import { useAsyncAction } from "../../lib/useAsyncAction";
+import { notify } from "../../lib/notify";
+import { StatTile } from "../ui/StatTile";
 
 /** Scales the completion celebration to the actual amount freed, so a quick
  * temp-file sweep and a multi-gigabyte prune don't get identical fanfare. */
@@ -62,7 +60,6 @@ export const CasualView: React.FC = () => {
 
   const [dryRun, setDryRun] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
-  const [gardenExpanded, setGardenExpanded] = useState(false);
   const [successCelebration, setSuccessCelebration] = useState(false);
   const [completionReceipt, setCompletionReceipt] = useState<CleanExecutionResult | null>(null);
   const errorAction = useAsyncAction();
@@ -199,6 +196,10 @@ export const CasualView: React.FC = () => {
         setStatusAnnouncement(finishMsg);
         addLog(finishMsg);
 
+        if (!dryRun && result.freed_bytes > 0) {
+          notify("cleanupComplete", "Cleanup complete", finishMsg);
+        }
+
         // Refresh scan data quietly to update baseline
         try {
           const res = await bridge.scanAll();
@@ -280,11 +281,6 @@ export const CasualView: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* WEEKLY DIGEST -- transient, dismissible, shows at most once a week        */}
-      {/* ========================================================================= */}
-      {!completionReceipt && <WeeklyDigestCard />}
-
-      {/* ========================================================================= */}
       {/* ONE HERO MODULE -- lesson-screen grammar: a single dominant focal card,   */}
       {/* the mascot as emotional anchor, one big pill primary action. The         */}
       {/* completion receipt IS the hero when present; otherwise the hero reads    */}
@@ -292,7 +288,7 @@ export const CasualView: React.FC = () => {
       {/* one obvious next step. Health/streak collapse into a slim stat strip     */}
       {/* instead of stacking as separate parallel cards.                         */}
       {/* ========================================================================= */}
-      <div className="bg-gradient-to-b from-white to-miri-50/60 rounded-[2rem] p-10 sm:p-12 border-2 border-miri-100 shadow-duo text-center space-y-6">
+      <div className="bg-gradient-to-b from-white dark:from-slate-800 to-miri-50/60 rounded-[2rem] p-10 sm:p-12 border-2 border-miri-100 shadow-duo text-center space-y-6">
         <div className="relative flex justify-center">
           <Mascot
             mood={
@@ -320,10 +316,10 @@ export const CasualView: React.FC = () => {
                 <CheckCircle2 className="w-3 h-3 text-emerald-600" /> All Trimmed & Fresh
               </span>
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+            <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
               {dryRun ? "Simulation Complete!" : "Hooray! Freshly Polished!"}
             </h2>
-            <p className="text-sm font-semibold text-slate-600 max-w-md mx-auto leading-relaxed">
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
               {dryRun
                 ? `Simulated clean finished. In live mode, this would safely reclaim ${
                     formatBytes(completionReceipt.freed_bytes).formatted
@@ -332,12 +328,12 @@ export const CasualView: React.FC = () => {
                     formatBytes(completionReceipt.freed_bytes).formatted
                   }. A verified snapshot was registered before pruning.`}
             </p>
-            <div className="flex items-center justify-center gap-3 flex-wrap text-xs font-bold text-slate-700">
-              <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-200 tabular-nums">
-                <Trash2 className="w-3.5 h-3.5 text-slate-500" /> {formatNumber(animatedDeletedFiles)} files pruned
+            <div className="flex items-center justify-center gap-3 flex-wrap text-xs font-bold text-slate-700 dark:text-slate-300">
+              <span className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700 tabular-nums">
+                <Trash2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" /> {formatNumber(animatedDeletedFiles)} files pruned
               </span>
-              <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-200 tabular-nums">
-                <Lock className="w-3.5 h-3.5 text-slate-500" /> {formatNumber(animatedSkippedFiles)} active locks preserved
+              <span className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700 tabular-nums">
+                <Lock className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" /> {formatNumber(animatedSkippedFiles)} active locks preserved
               </span>
               <span className="flex items-center gap-1.5 bg-emerald-100/80 text-emerald-900 px-2.5 py-1 rounded-xl border border-emerald-300">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" /> Snapshot Protected
@@ -358,7 +354,7 @@ export const CasualView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab("snapshots")}
-                className="text-xs font-bold text-slate-500 hover:text-indigo-600 underline decoration-dotted underline-offset-4"
+                className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 underline decoration-dotted underline-offset-4"
               >
                 <RotateCcw className="w-3 h-3 inline mr-1" />
                 Undo with Snapshot
@@ -369,9 +365,9 @@ export const CasualView: React.FC = () => {
           <>
             <div className="flex items-center justify-center gap-2 flex-wrap">
               <PixelBadge label="System Health" variant={healthScore > 80 ? "green" : "pink"} />
-              <span className="text-xs font-bold text-slate-600">Active OS: {hostLabel}</span>
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Active OS: {hostLabel}</span>
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+            <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
               {!scanResult
                 ? "Ready for a Garden Inspection?"
                 : healthScore >= 95
@@ -380,49 +376,17 @@ export const CasualView: React.FC = () => {
                 ? "A Few Weeds to Prune!"
                 : "Ready for a Fresh Trim!"}
             </h2>
-            <p className="text-sm font-semibold text-slate-600 max-w-md mx-auto leading-relaxed">
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
               {!scanResult
                 ? "Run a safe, non-destructive inspection to discover reclaimable temporary files, package caches, and dev toolchain artifacts."
                 : "Miri Cleaner keeps your computer swift, private, and tidy with safety guardrails and pre-flight snapshots."}
             </p>
 
-            {/* Slim consolidated stat strip -- health, ready-to-prune, and streak
-                as one lightweight row instead of three parallel cards. */}
+            {/* Slim consolidated stat strip -- health and ready-to-prune as one
+                lightweight row instead of separate parallel cards. */}
             <div className="flex items-center justify-center flex-wrap gap-x-8 gap-y-3 pt-1">
-              <div className="text-center">
-                <div className="text-2xl font-black text-miri-500 font-pixel tabular-nums">{animatedHealthScore}%</div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Health</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-black text-slate-800 tabular-nums">
-                  {selectedFormatted.value}
-                  <span className="text-xs font-bold text-slate-500 ml-0.5">{selectedFormatted.unit}</span>
-                </div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ready to Prune</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setGardenExpanded((v) => !v)}
-                aria-expanded={gardenExpanded}
-                className="text-center group"
-              >
-                <div className="text-2xl font-black text-amber-600 tabular-nums flex items-center gap-1 justify-center">
-                  <Flame className="w-5 h-5" />
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${gardenExpanded ? "rotate-180" : ""}`} />
-                </div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-slate-700">
-                  {gardenExpanded ? "Hide Garden" : "View Garden"}
-                </div>
-              </button>
-            </div>
-
-            {/* Secondary data tucked behind expansion, per the lesson-screen brief */}
-            <div className={`collapsible-rows ${gardenExpanded ? "is-expanded" : ""}`}>
-              <div className="collapsible-inner">
-                <div className="pt-4 text-left">
-                  <GardenGrowth />
-                </div>
-              </div>
+              <StatTile value={`${animatedHealthScore}%`} label="Health" valueClassName="text-miri-500 font-pixel" />
+              <StatTile value={selectedFormatted.value} suffix={selectedFormatted.unit} label="Ready to Prune" />
             </div>
 
             {/* ONE big pill primary action -- Scan first, then Prune once ready */}
@@ -464,7 +428,7 @@ export const CasualView: React.FC = () => {
                     type="button"
                     onClick={handleScan}
                     disabled={isScanning || isCleaning}
-                    className="text-slate-500 hover:text-slate-800 underline decoration-dotted underline-offset-4 disabled:opacity-50"
+                    className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline decoration-dotted underline-offset-4 disabled:opacity-50"
                   >
                     Re-scan
                   </button>
@@ -477,14 +441,14 @@ export const CasualView: React.FC = () => {
                 >
                   <Wand2 className="w-3.5 h-3.5" /> Smart Clean
                 </button>
-                <label className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-800 cursor-pointer">
+                <label className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer">
                   <PixelCheckbox checked={dryRun} onChange={setDryRun} label="Toggle simulation dry run mode" />
                   Simulation mode only
                 </label>
               </div>
 
               {isCleaning && (
-                <div className="w-full max-w-xs bg-slate-100 h-2 rounded-full overflow-hidden animate-slide-down">
+                <div className="w-full max-w-xs bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden animate-slide-down">
                   <div className="h-full bg-gradient-to-r from-miri-400 via-miri-300 to-miri-500 w-1/2 rounded-full animate-sweep" />
                 </div>
               )}
@@ -499,18 +463,18 @@ export const CasualView: React.FC = () => {
       {!completionReceipt && scanResult && scanResult.targets.length > 0 && !isScanning && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2 text-xs">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-slate-500">Quick Selection:</span>
-            <button type="button" onClick={selectAll} className="chip-press px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold transition-colors">
+            <span className="font-bold text-slate-500 dark:text-slate-400">Quick Selection:</span>
+            <button type="button" onClick={selectAll} className="chip-press px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-bold transition-colors">
               Select All
             </button>
             <button type="button" onClick={handleSelectSafeOnly} className="chip-press px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold transition-colors">
               Gentle Trim (Safe Only)
             </button>
-            <button type="button" onClick={deselectAll} disabled={selectedTargetIds.length === 0} className="chip-press px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold transition-colors disabled:opacity-50">
+            <button type="button" onClick={deselectAll} disabled={selectedTargetIds.length === 0} className="chip-press px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-400 font-bold transition-colors disabled:opacity-50">
               Clear Selection
             </button>
           </div>
-          <span className="text-slate-400 font-semibold">
+          <span className="text-slate-400 dark:text-slate-500 font-semibold">
             {selectedTargetIds.length} of {scanResult.targets.length} categories selected
           </span>
         </div>
@@ -521,7 +485,7 @@ export const CasualView: React.FC = () => {
       ) : completionReceipt ? null : !scanResult ? null : scanResult.targets.length === 0 ? (
         /* Sparkling Clean Empty State */
         <div className="text-center space-y-3 py-6 animate-fade-in">
-          <p className="text-sm font-semibold text-slate-500 max-w-md mx-auto leading-relaxed">
+          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
             No leftover junk, orphaned caches, or temporary clutter were detected across your system paths.
           </p>
         </div>
@@ -551,33 +515,33 @@ export const CasualView: React.FC = () => {
                 className={`cursor-pointer flex items-center justify-between gap-4 rounded-2xl px-5 py-4 transition-all duration-150 ease-out animate-slide-up focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-miri-400/60 ${
                   isSelected
                     ? "bg-miri-50/60 border-2 border-miri-300"
-                    : "bg-white border-2 border-transparent hover:border-slate-200"
+                    : "bg-white dark:bg-slate-800 border-2 border-transparent hover:border-slate-200"
                 }`}
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <PixelCheckbox checked={isSelected} presentational={true} />
                   <div
                     className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-150 ${
-                      isSelected ? "bg-white border-2 border-miri-300" : theme.bg + " border-2"
+                      isSelected ? "bg-white dark:bg-slate-800 border-2 border-miri-300" : theme.bg + " border-2"
                     }`}
                   >
                     {theme.icon}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-black text-slate-900 text-sm md:text-base truncate">{target.name}</h4>
+                      <h4 className="font-black text-slate-900 dark:text-slate-100 text-sm md:text-base truncate">{target.name}</h4>
                       {target.requires_elevation ? (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 shrink-0">Admin</span>
                       ) : (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 shrink-0">{theme.pill}</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">{theme.pill}</span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500 font-semibold line-clamp-1 mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold line-clamp-1 mt-0.5">
                       {target.description} &middot; {formatNumber(target.file_count)} files
                     </p>
                   </div>
                 </div>
-                <div className="font-pixel text-xs text-slate-900 font-bold shrink-0">{targetFormatted.formatted}</div>
+                <div className="font-pixel text-xs text-slate-900 dark:text-slate-100 font-bold shrink-0">{targetFormatted.formatted}</div>
               </div>
             );
           })}

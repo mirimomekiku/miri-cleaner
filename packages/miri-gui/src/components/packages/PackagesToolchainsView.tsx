@@ -22,6 +22,9 @@ import { ErrorBanner } from "../ui/ErrorBanner";
 import { useAsyncAction } from "../../lib/useAsyncAction";
 import { ConfettiBurst } from "../ui/ConfettiBurst";
 import { celebrationTier } from "../casual/CasualView";
+import { StatTile } from "../ui/StatTile";
+import { SegmentedTabs } from "../ui/SegmentedTabs";
+import { HeroCard } from "../ui/HeroCard";
 
 export const PackagesToolchainsView: React.FC = () => {
   const {
@@ -203,63 +206,40 @@ export const PackagesToolchainsView: React.FC = () => {
           {/* and selected). Individual per-tool prune controls collapse behind    */}
           {/* a toggle instead of standing as the page's main structure.           */}
           {/* ==================================================================== */}
-          <div className="bg-gradient-to-b from-white to-miri-50/60 rounded-[2rem] p-10 sm:p-12 border-2 border-miri-100 shadow-duo text-center space-y-6">
-            <div className="flex justify-center relative">
-              <Mascot
-                mood={
-                  successCelebration
-                    ? "celebrate"
-                    : isScanning
-                    ? "scanning"
-                    : isCleaning
-                    ? "cleaning"
-                    : "happy"
-                }
-                size="lg"
-              />
-              {successCelebration && !dryRun && (
-                <ConfettiBurst tier={celebrationTier(celebrationFreedBytes)} />
-              )}
-            </div>
-
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <PixelBadge label="Packages & Toolchains" variant="blue" />
-              <span className="text-xs font-bold text-slate-500">
-                DNF5 • Flatpak • WinGet • Python • JS • Podman • C/C++/Rust • JVM • Go
-              </span>
-            </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-              Packages & Developer Toolchains
-            </h2>
-            <p className="text-sm font-semibold text-slate-600 max-w-lg mx-auto leading-relaxed">
-              Safely sweep package repositories, compiler artifact caches, and container
-              layers without touching active projects, configs, or git repositories.
-            </p>
-
+          <HeroCard
+            accent="miri"
+            mascot={
+              <>
+                <Mascot
+                  mood={
+                    successCelebration
+                      ? "celebrate"
+                      : isScanning
+                      ? "scanning"
+                      : isCleaning
+                      ? "cleaning"
+                      : "happy"
+                  }
+                  size="lg"
+                />
+                {successCelebration && !dryRun && (
+                  <ConfettiBurst tier={celebrationTier(celebrationFreedBytes)} />
+                )}
+              </>
+            }
+            badgeLabel="Packages & Toolchains"
+            badgeVariant="blue"
+            badgeSubtitle="DNF5 • Flatpak • WinGet • Python • JS • Podman • C/C++/Rust • JVM • Go"
+            heading="Packages & Developer Toolchains"
+            description="Safely sweep package repositories, compiler artifact caches, and container layers without touching active projects, configs, or git repositories."
+            descriptionMaxWidth="max-w-lg"
+          >
             {/* Consolidated stat strip -- package caches, toolchains, and current
                 selection, instead of stacking separate metric cards. */}
             <div className="flex items-center justify-center flex-wrap gap-x-8 gap-y-3 pt-1">
-              <div className="text-center">
-                <div className="text-2xl font-black text-slate-800 tabular-nums">
-                  {packageFormatted.value}
-                  <span className="text-xs font-bold text-slate-500 ml-0.5">{packageFormatted.unit}</span>
-                </div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Package Caches</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-black text-slate-800 tabular-nums">
-                  {devFormatted.value}
-                  <span className="text-xs font-bold text-slate-500 ml-0.5">{devFormatted.unit}</span>
-                </div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Toolchains Stored</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-black text-slate-800 tabular-nums">
-                  {selectedFormatted.value}
-                  <span className="text-xs font-bold text-slate-500 ml-0.5">{selectedFormatted.unit}</span>
-                </div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Selected to Clean</div>
-              </div>
+              <StatTile value={packageFormatted.value} suffix={packageFormatted.unit} label="Package Caches" />
+              <StatTile value={devFormatted.value} suffix={devFormatted.unit} label="Toolchains Stored" />
+              <StatTile value={selectedFormatted.value} suffix={selectedFormatted.unit} label="Selected to Clean" />
             </div>
 
             {/* ONE big pill primary action -- Scan first, then Clean once ready */}
@@ -301,18 +281,18 @@ export const PackagesToolchainsView: React.FC = () => {
                     type="button"
                     onClick={handleScan}
                     disabled={isScanning || isCleaning}
-                    className="text-slate-500 hover:text-slate-800 underline decoration-dotted underline-offset-4 disabled:opacity-50"
+                    className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline decoration-dotted underline-offset-4 disabled:opacity-50"
                   >
                     Re-scan
                   </button>
                 )}
-                <label className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-800 cursor-pointer">
+                <label className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer">
                   <PixelCheckbox checked={dryRun} onChange={setDryRun} label="Toggle dry run mode" />
                   Dry-run simulation only
                 </label>
               </div>
             </div>
-          </div>
+          </HeroCard>
 
           {isScanning || !scanResult ? (
             <CardSkeleton count={6} />
@@ -320,42 +300,16 @@ export const PackagesToolchainsView: React.FC = () => {
             <div className="space-y-4">
               {/* Filter tabs -- real functional navigation for the sections below,
                   kept visible rather than tucked (this is primary wayfinding). */}
-              <div className="bg-white rounded-2xl p-3 border-2 border-slate-100 shadow-duo-sm flex justify-center">
-                <div className="flex items-center gap-2 p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto">
-                  <button
-                    onClick={() => setActiveFilter("all")}
-                    className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
-                      activeFilter === "all"
-                        ? "bg-white text-slate-900 shadow-duo-sm"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
-                  >
-                    <Boxes className="w-4 h-4 text-indigo-500" />
-                    <span>All Items ({allMergedTargets.length})</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveFilter("packages")}
-                    className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
-                      activeFilter === "packages"
-                        ? "bg-white text-slate-900 shadow-duo-sm"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
-                  >
-                    <Package className="w-4 h-4 text-pink-500" />
-                    <span>System Packages ({packageTargets.length})</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveFilter("toolchains")}
-                    className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
-                      activeFilter === "toolchains"
-                        ? "bg-white text-slate-900 shadow-duo-sm"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
-                  >
-                    <Cpu className="w-4 h-4 text-emerald-500" />
-                    <span>Dev Toolchains ({devTargets.length})</span>
-                  </button>
-                </div>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-3 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm flex justify-center">
+                <SegmentedTabs
+                  value={activeFilter}
+                  onChange={setActiveFilter}
+                  options={[
+                    { value: "all", label: `All Items (${allMergedTargets.length})`, icon: <Boxes className="w-4 h-4 text-indigo-500" /> },
+                    { value: "packages", label: `System Packages (${packageTargets.length})`, icon: <Package className="w-4 h-4 text-pink-500" /> },
+                    { value: "toolchains", label: `Dev Toolchains (${devTargets.length})`, icon: <Cpu className="w-4 h-4 text-emerald-500" /> },
+                  ]}
+                />
               </div>
 
               {/* Individual per-tool controls -- secondary to the bulk scan/clean
@@ -364,7 +318,7 @@ export const PackagesToolchainsView: React.FC = () => {
                 type="button"
                 onClick={() => setDetailsExpanded((v) => !v)}
                 aria-expanded={detailsExpanded}
-                className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 py-1"
+                className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 py-1"
               >
                 {detailsExpanded ? "Hide Individual Controls" : "Show Individual Controls"}
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${detailsExpanded ? "rotate-180" : ""}`} />
@@ -379,11 +333,11 @@ export const PackagesToolchainsView: React.FC = () => {
                         <div className="flex items-center justify-between px-1">
                           <div className="flex items-center gap-2">
                             <Package className="w-5 h-5 text-indigo-500" />
-                            <h3 className="text-lg font-black text-slate-900">
+                            <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
                               System Package Managers
                             </h3>
                           </div>
-                          <span className="text-xs font-bold text-slate-400">
+                          <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
                             {packageTargets.length} Stores Available
                           </span>
                         </div>
@@ -391,10 +345,10 @@ export const PackagesToolchainsView: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {/* DNF / DNF5 Cache */}
                           <div
-                            className={`bg-white rounded-2xl p-5 border-2 transition-all flex flex-col justify-between ${
+                            className={`bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 transition-all flex flex-col justify-between ${
                               !isLinux
                                 ? "opacity-50 grayscale-[40%] border-dashed border-slate-300"
-                                : "border-slate-100 shadow-duo-sm hover:border-indigo-200"
+                                : "border-slate-100 dark:border-slate-700/60 shadow-duo-sm hover:border-indigo-200"
                             }`}
                           >
                             <div>
@@ -407,18 +361,18 @@ export const PackagesToolchainsView: React.FC = () => {
                                     <CheckCircle className="w-3 h-3 text-emerald-600" /> Active
                                   </span>
                                 ) : (
-                                  <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
                                     <Laptop className="w-3 h-3" /> Linux Only
                                   </span>
                                 )}
                               </div>
-                              <h4 className="text-base font-black text-slate-900">DNF / DNF5 Cache</h4>
-                              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                              <h4 className="text-base font-black text-slate-900 dark:text-slate-100">DNF / DNF5 Cache</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                                 Removes cached RPM metadata, repodata archives, and incomplete package downloads.
                               </p>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                              <span className="text-xs font-mono font-bold text-slate-600">/var/cache/dnf</span>
+                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                              <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">/var/cache/dnf</span>
                               <TactileButton
                                 variant="secondary"
                                 size="sm"
@@ -432,10 +386,10 @@ export const PackagesToolchainsView: React.FC = () => {
 
                           {/* Flatpak Unused Runtimes */}
                           <div
-                            className={`bg-white rounded-2xl p-5 border-2 transition-all flex flex-col justify-between ${
+                            className={`bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 transition-all flex flex-col justify-between ${
                               !isLinux
                                 ? "opacity-50 grayscale-[40%] border-dashed border-slate-300"
-                                : "border-slate-100 shadow-duo-sm hover:border-indigo-200"
+                                : "border-slate-100 dark:border-slate-700/60 shadow-duo-sm hover:border-indigo-200"
                             }`}
                           >
                             <div>
@@ -448,18 +402,18 @@ export const PackagesToolchainsView: React.FC = () => {
                                     <CheckCircle className="w-3 h-3 text-emerald-600" /> Active
                                   </span>
                                 ) : (
-                                  <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
                                     <Laptop className="w-3 h-3" /> Linux Only
                                   </span>
                                 )}
                               </div>
-                              <h4 className="text-base font-black text-slate-900">Flatpak Unused Runtimes</h4>
-                              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                              <h4 className="text-base font-black text-slate-900 dark:text-slate-100">Flatpak Unused Runtimes</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                                 Uninstalls orphaned GNOME/KDE runtime layers and sweeps application caches.
                               </p>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                              <span className="text-xs font-mono font-bold text-slate-600">~/.var/app</span>
+                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                              <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">~/.var/app</span>
                               <TactileButton
                                 variant="secondary"
                                 size="sm"
@@ -473,10 +427,10 @@ export const PackagesToolchainsView: React.FC = () => {
 
                           {/* WinGet / AppX Stores */}
                           <div
-                            className={`bg-white rounded-2xl p-5 border-2 transition-all flex flex-col justify-between ${
+                            className={`bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 transition-all flex flex-col justify-between ${
                               !isWindows
                                 ? "opacity-50 grayscale-[40%] border-dashed border-slate-300"
-                                : "border-slate-100 shadow-duo-sm hover:border-indigo-200"
+                                : "border-slate-100 dark:border-slate-700/60 shadow-duo-sm hover:border-indigo-200"
                             }`}
                           >
                             <div>
@@ -489,18 +443,18 @@ export const PackagesToolchainsView: React.FC = () => {
                                     <CheckCircle className="w-3 h-3 text-emerald-600" /> Active
                                   </span>
                                 ) : (
-                                  <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
                                     <Laptop className="w-3 h-3" /> Windows Only
                                   </span>
                                 )}
                               </div>
-                              <h4 className="text-base font-black text-slate-900">WinGet Installer Cache</h4>
-                              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                              <h4 className="text-base font-black text-slate-900 dark:text-slate-100">WinGet Installer Cache</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                                 Clears downloaded installer payloads and cached MSStore package files in %LOCALAPPDATA%.
                               </p>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                              <span className="text-xs font-mono font-bold text-slate-600">%TEMP%\WinGet</span>
+                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                              <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">%TEMP%\WinGet</span>
                               <TactileButton
                                 variant="secondary"
                                 size="sm"
@@ -521,18 +475,18 @@ export const PackagesToolchainsView: React.FC = () => {
                         <div className="flex items-center justify-between px-1">
                           <div className="flex items-center gap-2">
                             <Cpu className="w-5 h-5 text-emerald-500" />
-                            <h3 className="text-lg font-black text-slate-900">
+                            <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
                               Developer Toolchains & Runtimes
                             </h3>
                           </div>
-                          <span className="text-xs font-bold text-slate-400">
+                          <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
                             {devTargets.length} Toolchain Suites
                           </span>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {/* 1. Python Ecosystem */}
-                          <div className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
+                          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
                             <div>
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
@@ -540,13 +494,13 @@ export const PackagesToolchainsView: React.FC = () => {
                                 </span>
                                 <span className="text-[10px] font-bold text-emerald-700">Safe Cache</span>
                               </div>
-                              <h4 className="text-base font-black text-slate-900">pip, uv, Poetry & Conda</h4>
-                              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                              <h4 className="text-base font-black text-slate-900 dark:text-slate-100">pip, uv, Poetry & Conda</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                                 Purges downloaded wheel packages (~/.cache/pip), uv virtualenv archives, Poetry build cache, and conda package tarballs.
                               </p>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                              <span className="text-xs font-mono font-bold text-slate-600">~/.cache/pip</span>
+                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                              <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">~/.cache/pip</span>
                               <TactileButton
                                 variant="secondary"
                                 size="sm"
@@ -559,7 +513,7 @@ export const PackagesToolchainsView: React.FC = () => {
                           </div>
 
                           {/* 2. Modern JS Ecosystem */}
-                          <div className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
+                          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
                             <div>
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
@@ -567,13 +521,13 @@ export const PackagesToolchainsView: React.FC = () => {
                                 </span>
                                 <span className="text-[10px] font-bold text-emerald-700">Fast Re-fetch</span>
                               </div>
-                              <h4 className="text-base font-black text-slate-900">npm, pnpm, Yarn, Bun & Deno</h4>
-                              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                              <h4 className="text-base font-black text-slate-900 dark:text-slate-100">npm, pnpm, Yarn, Bun & Deno</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                                 Prunes ~/.npm/_cacache, pnpm global store (~/.local/share/pnpm/store), Bun installer tarballs, and Deno HTTP cache.
                               </p>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                              <span className="text-xs font-mono font-bold text-slate-600">~/.npm/_cacache</span>
+                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                              <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">~/.npm/_cacache</span>
                               <TactileButton
                                 variant="secondary"
                                 size="sm"
@@ -586,7 +540,7 @@ export const PackagesToolchainsView: React.FC = () => {
                           </div>
 
                           {/* 3. Containers & Podman */}
-                          <div className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
+                          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
                             <div>
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-purple-50 text-purple-800 border border-purple-200">
@@ -594,13 +548,13 @@ export const PackagesToolchainsView: React.FC = () => {
                                 </span>
                                 <span className="text-[10px] font-bold text-emerald-700">Storage Prune</span>
                               </div>
-                              <h4 className="text-base font-black text-slate-900">Podman & Docker Runtimes</h4>
-                              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                              <h4 className="text-base font-black text-slate-900 dark:text-slate-100">Podman & Docker Runtimes</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                                 Runs podman/docker system prune to free dangling container layers, stopped images, and temporary rootless storage overlays.
                               </p>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                              <span className="text-xs font-mono font-bold text-slate-600">podman system</span>
+                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                              <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">podman system</span>
                               <TactileButton
                                 variant="secondary"
                                 size="sm"
@@ -613,7 +567,7 @@ export const PackagesToolchainsView: React.FC = () => {
                           </div>
 
                           {/* 4. C / C++ / Rust Compilers */}
-                          <div className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
+                          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
                             <div>
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-orange-50 text-orange-800 border border-orange-200">
@@ -621,13 +575,13 @@ export const PackagesToolchainsView: React.FC = () => {
                                 </span>
                                 <span className="text-[10px] font-bold text-emerald-700">Rebuilds Fresh</span>
                               </div>
-                              <h4 className="text-base font-black text-slate-900">ccache, sccache, Cargo & Rustup</h4>
-                              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                              <h4 className="text-base font-black text-slate-900 dark:text-slate-100">ccache, sccache, Cargo & Rustup</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                                 Clears compilation object caches (ccache -C / sccache), Rust Cargo crate tarballs, git checkouts, and Rustup temp toolchains.
                               </p>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                              <span className="text-xs font-mono font-bold text-slate-600">~/.cargo/cache</span>
+                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                              <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">~/.cargo/cache</span>
                               <TactileButton
                                 variant="secondary"
                                 size="sm"
@@ -640,7 +594,7 @@ export const PackagesToolchainsView: React.FC = () => {
                           </div>
 
                           {/* 5. JVM Build Systems */}
-                          <div className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
+                          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
                             <div>
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-rose-50 text-rose-800 border border-rose-200">
@@ -648,13 +602,13 @@ export const PackagesToolchainsView: React.FC = () => {
                                 </span>
                                 <span className="text-[10px] font-bold text-emerald-700">Massive Savings</span>
                               </div>
-                              <h4 className="text-base font-black text-slate-900">Maven, Gradle & sbt</h4>
-                              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                              <h4 className="text-base font-black text-slate-900 dark:text-slate-100">Maven, Gradle & sbt</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                                 Sweeps downloaded jar dependencies in ~/.m2/repository, Gradle build-cache payloads (~/.gradle/caches), daemons, and Coursier caches.
                               </p>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                              <span className="text-xs font-mono font-bold text-slate-600">~/.m2/repository</span>
+                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                              <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">~/.m2/repository</span>
                               <TactileButton
                                 variant="secondary"
                                 size="sm"
@@ -667,7 +621,7 @@ export const PackagesToolchainsView: React.FC = () => {
                           </div>
 
                           {/* 6. Go Toolchain */}
-                          <div className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
+                          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
                             <div>
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-cyan-50 text-cyan-800 border border-cyan-200">
@@ -675,13 +629,13 @@ export const PackagesToolchainsView: React.FC = () => {
                                 </span>
                                 <span className="text-[10px] font-bold text-emerald-700">Quick Clean</span>
                               </div>
-                              <h4 className="text-base font-black text-slate-900">Go Build & Module Cache</h4>
-                              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                              <h4 className="text-base font-black text-slate-900 dark:text-slate-100">Go Build & Module Cache</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                                 Executes go clean -cache and purges cached module zip packages in ~/go/pkg/mod/cache.
                               </p>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                              <span className="text-xs font-mono font-bold text-slate-600">go clean -cache</span>
+                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                              <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">go clean -cache</span>
                               <TactileButton
                                 variant="secondary"
                                 size="sm"
@@ -707,21 +661,21 @@ export const PackagesToolchainsView: React.FC = () => {
         /* ========================================================================= */
         <>
           {/* Advanced Header -- lighter pass only, PowerView-style density */}
-          <div className="bg-white rounded-3xl p-7 border-2 border-slate-100 shadow-duo flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-7 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <PixelBadge label="Advanced" variant="blue" />
-                <span className="text-xs font-bold text-slate-400">
+                <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
                   Granular Package & Toolchain Cache Inspection
                 </span>
               </div>
-              <h2 className="text-2xl font-black text-slate-900">
+              <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">
                 Packages & Developer Toolchains
               </h2>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100">
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/40 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700">
                 <PixelCheckbox
                   checked={dryRun}
                   onChange={setDryRun}
@@ -759,59 +713,33 @@ export const PackagesToolchainsView: React.FC = () => {
           </div>
 
           {/* Segmented Filter Bar */}
-          <div className="bg-white rounded-2xl p-3 border-2 border-slate-100 shadow-duo-sm flex justify-center">
-            <div className="flex items-center gap-2 p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto">
-              <button
-                onClick={() => setActiveFilter("all")}
-                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
-                  activeFilter === "all"
-                    ? "bg-white text-slate-900 shadow-duo-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <Boxes className="w-4 h-4 text-indigo-500" />
-                <span>All Items ({allMergedTargets.length})</span>
-              </button>
-              <button
-                onClick={() => setActiveFilter("packages")}
-                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
-                  activeFilter === "packages"
-                    ? "bg-white text-slate-900 shadow-duo-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <Package className="w-4 h-4 text-pink-500" />
-                <span>System Packages ({packageTargets.length})</span>
-              </button>
-              <button
-                onClick={() => setActiveFilter("toolchains")}
-                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
-                  activeFilter === "toolchains"
-                    ? "bg-white text-slate-900 shadow-duo-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <Cpu className="w-4 h-4 text-emerald-500" />
-                <span>Dev Toolchains ({devTargets.length})</span>
-              </button>
-            </div>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-3 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm flex justify-center">
+            <SegmentedTabs
+              value={activeFilter}
+              onChange={setActiveFilter}
+              options={[
+                { value: "all", label: `All Items (${allMergedTargets.length})`, icon: <Boxes className="w-4 h-4 text-indigo-500" /> },
+                { value: "packages", label: `System Packages (${packageTargets.length})`, icon: <Package className="w-4 h-4 text-pink-500" /> },
+                { value: "toolchains", label: `Dev Toolchains (${devTargets.length})`, icon: <Cpu className="w-4 h-4 text-emerald-500" /> },
+              ]}
+            />
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="text-xs font-bold text-slate-500">
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 Select granular targets for dry-run simulation or execution ({displayedTargets.length} items):
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={selectAll}
-                  className="text-xs font-bold px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
+                  className="text-xs font-bold px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300"
                 >
                   Select All
                 </button>
                 <button
                   onClick={deselectAll}
-                  className="text-xs font-bold px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
+                  className="text-xs font-bold px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300"
                 >
                   Deselect All
                 </button>
@@ -827,8 +755,8 @@ export const PackagesToolchainsView: React.FC = () => {
                 return (
                   <div
                     key={target.id}
-                    className={`bg-white rounded-2xl p-4 border-2 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${
-                      isSelected ? "border-indigo-400 shadow-duo-sm" : "border-slate-100 hover:border-slate-200"
+                    className={`bg-white dark:bg-slate-800 rounded-2xl p-4 border-2 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${
+                      isSelected ? "border-indigo-400 shadow-duo-sm" : "border-slate-100 dark:border-slate-700/60 hover:border-slate-200"
                     }`}
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
@@ -839,7 +767,7 @@ export const PackagesToolchainsView: React.FC = () => {
                       />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-black text-slate-800 text-sm">{target.name}</h4>
+                          <h4 className="font-black text-slate-800 dark:text-slate-200 text-sm">{target.name}</h4>
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${
                               isPkg
@@ -856,8 +784,8 @@ export const PackagesToolchainsView: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">{target.description}</p>
-                        <div className="flex items-center gap-3 text-xs font-mono text-slate-400 mt-1 flex-wrap">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{target.description}</p>
+                        <div className="flex items-center gap-3 text-xs font-mono text-slate-400 dark:text-slate-500 mt-1 flex-wrap">
                           <span>Paths: {target.paths.join(", ")}</span>
                           <span>•</span>
                           <span>Locks: {target.locked_count}</span>
@@ -866,8 +794,8 @@ export const PackagesToolchainsView: React.FC = () => {
                     </div>
 
                     <div className="text-right shrink-0 pl-8 sm:pl-0">
-                      <div className="font-pixel text-xs text-slate-800 font-bold">{targetFormatted}</div>
-                      <div className="text-xs text-slate-400">{target.file_count} files</div>
+                      <div className="font-pixel text-xs text-slate-800 dark:text-slate-200 font-bold">{targetFormatted}</div>
+                      <div className="text-xs text-slate-400 dark:text-slate-500">{target.file_count} files</div>
                     </div>
                   </div>
                 );

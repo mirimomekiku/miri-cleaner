@@ -27,15 +27,15 @@ export const ErrorBanner: React.FC<ErrorBannerProps> = ({
     <div
       role="alert"
       aria-live="assertive"
-      className="bg-red-50 border-2 border-red-200 rounded-3xl p-5 shadow-duo-sm flex items-start justify-between gap-4 animate-slide-down"
+      className="bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/60 rounded-3xl p-5 shadow-duo-sm flex items-start justify-between gap-4 animate-slide-down"
     >
       <div className="flex items-start gap-3.5 min-w-0">
-        <div className="w-10 h-10 rounded-2xl bg-red-100 border border-red-300 flex items-center justify-center shrink-0 mt-0.5">
-          <AlertTriangle className="w-5 h-5 text-red-600" />
+        <div className="w-10 h-10 rounded-2xl bg-red-100 dark:bg-red-900/50 border border-red-300 dark:border-red-800 flex items-center justify-center shrink-0 mt-0.5">
+          <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
         </div>
         <div className="min-w-0">
-          <h4 className="text-sm font-black text-red-900">{title}</h4>
-          <p className="text-xs text-red-700 font-semibold mt-0.5 leading-relaxed break-words">
+          <h4 className="text-sm font-black text-red-900 dark:text-red-200">{title}</h4>
+          <p className="text-xs text-red-700 dark:text-red-300 font-semibold mt-0.5 leading-relaxed break-words">
             {message}
           </p>
           <div className="flex items-center gap-3 mt-3">
@@ -48,7 +48,7 @@ export const ErrorBanner: React.FC<ErrorBannerProps> = ({
             <button
               type="button"
               onClick={onDismiss}
-              className="text-xs font-bold text-red-800 hover:text-red-950 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 rounded"
+              className="text-xs font-bold text-red-800 dark:text-red-300 hover:text-red-950 dark:hover:text-red-100 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 rounded"
             >
               Dismiss Notice
             </button>
@@ -58,7 +58,7 @@ export const ErrorBanner: React.FC<ErrorBannerProps> = ({
       <button
         type="button"
         onClick={onDismiss}
-        className="p-1 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-100 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+        className="p-1 rounded-xl text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
         aria-label="Dismiss error notice"
       >
         <X className="w-4 h-4" />

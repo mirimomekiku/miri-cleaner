@@ -33,7 +33,7 @@ function Show-Help {
     Write-Host "Usage: .\miri.ps1 <command> [options...]" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Commands:" -ForegroundColor Cyan
-    Write-Host "  gui          Launch desktop GUI (React / Tauri dev server)"
+    Write-Host "  gui          Launch the native desktop GUI (React / Electron shell)"
     Write-Host "  tui          Launch interactive terminal UI (Ratatui)"
     Write-Host "  scan         Run non-destructive inspection"
     Write-Host "  clean        Clean system targets"

@@ -14,6 +14,9 @@ import {
   FolderTree,
   Zap,
   ChevronDown,
+  Search,
+  Globe,
+  MoreVertical,
 } from "lucide-react";
 import { bridge } from "../../lib/bridge";
 import { XRayReport, DuplicateGroup } from "../../types";
@@ -21,11 +24,22 @@ import { TreemapSkeleton, ListSkeleton } from "../ui/Skeleton";
 import { formatBytes } from "../../lib/formatters";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { useAsyncAction } from "../../lib/useAsyncAction";
+import { ContextMenu } from "../ui/ContextMenu";
+import { FilePropertiesModal } from "./FilePropertiesModal";
+import { useFileActions } from "../../lib/useFileActions";
+import { categoryStyle } from "../../lib/fileCategories";
+import { BigFileFinderView } from "./BigFileFinderView";
+import { BrowserCleanupView } from "./BrowserCleanupView";
+import { StatTile } from "../ui/StatTile";
+import { SegmentedTabs } from "../ui/SegmentedTabs";
+import { HeroCard } from "../ui/HeroCard";
+
+type StorageSubTab = "xray" | "twins" | "bigfiles" | "browsers";
 
 export const StorageView: React.FC = () => {
   const { addLog, openDangerModal } = useCleanerStore();
 
-  const [activeSubTab, setActiveSubTab] = useState<"xray" | "twins">("xray");
+  const [activeSubTab, setActiveSubTab] = useState<StorageSubTab>("xray");
   const [xrayReport, setXrayReport] = useState<XRayReport | null>(null);
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,8 +48,12 @@ export const StorageView: React.FC = () => {
   const [pathExpanded, setPathExpanded] = useState(false);
   const errorAction = useAsyncAction();
 
+  const fileActions = useFileActions(() => loadData());
+
   useEffect(() => {
-    loadData();
+    if (activeSubTab === "xray" || activeSubTab === "twins") {
+      loadData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSubTab]);
 
@@ -98,15 +116,6 @@ export const StorageView: React.FC = () => {
     });
   };
 
-  const categoryColors: Record<string, { bg: string; bar: string; label: string }> = {
-    build_cache: { bg: "bg-emerald-50 text-emerald-800 border-emerald-200", bar: "bg-emerald-500", label: "Build Caches" },
-    video: { bg: "bg-indigo-50 text-indigo-800 border-indigo-200", bar: "bg-indigo-500", label: "Videos" },
-    archives_installers: { bg: "bg-amber-50 text-amber-800 border-amber-200", bar: "bg-amber-500", label: "Archives & Installers" },
-    images: { bg: "bg-pink-50 text-pink-800 border-pink-200", bar: "bg-pink-500", label: "Photos & Images" },
-    documents: { bg: "bg-sky-50 text-sky-800 border-sky-200", bar: "bg-sky-500", label: "Documents" },
-    other: { bg: "bg-slate-100 text-slate-700 border-slate-200", bar: "bg-slate-400", label: "Other Files" },
-  };
-
   const totalWastedBytes = duplicateGroups.reduce((acc, g) => acc + g.wasted_bytes, 0);
   const totalWastedFormatted = formatBytes(totalWastedBytes).formatted;
 
@@ -120,6 +129,9 @@ export const StorageView: React.FC = () => {
           retryLabel="Retry"
         />
       )}
+      {fileActions.error && (
+        <ErrorBanner message={fileActions.error} onDismiss={fileActions.dismissError} />
+      )}
 
       {/* ========================================================================= */}
       {/* ONE HERO MODULE -- lesson-screen grammar: a single dominant focal card     */}
@@ -128,54 +140,37 @@ export const StorageView: React.FC = () => {
       {/* control tucks behind an expand toggle, and one big pill action drives    */}
       {/* whichever operation matters most for the active sub-tab.                 */}
       {/* ========================================================================= */}
-      <div className="bg-gradient-to-b from-white to-amber-50/50 rounded-[2rem] p-10 sm:p-12 border-2 border-amber-100 shadow-duo text-center space-y-6">
-        <div className="flex justify-center">
-          <Mascot mood={isLoading ? "scanning" : "happy"} size="lg" />
-        </div>
-
-        <div className="flex items-center justify-center gap-2 flex-wrap">
-          <PixelBadge label="Storage & Duplicates" variant="yellow" />
-          <span className="text-xs font-bold text-slate-500">
-            Visual Disk Treemap • Largest Files • Duplicate Extents
-          </span>
-        </div>
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-          Storage Intelligence & Deduplication
-        </h2>
-        <p className="text-sm font-semibold text-slate-500 max-w-lg mx-auto leading-relaxed">
-          Visualize where your disk space goes with interactive treemaps, uncover
-          gigabyte-sized files, and eliminate duplicate files with Btrfs CoW.
-        </p>
-
+      <HeroCard
+        accent="amber"
+        mascot={<Mascot mood={isLoading ? "scanning" : "happy"} size="lg" />}
+        badgeLabel="Storage & Duplicates"
+        badgeVariant="yellow"
+        badgeSubtitle="Visual Disk Treemap • Largest Files • Duplicate Extents"
+        heading="Storage Intelligence & Deduplication"
+        description="Visualize where your disk space goes with interactive treemaps, uncover gigabyte-sized files, and eliminate duplicate files with Btrfs CoW."
+        descriptionMaxWidth="max-w-lg"
+      >
         {/* Slim consolidated stat strip -- both totals always visible, with the
             custom-path control tucked behind expansion instead of a third
             parallel card. */}
         <div className="flex items-center justify-center flex-wrap gap-x-8 gap-y-3 pt-1">
-          <div className="text-center">
-            <div className="text-2xl font-black text-amber-600 tabular-nums">
-              {xrayReport ? formatBytes(xrayReport.total_scanned_bytes).formatted : "--"}
-            </div>
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              Total Analyzed
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-black text-rose-600 tabular-nums">{totalWastedFormatted}</div>
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              Wasted by Copies
-            </div>
-          </div>
+          <StatTile
+            value={xrayReport ? formatBytes(xrayReport.total_scanned_bytes).formatted : "--"}
+            label="Total Analyzed"
+            valueClassName="text-amber-600"
+          />
+          <StatTile value={totalWastedFormatted} label="Wasted by Copies" valueClassName="text-rose-600" />
           <button
             type="button"
             onClick={() => setPathExpanded((v) => !v)}
             aria-expanded={pathExpanded}
             className="text-center group"
           >
-            <div className="text-2xl font-black text-slate-400 flex items-center gap-1 justify-center">
+            <div className="text-2xl font-black text-slate-400 dark:text-slate-500 flex items-center gap-1 justify-center">
               <FolderOpen className="w-5 h-5" />
               <ChevronDown className={`w-4 h-4 transition-transform ${pathExpanded ? "rotate-180" : ""}`} />
             </div>
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-slate-700">
+            <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider group-hover:text-slate-700 dark:group-hover:text-slate-300">
               {pathExpanded ? "Hide Path" : "Custom Path"}
             </div>
           </button>
@@ -191,42 +186,29 @@ export const StorageView: React.FC = () => {
                 aria-label="Custom directory path to inspect"
                 value={targetPathInput}
                 onChange={(e) => setTargetPathInput(e.target.value)}
-                className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-400 w-full max-w-xs"
+                className="text-xs bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-amber-400 w-full max-w-xs"
               />
             </div>
           </div>
         </div>
 
         {/* Sub-tab segmented toggle */}
-        <div className="flex justify-center">
-          <div className="inline-flex items-center gap-2 p-1 bg-slate-100/80 rounded-xl w-full sm:w-auto">
-            <button
-              onClick={() => setActiveSubTab("xray")}
-              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
-                activeSubTab === "xray"
-                  ? "bg-white text-slate-900 shadow-duo-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <FolderTree className="w-4 h-4 text-amber-500" />
-              <span>Storage Breakdown</span>
-            </button>
-            <button
-              onClick={() => setActiveSubTab("twins")}
-              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 ${
-                activeSubTab === "twins"
-                  ? "bg-white text-slate-900 shadow-duo-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <Copy className="w-4 h-4 text-indigo-500" />
-              <span>Duplicate Finder</span>
-            </button>
-          </div>
-        </div>
+        <SegmentedTabs
+          value={activeSubTab}
+          onChange={setActiveSubTab}
+          options={[
+            { value: "xray", label: "Storage Breakdown", icon: <FolderTree className="w-4 h-4 text-amber-500" /> },
+            { value: "twins", label: "Duplicate Finder", icon: <Copy className="w-4 h-4 text-indigo-500" /> },
+            { value: "bigfiles", label: "Big Files", icon: <Search className="w-4 h-4 text-rose-500" /> },
+            { value: "browsers", label: "Browser Data", icon: <Globe className="w-4 h-4 text-sky-500" /> },
+          ]}
+        />
 
         {/* ONE big pill primary action -- Reflink once duplicates are found and
-            ready to dedupe, otherwise Re-Scan is the obvious next step. */}
+            ready to dedupe, otherwise Re-Scan is the obvious next step. Big
+            Files and Browser Data drive their own scans, so this hero action
+            only applies to the first two sub-tabs. */}
+        {(activeSubTab === "xray" || activeSubTab === "twins") && (
         <div className="flex flex-col items-center gap-3 pt-2">
           {activeSubTab === "twins" && duplicateGroups.length > 0 ? (
             <TactileButton
@@ -260,13 +242,14 @@ export const StorageView: React.FC = () => {
               type="button"
               onClick={loadData}
               disabled={isLoading}
-              className="text-xs font-bold text-slate-500 hover:text-slate-800 underline decoration-dotted underline-offset-4 disabled:opacity-50"
+              className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline decoration-dotted underline-offset-4 disabled:opacity-50"
             >
               Re-Scan
             </button>
           )}
         </div>
-      </div>
+        )}
+      </HeroCard>
 
       {/* ========================================================================= */}
       {/* VIEW: STORAGE BREAKDOWN */}
@@ -277,26 +260,26 @@ export const StorageView: React.FC = () => {
         ) : xrayReport ? (
           <div className="space-y-6">
           {/* Category Distribution Bar */}
-          <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo-sm space-y-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+              <h3 className="text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <HardDrive className="w-4 h-4 text-amber-500" />
                 <span>Storage Category Breakdown</span>
               </h3>
-              <span className="text-xs font-mono font-bold text-slate-400">
+              <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500">
                 Root: {xrayReport.root_path}
               </span>
             </div>
 
             {/* Segmented Percentage Bar */}
-            <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+            <div className="h-4 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
               {Object.entries(xrayReport.by_category).map(([cat, bytes]) => {
                 const pct =
                   xrayReport.total_scanned_bytes > 0
                     ? (bytes / xrayReport.total_scanned_bytes) * 100
                     : 0;
                 if (pct < 1) return null;
-                const info = categoryColors[cat] || categoryColors.other;
+                const info = categoryStyle(cat);
                 return (
                   <div
                     key={cat}
@@ -311,7 +294,7 @@ export const StorageView: React.FC = () => {
             {/* Category Legend Tags */}
             <div className="flex items-center gap-3 flex-wrap pt-2">
               {Object.entries(xrayReport.by_category).map(([cat, bytes]) => {
-                const info = categoryColors[cat] || categoryColors.other;
+                const info = categoryStyle(cat);
                 return (
                   <div
                     key={cat}
@@ -329,10 +312,10 @@ export const StorageView: React.FC = () => {
           {/* Visual Treemap Folder Cards */}
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
-              <h4 className="text-sm font-black text-slate-900">
+              <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">
                 Largest Storage Folders (Treemap Blocks)
               </h4>
-              <span className="text-xs font-bold text-slate-400">Top 15 Directories</span>
+              <span className="text-xs font-bold text-slate-400 dark:text-slate-500">Top 15 Directories</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -341,26 +324,38 @@ export const StorageView: React.FC = () => {
                 return (
                   <div
                     key={folder.path}
-                    className="bg-white rounded-2xl p-4 border-2 border-slate-100 shadow-duo-sm hover:border-amber-300 transition-all flex flex-col justify-between"
+                    onContextMenu={(e) => fileActions.openContextMenu(e, folder.path, folder.name, true)}
+                    className="bg-white dark:bg-slate-800 rounded-2xl p-4 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm hover:border-amber-300 transition-all flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <FolderOpen className="w-5 h-5 text-amber-500" />
-                        <span className="text-xs font-mono font-black px-2 py-0.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
-                          {folder.percentage}% of disk
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-mono font-black px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                            {folder.percentage}% of disk
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => fileActions.openContextMenuAt(e.currentTarget, folder.path, folder.name, true)}
+                            aria-label={`Actions for ${folder.name}`}
+                            aria-haspopup="menu"
+                            className="p-1 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400 shrink-0"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                      <h5 className="font-black text-slate-800 text-sm truncate" title={folder.name}>
+                      <h5 className="font-black text-slate-800 dark:text-slate-200 text-sm truncate" title={folder.name}>
                         {folder.name}
                       </h5>
-                      <p className="text-[11px] font-mono text-slate-400 truncate mt-0.5" title={folder.path}>
+                      <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate mt-0.5" title={folder.path}>
                         {folder.path}
                       </p>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                      <span className="text-xs font-mono font-bold text-slate-800">{folderFormatted}</span>
-                      <span className="text-xs text-slate-400">{folder.file_count} files</span>
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                      <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">{folderFormatted}</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500">{folder.file_count} files</span>
                     </div>
                   </div>
                 );
@@ -369,13 +364,13 @@ export const StorageView: React.FC = () => {
           </div>
 
           {/* Largest Individual Files List */}
-          <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo-sm space-y-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+              <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-indigo-500" />
                 <span>Heavyweight Files (&gt; 1 MB)</span>
               </h4>
-              <span className="text-xs font-bold text-slate-400">
+              <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
                 Top {xrayReport.largest_files.length} Candidates
               </span>
             </div>
@@ -383,25 +378,35 @@ export const StorageView: React.FC = () => {
             <div className="space-y-2">
               {xrayReport.largest_files.map((file) => {
                 const fileFormatted = formatBytes(file.size_bytes).formatted;
-                const info = categoryColors[file.category] || categoryColors.other;
+                const info = categoryStyle(file.category);
                 return (
                   <div
                     key={file.path}
-                    className="p-3 rounded-2xl border border-slate-100 hover:border-slate-200 bg-slate-50/50 flex items-center justify-between gap-4 transition-all"
+                    onContextMenu={(e) => fileActions.openContextMenu(e, file.path, file.name, false)}
+                    className="p-3 rounded-2xl border border-slate-100 dark:border-slate-700/60 hover:border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between gap-4 transition-all"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-bold text-slate-900 truncate">{file.name}</span>
+                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{file.name}</span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${info.bg}`}>
                           {info.label}
                         </span>
                       </div>
-                      <p className="text-[11px] font-mono text-slate-400 truncate mt-0.5">
+                      <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate mt-0.5">
                         {file.path} • Modified: {file.modified_time}
                       </p>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="font-pixel text-xs font-bold text-slate-800">{fileFormatted}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-pixel text-xs font-bold text-slate-800 dark:text-slate-200">{fileFormatted}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => fileActions.openContextMenuAt(e.currentTarget, file.path, file.name, false)}
+                        aria-label={`Actions for ${file.name}`}
+                        aria-haspopup="menu"
+                        className="p-1 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400"
+                      >
+                        <MoreVertical className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 );
@@ -418,12 +423,12 @@ export const StorageView: React.FC = () => {
       {activeSubTab === "twins" && (
         <div className="space-y-4">
           {/* Btrfs Reflink Explainer Banner */}
-          <div className="bg-emerald-50/60 rounded-3xl p-6 border-2 border-emerald-200/80 shadow-duo-sm space-y-2">
-            <div className="flex items-center gap-2 text-emerald-950 font-black text-sm">
-              <ShieldCheck className="w-5 h-5 text-emerald-600" />
+          <div className="bg-emerald-50/60 dark:bg-emerald-950/30 rounded-3xl p-6 border-2 border-emerald-200/80 dark:border-emerald-900/50 shadow-duo-sm space-y-2">
+            <div className="flex items-center gap-2 text-emerald-950 dark:text-emerald-200 font-black text-sm">
+              <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <span>Smart Btrfs Copy-on-Write Reflink Technology</span>
             </div>
-            <p className="text-xs text-emerald-900 leading-relaxed max-w-2xl">
+            <p className="text-xs text-emerald-900 dark:text-emerald-300 leading-relaxed max-w-2xl">
               On Fedora's default <strong>Btrfs</strong> filesystem, duplicate files can be linked to share
               the same disk storage blocks via <strong>Reflink (`cp --reflink`)</strong>. Both copies stay in place
               and function normally, but occupy the disk space of only one file!
@@ -434,10 +439,10 @@ export const StorageView: React.FC = () => {
           {isLoading ? (
             <ListSkeleton count={4} />
           ) : duplicateGroups.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 border-2 border-slate-100 shadow-duo text-center space-y-3">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-12 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo text-center space-y-3">
               <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-              <h4 className="text-lg font-black text-slate-800">No Duplicate Files Detected</h4>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">
+              <h4 className="text-lg font-black text-slate-800 dark:text-slate-200">No Duplicate Files Detected</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
                 No identical files found in the scanned directory. Your storage is tidy and non-redundant!
               </p>
             </div>
@@ -449,21 +454,21 @@ export const StorageView: React.FC = () => {
               return (
                 <div
                   key={group.group_id}
-                  className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo-sm space-y-4"
+                  className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm space-y-4"
                 >
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2.5">
                       <Copy className="w-4 h-4 text-indigo-500" />
-                      <h4 className="text-sm font-black text-slate-900">
+                      <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">
                         {group.count} Identical Copies ({singleFormatted} each)
                       </h4>
                       {group.can_reflink && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                           Btrfs CoW Ready
                         </span>
                       )}
                     </div>
-                    <div className="text-xs font-mono font-bold text-rose-600 bg-rose-50 px-3 py-1 rounded-xl border border-rose-200">
+                    <div className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 px-3 py-1 rounded-xl border border-rose-200 dark:border-rose-900/50">
                       Wasted: {wastedFormatted}
                     </div>
                   </div>
@@ -473,23 +478,23 @@ export const StorageView: React.FC = () => {
                     {group.files.map((file, idx) => (
                       <div
                         key={file.path}
-                        className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-4 text-xs"
+                        className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-4 text-xs"
                       >
                         <div className="min-w-0 flex items-center gap-2.5">
                           {file.is_original ? (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-900 border border-indigo-200">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-900 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                               Primary
                             </span>
                           ) : (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-900 border border-slate-300">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-600">
                               {`Copy #${idx}`}
                             </span>
                           )}
-                          <span className="font-mono text-slate-800 truncate" title={file.path}>
+                          <span className="font-mono text-slate-800 dark:text-slate-200 truncate" title={file.path}>
                             {file.path}
                           </span>
                         </div>
-                        <span className="text-[11px] text-slate-400 shrink-0">{file.modified_time}</span>
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">{file.modified_time}</span>
                       </div>
                     ))}
                   </div>
@@ -498,6 +503,26 @@ export const StorageView: React.FC = () => {
             })
           )}
         </div>
+      )}
+
+      {activeSubTab === "bigfiles" && <BigFileFinderView />}
+
+      {activeSubTab === "browsers" && <BrowserCleanupView />}
+
+      {fileActions.contextMenu && (
+        <ContextMenu
+          x={fileActions.contextMenu.x}
+          y={fileActions.contextMenu.y}
+          onClose={fileActions.closeContextMenu}
+          items={fileActions.buildMenuItems()!}
+        />
+      )}
+
+      {fileActions.propertiesPath && (
+        <FilePropertiesModal
+          path={fileActions.propertiesPath}
+          onClose={() => fileActions.setPropertiesPath(null)}
+        />
       )}
     </div>
   );

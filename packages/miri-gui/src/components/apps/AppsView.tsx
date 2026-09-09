@@ -28,9 +28,10 @@ import { AppCatalogSkeleton, CardSkeleton } from "../ui/Skeleton";
 import { formatBytes } from "../../lib/formatters";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { useAsyncAction } from "../../lib/useAsyncAction";
+import { notify } from "../../lib/notify";
 
 export const AppsView: React.FC = () => {
-  const { viewMode, scanResult, addLog, openDangerModal } = useCleanerStore();
+  const { viewMode, scanResult, addLog, openDangerModal, settings } = useCleanerStore();
 
   const currentOs =
     scanResult?.system_info.os ||
@@ -56,14 +57,31 @@ export const AppsView: React.FC = () => {
     bridge.getInstalledAppUsage().then(setInstalledAppUsage).catch(() => {});
   }, []);
 
-  const UNUSED_THRESHOLD_DAYS = 90;
   const suggestedUninstalls = useMemo(
     () =>
       installedAppUsage
-        .filter((a) => a.last_used_days_ago >= UNUSED_THRESHOLD_DAYS)
+        .filter((a) => a.last_used_days_ago >= settings.unusedAppThresholdDays)
         .sort((a, b) => b.install_size_bytes - a.install_size_bytes),
-    [installedAppUsage]
+    [installedAppUsage, settings.unusedAppThresholdDays]
   );
+
+  // Proactive nudge, once per time this view's usage data loads (not on
+  // every render) -- lets someone find out about unused apps without
+  // having to think to check the Get Apps tab first.
+  const notifiedForCountRef = React.useRef<number | null>(null);
+  useEffect(() => {
+    if (installedAppUsage.length === 0) return;
+    if (notifiedForCountRef.current === suggestedUninstalls.length) return;
+    notifiedForCountRef.current = suggestedUninstalls.length;
+    if (suggestedUninstalls.length === 0) return;
+    const totalBytes = suggestedUninstalls.reduce((acc, a) => acc + a.install_size_bytes, 0);
+    notify(
+      "unusedApps",
+      `${suggestedUninstalls.length} unused app${suggestedUninstalls.length === 1 ? "" : "s"} found`,
+      `Not opened in ${settings.unusedAppThresholdDays}+ days, using ${formatBytes(totalBytes).formatted}. Check Get Apps to review.`
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestedUninstalls, installedAppUsage.length]);
 
   const handleUninstallSuggested = (app: InstalledAppUsage) => {
     openDangerModal({
@@ -317,20 +335,20 @@ export const AppsView: React.FC = () => {
       )}
 
       {/* Header Section */}
-      <div className="bg-gradient-to-br from-white to-pink-50/40 rounded-3xl p-8 border-2 border-pink-100 shadow-duo flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="bg-gradient-to-br from-white dark:from-slate-800 to-pink-50/40 rounded-3xl p-8 border-2 border-pink-100 shadow-duo flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-6 w-full md:w-auto min-w-0">
           <Mascot mood="happy" size="lg" />
           <div>
             <div className="flex items-center gap-2 mb-1">
               <PixelBadge label="App Downloader" variant="pink" />
-              <span className="text-xs font-bold text-slate-400">
+              <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
                 Fast Native Installer
               </span>
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+            <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
               Get & Install Applications
             </h2>
-            <p className="text-sm font-semibold text-slate-500 mt-1 max-w-lg">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1 max-w-lg">
               Install curated cross-platform applications without third-party bloat.
               Powered directly by {isWindows ? "Microsoft WinGet" : "Flathub & Fedora DNF"}.
             </p>
@@ -338,28 +356,28 @@ export const AppsView: React.FC = () => {
         </div>
 
         {/* Backend Status Pill */}
-        <div className="bg-white rounded-2xl p-4 border-2 border-slate-100 shadow-duo-sm text-center min-w-[170px]">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm text-center min-w-[170px]">
           <div className="flex items-center justify-center gap-1.5 text-emerald-600 font-black text-xs mb-1">
             <CheckCircle className="w-4 h-4" />
             <span>Verified Source</span>
           </div>
-          <div className="text-sm font-black text-slate-900">
+          <div className="text-sm font-black text-slate-900 dark:text-slate-100">
             {isWindows ? "Windows WinGet" : "Flathub & DNF"}
           </div>
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+          <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5">
             {isWindows ? "Official Package Manager" : "Sandboxed & Native"}
           </div>
         </div>
       </div>
 
       {/* Sub-tab Navigation */}
-      <div className="bg-white rounded-2xl p-2 border-2 border-slate-100 shadow-duo-sm flex items-center gap-2">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-2 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm flex items-center gap-2">
         <button
           onClick={() => setActiveSubTab("catalog")}
           className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
             activeSubTab === "catalog"
               ? "bg-slate-900 text-white shadow-duo-sm"
-              : "text-slate-600 hover:text-slate-900 bg-slate-50"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-slate-50 dark:bg-slate-900/40"
           }`}
         >
           <Package className="w-4 h-4 text-pink-400" />
@@ -370,7 +388,7 @@ export const AppsView: React.FC = () => {
           className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
             activeSubTab === "leftovers"
               ? "bg-slate-900 text-white shadow-duo-sm"
-              : "text-slate-600 hover:text-slate-900 bg-slate-50"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-slate-50 dark:bg-slate-900/40"
           }`}
         >
           <Trash2 className="w-4 h-4 text-amber-500" />
@@ -385,18 +403,18 @@ export const AppsView: React.FC = () => {
       {/* Advanced: unchanged compact card, just with a responsive row fix.        */}
       {/* ========================================================================= */}
       {viewMode === "casual" ? (
-        <div className="animate-slide-down bg-gradient-to-b from-white to-amber-50/60 rounded-[2rem] p-10 sm:p-12 border-2 border-amber-100 shadow-duo space-y-6">
+        <div className="animate-slide-down bg-gradient-to-b from-white dark:from-slate-800 to-amber-50/60 rounded-[2rem] p-10 sm:p-12 border-2 border-amber-100 shadow-duo space-y-6">
           <div className="flex flex-col items-center text-center gap-3">
             <Mascot mood={suggestedUninstalls.length > 0 ? "alert" : "happy"} size="lg" />
             <PixelBadge label="Suggested Uninstalls" variant="pink" />
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
               {suggestedUninstalls.length === 0
                 ? "Nothing Gathering Dust!"
                 : `${suggestedUninstalls.length} App${
                     suggestedUninstalls.length > 1 ? "s" : ""
-                  } Haven't Been Opened in ${UNUSED_THRESHOLD_DAYS}+ Days`}
+                  } Haven't Been Opened in ${settings.unusedAppThresholdDays}+ Days`}
             </h2>
-            <p className="text-sm font-semibold text-slate-600 max-w-md leading-relaxed">
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 max-w-md leading-relaxed">
               {suggestedUninstalls.length === 0
                 ? "Every installed app has been opened recently -- nothing to suggest removing right now."
                 : `Still fully installed and safe to keep -- nothing here is removed automatically. Free up ${
@@ -415,8 +433,8 @@ export const AppsView: React.FC = () => {
                   className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
                 >
                   <div className="min-w-0">
-                    <div className="font-black text-slate-900 text-sm truncate">{app.name}</div>
-                    <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                    <div className="font-black text-slate-900 dark:text-slate-100 text-sm truncate">{app.name}</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
                       Not opened in {app.last_used_days_ago} days ·{" "}
                       {formatBytes(app.install_size_bytes).formatted}
                     </div>
@@ -443,12 +461,12 @@ export const AppsView: React.FC = () => {
               type="button"
               onClick={() => setPacksExpanded((v) => !v)}
               aria-expanded={packsExpanded}
-              className="w-full flex items-center justify-center gap-2 text-xs font-black text-slate-600 hover:text-slate-900 py-2 group"
+              className="w-full flex items-center justify-center gap-2 text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 py-2 group"
             >
               <Sparkles className="w-4 h-4 text-amber-500" />
               <span>{packsExpanded ? "Hide Quick Starter Packs" : "Show Quick Starter Packs"}</span>
               <ChevronDown
-                className={`w-4 h-4 text-slate-400 transition-transform group-hover:text-slate-700 ${
+                className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform group-hover:text-slate-700 dark:group-hover:text-slate-300 ${
                   packsExpanded ? "rotate-180" : ""
                 }`}
               />
@@ -466,8 +484,8 @@ export const AppsView: React.FC = () => {
                       <Code2 className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="font-black text-slate-900 text-xs">Dev Workstation</div>
-                      <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                      <div className="font-black text-slate-900 dark:text-slate-100 text-xs">Dev Workstation</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
                         VS Code, Git, Podman, Node.js
                       </div>
                     </div>
@@ -482,8 +500,8 @@ export const AppsView: React.FC = () => {
                       <Gamepad2 className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="font-black text-slate-900 text-xs">Gamer Pack</div>
-                      <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                      <div className="font-black text-slate-900 dark:text-slate-100 text-xs">Gamer Pack</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
                         Steam, Heroic, Discord, OBS
                       </div>
                     </div>
@@ -498,8 +516,8 @@ export const AppsView: React.FC = () => {
                       <Globe className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="font-black text-slate-900 text-xs">Privacy Starter</div>
-                      <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                      <div className="font-black text-slate-900 dark:text-slate-100 text-xs">Privacy Starter</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
                         Brave, Bitwarden, BleachBit
                       </div>
                     </div>
@@ -511,15 +529,15 @@ export const AppsView: React.FC = () => {
         </div>
       ) : (
         suggestedUninstalls.length > 0 && (
-          <div className="bg-white rounded-3xl p-6 border-2 border-amber-100 shadow-duo space-y-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-amber-100 shadow-duo space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
-                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <Package className="w-5 h-5 text-amber-500" />
                   <span>Suggested Uninstalls</span>
                 </h3>
-                <p className="text-xs text-slate-500 mt-1 max-w-md">
-                  Installed apps you haven't opened in {UNUSED_THRESHOLD_DAYS}+ days -- still fully
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md">
+                  Installed apps you haven't opened in {settings.unusedAppThresholdDays}+ days -- still fully
                   installed, just gathering dust. Nothing here is removed automatically.
                 </p>
               </div>
@@ -532,8 +550,8 @@ export const AppsView: React.FC = () => {
                   className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
                 >
                   <div className="min-w-0">
-                    <div className="font-black text-slate-900 text-sm truncate">{app.name}</div>
-                    <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                    <div className="font-black text-slate-900 dark:text-slate-100 text-sm truncate">{app.name}</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
                       Not opened in {app.last_used_days_ago} days ·{" "}
                       {formatBytes(app.install_size_bytes).formatted}
                     </div>
@@ -557,13 +575,13 @@ export const AppsView: React.FC = () => {
 
       {/* Leftovers Sub-View */} {activeSubTab === "leftovers" ? (
         <div className="space-y-4">
-          <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <Trash2 className="w-5 h-5 text-amber-500" />
                 <span>Orphaned Application Leftovers Scanner</span>
               </h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-md">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md">
                 Detects leftover directories, cache files, and configurations left behind by uninstalled Flatpaks, RPMs, and Windows apps.
               </p>
             </div>
@@ -581,10 +599,10 @@ export const AppsView: React.FC = () => {
           {isLoadingLeftovers ? (
             <CardSkeleton count={4} />
           ) : leftovers.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 border-2 border-slate-100 shadow-duo text-center space-y-3">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-12 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo text-center space-y-3">
               <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
-              <h4 className="text-lg font-black text-slate-800">No Orphaned App Leftovers Detected</h4>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">
+              <h4 className="text-lg font-black text-slate-800 dark:text-slate-200">No Orphaned App Leftovers Detected</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
                 No uninstalled app configuration directories or leftover caches found.
               </p>
             </div>
@@ -593,7 +611,7 @@ export const AppsView: React.FC = () => {
               {leftovers.map((leftover) => {
                 const leftoverFormatted = formatBytes(leftover.total_bytes).formatted;
                 return (
-                  <div key={leftover.id} className="bg-white rounded-2xl p-5 border-2 border-slate-100 shadow-duo-sm flex flex-col justify-between">
+                  <div key={leftover.id} className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
@@ -601,13 +619,13 @@ export const AppsView: React.FC = () => {
                         </span>
                         <span className="text-xs font-mono font-bold text-rose-600">{leftoverFormatted}</span>
                       </div>
-                      <h4 className="font-black text-slate-800 text-sm">{leftover.app_name}</h4>
-                      <div className="text-[11px] font-mono text-slate-400 mt-1 truncate">
+                      <h4 className="font-black text-slate-800 dark:text-slate-200 text-sm">{leftover.app_name}</h4>
+                      <div className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-1 truncate">
                         Paths: {leftover.paths.join(", ")}
                       </div>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                      <span className="text-xs text-slate-500">{leftover.file_count} cached files</span>
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">{leftover.file_count} cached files</span>
                       <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Safe to Purge</span>
                     </div>
                   </div>
@@ -620,7 +638,7 @@ export const AppsView: React.FC = () => {
         <>
 
       {/* Category Tabs & Search Bar */}
-      <div className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-duo space-y-4">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
             {categories.map((cat) => (
@@ -631,7 +649,7 @@ export const AppsView: React.FC = () => {
                 className={`px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap transition-all ${
                   activeCategory === cat.id
                     ? "bg-slate-900 text-white shadow-duo-sm"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
                 }`}
               >
                 {cat.icon}
@@ -641,32 +659,32 @@ export const AppsView: React.FC = () => {
           </div>
 
           <div className="relative w-full md:w-64 shrink-0">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search apps or IDs..."
               aria-label="Search apps or IDs"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-miri-400"
+              className="w-full pl-9 pr-3 py-1.5 text-xs font-semibold bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-miri-400"
             />
           </div>
         </div>
 
         {/* Advanced Source Controls */}
         {viewMode === "power" && (
-          <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
             {isLinux && (
               <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-700">Linux Source:</span>
-                <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200">
+                <span className="font-bold text-slate-700 dark:text-slate-300">Linux Source:</span>
+                <div className="flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
                   <button
                     type="button"
                     onClick={() => setLinuxBackend("flatpak")}
                     className={`px-3 py-1 rounded-lg font-bold text-xs transition-all ${
                       linuxBackend === "flatpak"
-                        ? "bg-white text-indigo-700 shadow-sm"
-                        : "text-slate-500 hover:text-slate-800"
+                        ? "bg-white dark:bg-slate-800 text-indigo-700 shadow-sm"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
                     }`}
                   >
                     Flathub (Flatpak)
@@ -676,8 +694,8 @@ export const AppsView: React.FC = () => {
                     onClick={() => setLinuxBackend("dnf")}
                     className={`px-3 py-1 rounded-lg font-bold text-xs transition-all ${
                       linuxBackend === "dnf"
-                        ? "bg-white text-indigo-700 shadow-sm"
-                        : "text-slate-500 hover:text-slate-800"
+                        ? "bg-white dark:bg-slate-800 text-indigo-700 shadow-sm"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
                     }`}
                   >
                     DNF (RPM)
@@ -693,7 +711,7 @@ export const AppsView: React.FC = () => {
                 aria-label={isWindows ? "Custom WinGet ID" : "Custom Flatpak ID"}
                 value={customPackageId}
                 onChange={(e) => setCustomPackageId(e.target.value)}
-                className="px-3 py-1.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-400 w-48"
+                className="px-3 py-1.5 text-xs font-semibold bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-400 w-48"
               />
               <TactileButton
                 variant="secondary"
@@ -739,14 +757,14 @@ export const AppsView: React.FC = () => {
                 className={`card-duo flex flex-col justify-between transition-all cursor-pointer select-none p-5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-miri-400/60 ${
                   isSelected
                     ? "border-2 border-miri-400 bg-miri-50/25 shadow-duo"
-                    : "border-2 border-slate-100 hover:border-slate-200 shadow-duo-sm"
+                    : "border-2 border-slate-100 dark:border-slate-700/60 hover:border-slate-200 shadow-duo-sm"
                 }`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2.5">
                       <PixelCheckbox checked={isSelected} presentational />
-                      <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
+                      <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
                         {getCategoryIcon(app.category)}
                       </div>
                     </div>
@@ -756,20 +774,20 @@ export const AppsView: React.FC = () => {
                           <Check className="w-3 h-3" /> Installed
                         </span>
                       )}
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 border border-slate-200">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                         {app.category}
                       </span>
                     </div>
                   </div>
 
-                  <h4 className="font-black text-slate-900 text-base">{app.name}</h4>
-                  <p className="text-xs text-slate-500 font-semibold mt-1 leading-relaxed">
+                  <h4 className="font-black text-slate-900 dark:text-slate-100 text-base">{app.name}</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-1 leading-relaxed">
                     {app.description}
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="font-mono text-[11px] text-slate-400 truncate max-w-[170px]" title={pkgId || ""}>
+                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                  <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[170px]" title={pkgId || ""}>
                     {pkgId}
                   </span>
                   {app.is_installed && (
@@ -803,7 +821,7 @@ export const AppsView: React.FC = () => {
               <div className="font-black text-sm">
                 Ready to install {selectedAppIds.size} application{selectedAppIds.size > 1 ? "s" : ""}
               </div>
-              <div className="text-xs text-slate-400 font-semibold">
+              <div className="text-xs text-slate-400 dark:text-slate-500 font-semibold">
                 Installation via native {isWindows ? "WinGet" : linuxBackend === "dnf" ? "DNF" : "Flathub"}
               </div>
             </div>
@@ -813,7 +831,7 @@ export const AppsView: React.FC = () => {
             <button
               type="button"
               onClick={() => setSelectedAppIds(new Set())}
-              className="text-xs font-bold text-slate-400 hover:text-white px-3 py-2"
+              className="text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-white px-3 py-2"
             >
               Clear
             </button>

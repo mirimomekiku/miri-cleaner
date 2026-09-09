@@ -2,7 +2,7 @@
  * Battery health trend: a small localStorage record of daily battery health
  * samples, so Safety & Vitals can show a trend instead of a single
  * point-in-time reading. Purely a client-side history -- no backend
- * involvement, same convention as streakTracker.ts / weeklyDigest.ts.
+ * involvement.
  */
 
 const HISTORY_KEY = "miri-cleaner:battery-history";
