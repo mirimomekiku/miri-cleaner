@@ -157,6 +157,54 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// SMART disk health monitoring
+    DiskHealth {
+        /// Retry the read with elevated (root/admin) privileges
+        #[arg(long)]
+        elevated: bool,
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Filtered big-file finder (size/category/age/last-opened)
+    BigFiles {
+        /// Root directory to search (defaults to the home directory)
+        #[arg(long)]
+        path: Option<String>,
+        /// Minimum file size in megabytes (default: 50)
+        #[arg(long)]
+        min_mb: Option<u64>,
+        /// Comma-separated category filter: video, images, audio, documents, archives_installers, build_cache, other
+        #[arg(long)]
+        categories: Option<String>,
+        /// Only files last modified at least this many days ago
+        #[arg(long)]
+        modified_before_days: Option<u32>,
+        /// Only files last modified within this many days
+        #[arg(long)]
+        modified_within_days: Option<u32>,
+        /// Only files not opened in at least this many days
+        #[arg(long)]
+        unopened_for_days: Option<u32>,
+        /// Sort order: size (default), oldest_modified, oldest_accessed
+        #[arg(long)]
+        sort_by: Option<String>,
+        /// Maximum results to return (default: 100)
+        #[arg(long)]
+        limit: Option<usize>,
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Per-browser, per-data-type storage breakdown (cache/cookies/site storage)
+    BrowserData {
+        /// Move the given comma-separated paths to the trash instead of scanning
+        #[arg(long)]
+        clear: Option<String>,
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Launch the interactive terminal UI
     Tui,
 }
@@ -616,6 +664,111 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         rep.disk_health.filesystem, rep.disk_health.is_btrfs, rep.disk_health.free_gb, rep.disk_health.total_gb);
                     println!("Snapshots: {} total (Older than 14d: {}, Reclaimable: ~{} MB)",
                         rep.snapshot_compactor.total_snapshots, rep.snapshot_compactor.older_than_14d_count, rep.snapshot_compactor.estimated_reclaimable_mb);
+                }
+            }
+        }
+        Some(Commands::DiskHealth { elevated, json }) => {
+            let rep = if elevated {
+                DiskHealthMonitor::get_report_elevated()
+            } else {
+                DiskHealthMonitor::get_report()
+            };
+            if json {
+                println!("{}", serde_json::to_string_pretty(&rep)?);
+            } else if !rep.smartctl_installed {
+                println!("{}", "smartctl (smartmontools) isn't installed -- install it to see drive health here.".yellow());
+            } else if rep.disks.is_empty() {
+                println!("No SMART-capable disks were detected.");
+            } else {
+                println!("{}", "Drive Health (SMART):".bold());
+                for disk in &rep.disks {
+                    if !disk.available {
+                        println!("• {:<20} {}", disk.device, disk.unavailable_reason.as_deref().unwrap_or("Unavailable").yellow());
+                        continue;
+                    }
+                    let status = match disk.overall_status.as_str() {
+                        "healthy" => "[HEALTHY]".green(),
+                        "warning" => "[WARNING]".yellow(),
+                        "critical" => "[CRITICAL]".red(),
+                        _ => "[UNKNOWN]".normal(),
+                    };
+                    println!(
+                        "• {:<28} {}  Temp: {}  Power-on: {}",
+                        disk.model,
+                        status,
+                        disk.temperature_celsius.map(|t| format!("{t}°C")).unwrap_or_else(|| "?".to_string()),
+                        disk.power_on_hours.map(|h| format!("{h}h")).unwrap_or_else(|| "?".to_string()),
+                    );
+                }
+            }
+        }
+        Some(Commands::BigFiles { path, min_mb, categories, modified_before_days, modified_within_days, unopened_for_days, sort_by, limit, json }) => {
+            let query = BigFileQuery {
+                root_path: path,
+                min_size_bytes: min_mb.map(|mb| mb * 1024 * 1024),
+                categories: categories.map(|c| c.split(',').map(|s| s.trim().to_string()).collect()),
+                modified_before_days,
+                modified_within_days,
+                unopened_for_days,
+                sort_by,
+                limit,
+            };
+            let rep = BigFileFinder::find(query);
+            if json {
+                println!("{}", serde_json::to_string_pretty(&rep)?);
+            } else {
+                println!("{}", "Big File Finder:".bold());
+                if let Some(note) = &rep.access_time_note {
+                    println!("{}", note.yellow());
+                }
+                for f in &rep.files {
+                    println!(
+                        "• {:<44} {:>8.1} MB  [{}]  Modified {}",
+                        f.name,
+                        f.size_bytes as f64 / (1024.0 * 1024.0),
+                        f.category.cyan(),
+                        f.modified_time
+                    );
+                }
+                println!();
+                println!(
+                    "Total: {} match(es), {:.2} GB",
+                    rep.total_matched,
+                    rep.total_matched_bytes as f64 / (1024.0 * 1024.0 * 1024.0)
+                );
+            }
+        }
+        Some(Commands::BrowserData { clear, json }) => {
+            if let Some(paths_str) = clear {
+                let paths: Vec<String> = paths_str.split(',').map(|s| s.trim().to_string()).collect();
+                let (cleared, details) = move_paths_to_trash(&paths);
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+                        "success": cleared > 0,
+                        "details": details,
+                    }))?);
+                } else {
+                    println!("{}", details);
+                }
+            } else {
+                let rep = BrowserCleanupScanner::scan();
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&rep)?);
+                } else {
+                    println!("{}", "Browser Data Breakdown:".bold());
+                    for browser in &rep.browsers {
+                        println!("• {} ({})", browser.browser_name.bold(), browser.profile_name);
+                        for cat in &browser.categories {
+                            println!(
+                                "    └─ {:<20} {:>8.1} MB{}",
+                                cat.label,
+                                cat.size_bytes as f64 / (1024.0 * 1024.0),
+                                if cat.safe_to_clear { "".to_string() } else { format!("  {}", "[signs you out]".yellow()) }
+                            );
+                        }
+                    }
+                    println!();
+                    println!("Total: {:.2} GB across {} profile(s)", rep.total_bytes as f64 / (1024.0 * 1024.0 * 1024.0), rep.browsers.len());
                 }
             }
         }

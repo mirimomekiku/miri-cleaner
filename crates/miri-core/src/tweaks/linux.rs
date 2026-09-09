@@ -1,4 +1,5 @@
 use crate::elevation::ElevationManager;
+use crate::rules::RuleEngine;
 use crate::models::{
     DnsInfo, LinuxTweakCategory, LinuxTweakItem, RiskLevel, TweakActionReport,
 };
@@ -19,7 +20,7 @@ pub struct LinuxActionReport {
 impl LinuxTweaks {
     /// Prunes DNF / DNF5 package cache
     pub fn clean_dnf_cache() -> Result<LinuxActionReport, String> {
-        let (cmd, args) = if Command::new("which").arg("dnf5").output().map(|o| o.status.success()).unwrap_or(false) {
+        let (cmd, args) = if RuleEngine::command_exists("dnf5") {
             ("dnf5", vec!["clean", "all"])
         } else {
             ("dnf", vec!["clean", "all"])
@@ -116,8 +117,8 @@ impl LinuxTweaks {
 
     /// Prunes unused Flatpak runtimes and caches
     pub fn clean_flatpak_unused() -> Result<LinuxActionReport, String> {
-        if let Ok(which) = Command::new("which").arg("flatpak").output() {
-            if which.status.success() {
+        if RuleEngine::command_exists("flatpak") {
+            {
                 let output = Command::new("flatpak")
                     .args(["uninstall", "--unused", "-y"])
                     .output()

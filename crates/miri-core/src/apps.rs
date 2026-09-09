@@ -1,4 +1,5 @@
 use crate::elevation::ElevationManager;
+use crate::rules::RuleEngine;
 use crate::models::{AppCategory, AppDefinition, OsType, TweakActionReport};
 use serde::{Deserialize, Serialize};
 use std::process::Command;
@@ -615,7 +616,7 @@ impl AppManager {
                         continue;
                     }
                     if let Some(ref dnf_pkg) = app.linux_dnf_package {
-                        if Command::new("which").arg(dnf_pkg).output().map(|o| o.status.success()).unwrap_or(false) {
+                        if RuleEngine::command_exists(dnf_pkg) {
                             app.is_installed = true;
                         }
                     }

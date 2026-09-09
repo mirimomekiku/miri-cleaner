@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;
+mod fs_ops;
 
 fn main() {
     tauri::Builder::default()
@@ -37,7 +38,16 @@ fn main() {
             commands::reflink_duplicates,
             commands::get_vitals,
             commands::set_power_profile,
-            commands::compact_snapshots
+            commands::compact_snapshots,
+            commands::get_disk_health,
+            commands::get_disk_health_elevated,
+            commands::find_big_files,
+            commands::scan_browser_data,
+            commands::show_notification,
+            fs_ops::delete_path,
+            fs_ops::reveal_in_file_manager,
+            fs_ops::get_file_properties,
+            fs_ops::clear_browser_data
         ])
         .run(tauri::generate_context!())
         .expect("error while running Miri Cleaner desktop application");

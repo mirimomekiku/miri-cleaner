@@ -1,3 +1,4 @@
+use crate::rules::RuleEngine;
 use crate::audit::AuditJournal;
 use crate::models::{OsType, SnapshotStatus};
 use chrono::Utc;
@@ -13,8 +14,8 @@ impl SnapshotManager {
         match os {
             OsType::Linux => {
                 // 1. Check Snapper (Btrfs on Fedora / openSUSE)
-                if let Ok(output) = Command::new("which").arg("snapper").output() {
-                    if output.status.success() {
+                if RuleEngine::command_exists("snapper") {
+                    {
                         let list_out = Command::new("snapper").arg("list").output().ok();
                         let last = list_out.and_then(|o| {
                             let s = String::from_utf8_lossy(&o.stdout);
@@ -31,8 +32,8 @@ impl SnapshotManager {
                 }
 
                 // 2. Check Timeshift
-                if let Ok(output) = Command::new("which").arg("timeshift").output() {
-                    if output.status.success() {
+                if RuleEngine::command_exists("timeshift") {
+                    {
                         return SnapshotStatus {
                             is_available: true,
                             provider_name: "Timeshift".to_string(),
@@ -78,8 +79,8 @@ impl SnapshotManager {
                 // Try snapper first. `--print-number` makes snapper emit just the
                 // integer snapshot number on stdout, which is the only thing that
                 // can later be referenced for a scoped `snapper undochange` rollback.
-                if let Ok(snapper_which) = Command::new("which").arg("snapper").output() {
-                    if snapper_which.status.success() {
+                if RuleEngine::command_exists("snapper") {
+                    {
                         let output = Command::new("snapper")
                             .arg("create")
                             .arg("-d")
@@ -101,8 +102,8 @@ impl SnapshotManager {
                 }
 
                 // Try timeshift
-                if let Ok(ts_which) = Command::new("which").arg("timeshift").output() {
-                    if ts_which.status.success() {
+                if RuleEngine::command_exists("timeshift") {
+                    {
                         let output = Command::new("timeshift")
                             .arg("--create")
                             .arg("--comments")

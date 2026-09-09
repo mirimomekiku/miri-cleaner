@@ -1,3 +1,5 @@
+#[cfg(target_os = "linux")]
+use crate::rules::RuleEngine;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -239,7 +241,7 @@ impl SystemVitals {
     fn read_snapshot_compactor() -> SnapshotCompactorInfo {
         #[cfg(target_os = "linux")]
         {
-            let has_snapper = Command::new("which").arg("snapper").output().map(|o| o.status.success()).unwrap_or(false);
+            let has_snapper = RuleEngine::command_exists("snapper");
             if has_snapper {
                 if let Ok(out) = Command::new("snapper").args(["list", "-t", "single"]).output() {
                     if out.status.success() {
@@ -258,7 +260,7 @@ impl SystemVitals {
                 }
             }
 
-            let has_timeshift = Command::new("which").arg("timeshift").output().map(|o| o.status.success()).unwrap_or(false);
+            let has_timeshift = RuleEngine::command_exists("timeshift");
             if has_timeshift {
                 if let Ok(out) = Command::new("timeshift").arg("--list").output() {
                     if out.status.success() {
@@ -345,7 +347,7 @@ impl SystemVitals {
         {
             let cutoff = older_than_days as i64;
 
-            let has_snapper = Command::new("which").arg("snapper").output().map(|o| o.status.success()).unwrap_or(false);
+            let has_snapper = RuleEngine::command_exists("snapper");
             if has_snapper {
                 let list_out = Command::new("snapper").args(["list", "-t", "single"]).output()
                     .map_err(|e| format!("Failed to list snapper snapshots: {}", e))?;
@@ -379,7 +381,7 @@ impl SystemVitals {
                 };
             }
 
-            let has_timeshift = Command::new("which").arg("timeshift").output().map(|o| o.status.success()).unwrap_or(false);
+            let has_timeshift = RuleEngine::command_exists("timeshift");
             if has_timeshift {
                 let list_out = Command::new("timeshift").arg("--list").output()
                     .map_err(|e| format!("Failed to list Timeshift snapshots: {}", e))?;

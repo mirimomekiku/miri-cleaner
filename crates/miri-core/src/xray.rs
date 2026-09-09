@@ -36,13 +36,11 @@ pub struct SpaceXRay;
 
 impl SpaceXRay {
     pub fn scan_path(target_path: Option<&str>) -> XRayReport {
-        let root = target_path
-            .map(|p| RuleEngine::expand_path(p))
-            .unwrap_or_else(|| {
-                std::env::var("HOME")
-                    .or_else(|_| std::env::var("USERPROFILE"))
-                    .unwrap_or_else(|_| ".".to_string())
-            });
+        let root = target_path.map(|p| RuleEngine::expand_path(p)).unwrap_or_else(|| {
+            RuleEngine::home_dir()
+                .map(|h| h.to_string_lossy().to_string())
+                .unwrap_or_else(|| ".".to_string())
+        });
 
         let mut total_bytes = 0u64;
         let mut total_files = 0u64;
@@ -151,7 +149,10 @@ impl SpaceXRay {
         }
     }
 
-    fn categorize_file(path: &Path) -> String {
+    /// Classifies a file by extension/path into a coarse category bucket.
+    /// Shared with `big_files.rs` so the finder and the storage breakdown
+    /// agree on what "video", "documents", etc. mean.
+    pub fn categorize_file(path: &Path) -> String {
         let ext = path
             .extension()
             .and_then(|e| e.to_str())
