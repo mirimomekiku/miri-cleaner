@@ -9,20 +9,21 @@ export default {
     extend: {
       colors: {
         miri: {
-          50: '#FFF5F5',
-          100: '#FFEBEB',
-          200: '#FFD6D6',
-          300: '#FFB8B8',
-          400: '#FF9D9D', // Main brand hex
-          500: '#FF7B7B',
-          600: '#F05252',
-          700: '#D62828',
-          bg: '#FFF9F8',
+          50: 'rgb(var(--miri-50-rgb, 255 245 245) / <alpha-value>)',
+          100: 'rgb(var(--miri-100-rgb, 255 235 235) / <alpha-value>)',
+          200: 'rgb(var(--miri-200-rgb, 255 214 214) / <alpha-value>)',
+          300: 'rgb(var(--miri-300-rgb, 255 184 184) / <alpha-value>)',
+          400: 'rgb(var(--miri-400-rgb, 255 157 157) / <alpha-value>)',
+          500: 'rgb(var(--miri-500-rgb, 255 123 123) / <alpha-value>)',
+          600: 'rgb(var(--miri-600-rgb, 240 82 82) / <alpha-value>)',
+          700: 'rgb(var(--miri-700-rgb, 214 40 40) / <alpha-value>)',
+          bg: 'var(--miri-bg, #FFF9F8)',
           card: '#FFFFFF',
           dark: '#2D2327',
           mint: '#58CC02', // Duolingo green
           yellow: '#FFC800',
           blue: '#1CB0F6',
+          purple: '#CE82FF',
         }
       },
       fontFamily: {

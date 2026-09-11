@@ -24,7 +24,7 @@ export const TactileButton: React.FC<TactileButtonProps> = ({
 
   const variants = {
     primary:
-      "bg-miri-400 hover:bg-miri-500 text-slate-900 dark:text-slate-100 font-black shadow-[0_4px_0_0_#E05B5B] active:shadow-[0_1px_0_0_#E05B5B]",
+      "bg-miri-400 hover:bg-miri-500 text-slate-900 font-black shadow-[0_4px_0_0_var(--miri-shadow,#E05B5B)] active:shadow-[0_1px_0_0_var(--miri-shadow,#E05B5B)]",
     success:
       "bg-miri-mint hover:opacity-95 text-slate-950 font-black shadow-[0_4px_0_0_#047857] active:shadow-[0_1px_0_0_#047857]",
     danger:

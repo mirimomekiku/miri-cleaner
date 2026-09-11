@@ -16,23 +16,21 @@ import { LogDrawer } from "./components/layout/LogDrawer";
 import { DangerConfirmationModal } from "./components/layout/DangerConfirmationModal";
 import { bridge } from "./lib/bridge";
 import { formatBytes } from "./lib/formatters";
-import { applyThemeClass } from "./lib/theme";
+import { applyTheme } from "./lib/theme";
 import { notify } from "./lib/notify";
 
 export const App: React.FC = () => {
-  const { viewMode, themeMode, settings, activeTab, setScanResult, setIsScanning, addLog } = useCleanerStore();
+  const { viewMode, themeMode, colorScheme, settings, activeTab, setScanResult, setIsScanning, addLog } = useCleanerStore();
 
-  // Keeps "system" mode honest if the OS theme changes while the app is
-  // open, and re-applies on every themeMode change (redundant with main.tsx's
-  // pre-paint application on first mount, but the only path for later ones).
+  // Keeps "system" mode and playful color scheme honest if OS theme or scheme changes
   useEffect(() => {
-    applyThemeClass(themeMode);
+    applyTheme(themeMode, colorScheme);
     if (themeMode !== "system" || typeof window.matchMedia !== "function") return;
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = () => applyThemeClass(themeMode);
+    const handleChange = () => applyTheme(themeMode, colorScheme);
     mql.addEventListener("change", handleChange);
     return () => mql.removeEventListener("change", handleChange);
-  }, [themeMode]);
+  }, [themeMode, colorScheme]);
 
   const [showSplash, setShowSplash] = useState(true);
   // Only ever computed once: reading localStorage on the initial render
@@ -74,7 +72,7 @@ export const App: React.FC = () => {
               "Low disk space",
               `Only ${formatBytes(free_disk_space).formatted} free (${freePercent.toFixed(1)}% of ${
                 formatBytes(total_disk_space).formatted
-              }). Open Miri Cleaner to free up space.`
+              }). Open MiriCleaner to free up space.`
             );
           }
         }

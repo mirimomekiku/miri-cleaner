@@ -4,8 +4,8 @@ import { Mascot } from "../ui/Mascot";
 import { PixelBadge } from "../ui/PixelBadge";
 import { PixelCheckbox } from "../ui/PixelCheckbox";
 import { TactileButton } from "../ui/TactileButton";
-import { Sun, Moon, MonitorCog, Bell, Trash2, RotateCcw } from "lucide-react";
-import { ThemeMode } from "../../lib/theme";
+import { Sun, Moon, MonitorCog, Bell, Trash2, RotateCcw, Palette, Check } from "lucide-react";
+import { ThemeMode, COLOR_SCHEMES } from "../../lib/theme";
 import { NotificationSettings } from "../../lib/settings";
 import { HeroCard } from "../ui/HeroCard";
 
@@ -42,7 +42,8 @@ const UNUSED_APP_OPTIONS = [30, 60, 90, 180, 365];
 const LOW_DISK_OPTIONS = [5, 10, 15, 20];
 
 export const SettingsView: React.FC = () => {
-  const { themeMode, setThemeMode, settings, updateSettings, openDangerModal } = useCleanerStore();
+  const { themeMode, setThemeMode, colorScheme, setColorScheme, settings, updateSettings, openDangerModal } =
+    useCleanerStore();
 
   const handleResetAppData = () => {
     openDangerModal({
@@ -78,25 +79,114 @@ export const SettingsView: React.FC = () => {
       />
 
       {/* Appearance */}
-      <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm space-y-4">
-        <h3 className="text-base font-black text-slate-900 dark:text-slate-100">Appearance</h3>
-        <div className="flex flex-wrap gap-2">
-          {THEME_OPTIONS.map((opt) => (
-            <button
-              key={opt.mode}
-              type="button"
-              onClick={() => setThemeMode(opt.mode)}
-              aria-pressed={themeMode === opt.mode}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400 ${
-                themeMode === opt.mode
-                  ? "bg-miri-100 dark:bg-miri-400/20 border-miri-300 text-miri-700 dark:text-miri-300"
-                  : "bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
-              }`}
-            >
-              {opt.icon}
-              {opt.label}
-            </button>
-          ))}
+      <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo-sm space-y-6">
+        <div>
+          <h3 className="text-base font-black text-slate-900 dark:text-slate-100 mb-1">Appearance</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+            Customize your display surface and playful theme personality.
+          </p>
+        </div>
+
+        {/* Surface Mode */}
+        <div className="space-y-2">
+          <label className="text-[11px] font-black uppercase tracking-wider font-pixel text-slate-500 dark:text-slate-400">
+            Surface Mode
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {THEME_OPTIONS.map((opt) => (
+              <button
+                key={opt.mode}
+                type="button"
+                onClick={() => setThemeMode(opt.mode)}
+                aria-pressed={themeMode === opt.mode}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400 ${
+                  themeMode === opt.mode
+                    ? "bg-miri-100 dark:bg-miri-400/20 border-miri-300 text-miri-700 dark:text-miri-300 shadow-duo-sm"
+                    : "bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                }`}
+              >
+                {opt.icon}
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Playful Color Schemes */}
+        <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-700/60">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-black uppercase tracking-wider font-pixel text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <Palette className="w-3.5 h-3.5 text-miri-400" />
+              <span>Playful Color Schemes</span>
+            </label>
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
+              5 colorful palettes
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {COLOR_SCHEMES.map((scheme) => {
+              const isSelected = colorScheme === scheme.id;
+              return (
+                <button
+                  key={scheme.id}
+                  type="button"
+                  onClick={() => setColorScheme(scheme.id)}
+                  aria-pressed={isSelected}
+                  className={`group relative flex flex-col justify-between p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miri-400 ${
+                    isSelected
+                      ? "bg-white dark:bg-slate-800 border-miri-400 shadow-duo lg:scale-[1.02]"
+                      : "bg-slate-50/80 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl select-none" role="img" aria-label={scheme.name}>
+                        {scheme.emoji}
+                      </span>
+                      <span className="text-sm font-black text-slate-900 dark:text-slate-100">
+                        {scheme.name}
+                      </span>
+                    </div>
+                    {isSelected && (
+                      <span
+                        className="w-5 h-5 rounded-full text-slate-950 flex items-center justify-center text-xs font-black shadow-xs"
+                        style={{ backgroundColor: scheme.primaryHex }}
+                      >
+                        <Check className="w-3 h-3 stroke-[3]" />
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 leading-tight mb-3">
+                    {scheme.description}
+                  </p>
+
+                  {/* Swatch Strip */}
+                  <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+                    <span
+                      className="w-4 h-4 rounded-full border border-black/10 shadow-xs"
+                      style={{ backgroundColor: scheme.primaryHex }}
+                      title={`Primary: ${scheme.primaryHex}`}
+                    />
+                    <span
+                      className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-xs"
+                      style={{ backgroundColor: scheme.accentHex }}
+                      title={`Accent: ${scheme.accentHex}`}
+                    />
+                    <span
+                      className="w-3 h-3 rounded-full border border-black/10 shadow-xs"
+                      style={{ backgroundColor: scheme.shadowHex }}
+                      title={`Shadow: ${scheme.shadowHex}`}
+                    />
+                    <span className="text-[10px] font-pixel text-slate-400 dark:text-slate-500 ml-auto">
+                      {scheme.primaryHex}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

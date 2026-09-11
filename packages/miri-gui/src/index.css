@@ -2,10 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --miri-brand: #FF9D9D;
+  --miri-accent: #FF7B7B;
+  --miri-shadow: #E05B5B;
+  --miri-ring: rgba(255, 157, 157, 0.6);
+  --miri-bg: #FFF9F8;
+  --miri-50-rgb: 255 245 245;
+  --miri-100-rgb: 255 235 235;
+  --miri-200-rgb: 255 214 214;
+  --miri-300-rgb: 255 184 184;
+  --miri-400-rgb: 255 157 157;
+  --miri-500-rgb: 255 123 123;
+  --miri-600-rgb: 240 82 82;
+  --miri-700-rgb: 214 40 40;
+}
+
 @layer components {
   /* Duolingo-style 3D tactile buttons */
   .btn-duo-primary {
-    @apply bg-miri-400 hover:bg-miri-500 text-slate-900 font-black px-6 py-3 rounded-2xl shadow-[0_4px_0_0_#E05B5B] active:shadow-[0_1px_0_0_#E05B5B] active:translate-y-1 transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-miri-400/60;
+    @apply bg-miri-400 hover:bg-miri-500 text-slate-900 font-black px-6 py-3 rounded-2xl active:translate-y-1 transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-miri-400/60;
+    box-shadow: 0 4px 0 0 var(--miri-shadow, #E05B5B);
+  }
+  .btn-duo-primary:active {
+    box-shadow: 0 1px 0 0 var(--miri-shadow, #E05B5B);
   }
   
   .btn-duo-success {
@@ -304,7 +324,7 @@
 
 /* Reduced Motion for Accessibility */
 @media (prefers-reduced-motion: reduce) {
-  .animate-pulse, .animate-bounce, .animate-ping, .animate-spin, .animate-sweep,
+  .animate-pulse, .animate-ping, .animate-spin, .animate-sweep,
   .animate-mascot-breathe, .animate-mascot-waddle, .animate-mane-flutter {
     animation: none !important;
   }
