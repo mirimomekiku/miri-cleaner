@@ -1,6 +1,14 @@
 import { create } from "zustand";
 import { CleanExecutionResult, CleanTarget, RiskLevel, ScanResult } from "../types";
-import { applyThemeClass, getStoredThemeMode, storeThemeMode, ThemeMode } from "../lib/theme";
+import {
+  applyTheme,
+  getStoredColorScheme,
+  getStoredThemeMode,
+  storeColorScheme,
+  storeThemeMode,
+  ThemeMode,
+  ColorScheme,
+} from "../lib/theme";
 import { AppSettings, getSettings, saveSettings } from "../lib/settings";
 
 export type ViewMode = "casual" | "power";
@@ -18,10 +26,10 @@ export interface DangerModalConfig {
   targets?: CleanTarget[];
   requiresElevation: boolean;
   riskLevel: RiskLevel;
-  /** The word the user must type to confirm this specific action (defaults to
-   * "CLEAN" when omitted). Type-to-confirm only works as a safety mechanism
-   * when the word matches the actual verb -- reusing "CLEAN" for every kind
-   * of confirmed action (installs, tweaks, DNS changes, rollbacks) trains
+  /** If set, the confirm button stays disabled until the user types this
+   * exact string into an input. Reserved for irreversible, system-critical
+   * actions (like resetting all app data) where a misclick would be painful;
+   * ordinary high-risk cleans rely on consequence previews instead of forcing
    * users to type a meaningless string regardless of what it does. */
   confirmWord?: string;
   /** May return a Promise; the modal awaits it and keeps itself open with
@@ -33,6 +41,7 @@ export interface DangerModalConfig {
 interface CleanerState {
   viewMode: ViewMode;
   themeMode: ThemeMode;
+  colorScheme: ColorScheme;
   settings: AppSettings;
   activeTab: TabId;
   scanResult: ScanResult | null;
@@ -46,6 +55,7 @@ interface CleanerState {
 
   setViewMode: (mode: ViewMode) => void;
   setThemeMode: (mode: ThemeMode) => void;
+  setColorScheme: (scheme: ColorScheme) => void;
   updateSettings: (patch: Partial<AppSettings>) => void;
   setActiveTab: (tab: TabId) => void;
   setScanResult: (res: ScanResult | null) => void;
@@ -62,9 +72,10 @@ interface CleanerState {
   clearLogs: () => void;
 }
 
-export const useCleanerStore = create<CleanerState>((set) => ({
+export const useCleanerStore = create<CleanerState>((set, get) => ({
   viewMode: "casual",
   themeMode: getStoredThemeMode(),
+  colorScheme: getStoredColorScheme(),
   settings: getSettings(),
   activeTab: "dashboard",
   scanResult: null,
@@ -89,8 +100,13 @@ export const useCleanerStore = create<CleanerState>((set) => ({
   setViewMode: (mode) => set({ viewMode: mode }),
   setThemeMode: (mode) => {
     storeThemeMode(mode);
-    applyThemeClass(mode);
+    applyTheme(mode, get().colorScheme);
     set({ themeMode: mode });
+  },
+  setColorScheme: (scheme) => {
+    storeColorScheme(scheme);
+    applyTheme(get().themeMode, scheme);
+    set({ colorScheme: scheme });
   },
   updateSettings: (patch) =>
     set((state) => {

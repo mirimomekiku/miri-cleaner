@@ -32,14 +32,14 @@ export const Mascot: React.FC<MascotProps> = ({ mood = "happy", size = "md" }) =
           <>
             <rect x="10" y="14" width="6" height="6" fill="#FFC800" className="animate-pulse" />
             <rect x="82" y="18" width="8" height="8" fill="#58CC02" className="animate-pulse" />
-            <rect x="86" y="66" width="5" height="5" fill="#FF9D9D" />
+            <rect x="86" y="66" width="5" height="5" fill="var(--miri-brand, #FF9D9D)" />
           </>
         )}
 
         {/* Tail, swishing gently behind the body */}
         <path
           d="M83 62 Q94 58 92 72 Q90 84 78 82"
-          stroke="#E05B5B"
+          stroke="var(--miri-shadow, #E05B5B)"
           strokeWidth="4"
           strokeLinecap="round"
           fill="none"
@@ -71,13 +71,13 @@ export const Mascot: React.FC<MascotProps> = ({ mood = "happy", size = "md" }) =
               ? "M28 22 Q18 30 22 44 Q14 50 20 62 Q12 66 18 76 L30 70 Q24 58 30 50 Q22 40 32 30 Z"
               : "M30 22 Q22 32 25 46 Q19 56 24 68 L32 64 Q27 52 31 42 Q26 34 34 28 Z"
           }
-          fill="#FF9D9D"
-          stroke="#E05B5B"
+          fill="var(--miri-brand, #FF9D9D)"
+          stroke="var(--miri-shadow, #E05B5B)"
           strokeWidth="3.5"
           strokeLinejoin="round"
           className={mood === "celebrate" ? "animate-mane-flutter" : ""}
         />
-        <rect x="46" y="12" width="8" height="14" rx="4" fill="#FF9D9D" stroke="#E05B5B" strokeWidth="3" />
+        <rect x="46" y="12" width="8" height="14" rx="4" fill="var(--miri-brand, #FF9D9D)" stroke="var(--miri-shadow, #E05B5B)" strokeWidth="3" />
 
         {/* Head: rounded horse head/muzzle silhouette */}
         <path
@@ -128,8 +128,8 @@ export const Mascot: React.FC<MascotProps> = ({ mood = "happy", size = "md" }) =
         )}
 
         {/* Rosy cheeks */}
-        <rect x="29" y="53" width="6" height="3" fill="#FFA5A5" rx="1.5" />
-        <rect x="65" y="53" width="6" height="3" fill="#FFA5A5" rx="1.5" />
+        <rect x="29" y="53" width="6" height="3" fill="var(--miri-brand, #FFA5A5)" opacity="0.6" rx="1.5" />
+        <rect x="65" y="53" width="6" height="3" fill="var(--miri-brand, #FFA5A5)" opacity="0.6" rx="1.5" />
 
         {/* Nostrils */}
         <ellipse cx="45" cy="68" rx="1.6" ry="2.2" fill="#C98D3A" opacity="0.6" />
@@ -137,7 +137,7 @@ export const Mascot: React.FC<MascotProps> = ({ mood = "happy", size = "md" }) =
 
         {/* Mouth */}
         {mood === "celebrate" ? (
-          <path d="M43 74 Q50 82 57 74" stroke="#2D2327" strokeWidth="3" strokeLinecap="round" fill="#FF7B7B" />
+          <path d="M43 74 Q50 82 57 74" stroke="#2D2327" strokeWidth="3" strokeLinecap="round" fill="var(--miri-accent, #FF7B7B)" />
         ) : mood === "alert" ? (
           <circle cx="50" cy="76" r="3" fill="#2D2327" />
         ) : (
