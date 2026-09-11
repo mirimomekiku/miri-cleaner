@@ -31,17 +31,17 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onDone }) => {
         exiting ? "animate-splash-exit" : ""
       }`}
       role="status"
-      aria-label="Miri Cleaner is starting up"
+      aria-label="MiriCleaner is starting up"
     >
       <div className="animate-mascot-waddle">
         <Mascot mood="happy" size="lg" />
       </div>
       <div className="flex flex-col items-center gap-1.5">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Miri Cleaner</h1>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">MiriCleaner</h1>
         </div>
         <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest font-pixel">
-          Safe &amp; Playful System Cleanup
+          System Maintenance &amp; Optimization
         </p>
       </div>
     </div>

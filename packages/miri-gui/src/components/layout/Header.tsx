@@ -37,15 +37,12 @@ export const Header: React.FC = () => {
         <div className="min-w-0">
           <div className="flex items-center gap-2 min-w-0">
             <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-1.5 truncate">
-              Miri Cleaner
+              MiriCleaner
             </h1>
             <span className="hidden sm:inline">
               <PixelBadge label={`v${__APP_VERSION__}`} variant="pink" />
             </span>
           </div>
-          <p className="hidden sm:block text-xs font-semibold text-slate-400 dark:text-slate-500 truncate">
-            Safe & Playful System Cleanup
-          </p>
         </div>
       </div>
 
