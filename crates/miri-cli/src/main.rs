@@ -85,12 +85,15 @@ enum Commands {
         /// Specific audit ID to rollback
         #[arg(long)]
         id: Option<String>,
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Manage applications (App Downloader for Fedora & Windows)
     Apps {
-        /// Subcommand: 'list', 'install', 'uninstall'
+        /// Subcommand: 'list', 'install', 'uninstall', 'usage'
         action: String,
-        /// App IDs to install (comma-separated)
+        /// App IDs to install or uninstall (comma-separated)
         #[arg(long)]
         ids: Option<String>,
         /// App ID to uninstall
@@ -99,6 +102,18 @@ enum Commands {
         /// Preferred package backend: 'flatpak', 'dnf', 'winget'
         #[arg(long)]
         backend: Option<String>,
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Manage system safety checkpoints and snapshots
+    Snapshot {
+        /// Subcommand: 'create', 'status'
+        #[arg(default_value = "status")]
+        action: String,
+        /// Description for the snapshot checkpoint
+        #[arg(long, default_value = "manual-checkpoint")]
+        description: String,
         /// Output results as JSON
         #[arg(long)]
         json: bool,
@@ -490,15 +505,54 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("{}: {}", r.name, r.message);
             }
         }
-        Some(Commands::Rollback { last: _last, id: _id }) => {
-            let entries = AuditJournal::load_entries();
-            if entries.is_empty() {
-                println!("No audit history entries found.");
+        Some(Commands::Rollback { last, id, json }) => {
+            if last || id.is_some() {
+                let target_id = if let Some(ref i) = id {
+                    i.clone()
+                } else {
+                    let entries = AuditJournal::load_entries();
+                    match entries.into_iter().rev().find(|e| !e.is_rolled_back) {
+                        Some(e) => e.id,
+                        None => {
+                            let msg = "No eligible transactions found to rollback.";
+                            if json {
+                                println!("{}", serde_json::json!({ "success": false, "error": msg }));
+                            } else {
+                                eprintln!("{}", msg);
+                            }
+                            return Ok(());
+                        }
+                    }
+                };
+                match SnapshotManager::rollback_snapshot(&target_id) {
+                    Ok(msg) => {
+                        if json {
+                            println!("{}", serde_json::json!({ "success": true, "message": msg, "target_id": target_id }));
+                        } else {
+                            println!("{}", msg);
+                        }
+                    }
+                    Err(e) => {
+                        if json {
+                            println!("{}", serde_json::json!({ "success": false, "error": e }));
+                        } else {
+                            eprintln!("Rollback error: {}", e);
+                        }
+                        std::process::exit(1);
+                    }
+                }
             } else {
-                println!("Audit History (Total: {}):", entries.len());
-                for e in entries.iter().take(5) {
-                    println!("• {} | {} | Freed: {:.1} MB | Snapshot: {:?}", 
-                        e.id.yellow(), e.timestamp, e.freed_bytes as f64 / (1024.0 * 1024.0), e.snapshot_id);
+                let entries = AuditJournal::load_entries();
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&entries)?);
+                } else if entries.is_empty() {
+                    println!("No audit history entries found.");
+                } else {
+                    println!("Audit History (Total: {}):", entries.len());
+                    for e in entries.iter().take(5) {
+                        println!("• {} | {} | Freed: {:.1} MB | Snapshot: {:?}", 
+                            e.id.yellow(), e.timestamp, e.freed_bytes as f64 / (1024.0 * 1024.0), e.snapshot_id);
+                    }
                 }
             }
         }
@@ -514,6 +568,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     for app in catalog {
                         let status = if app.is_installed { "[INSTALLED]".green() } else { "[AVAILABLE]".yellow() };
                         println!("• {:<28} {:<16} {}", app.name.bold(), format!("{:?}", app.category).cyan(), status);
+                    }
+                }
+            }
+            "usage" => {
+                let usage = AppManager::get_installed_app_usage();
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&usage)?);
+                } else {
+                    println!("{}", "╭───────────────────────────────────────────────────╮".truecolor(255, 157, 157));
+                    println!("│ {} │", " (•◡•) INSTALLED APPS USAGE TRACKING ".bold().truecolor(255, 157, 157));
+                    println!("{}", "╰───────────────────────────────────────────────────╯".truecolor(255, 157, 157));
+                    for u in usage {
+                        let tag = if u.last_used_days_ago >= 90 {
+                            format!("{} days unused", u.last_used_days_ago).red()
+                        } else {
+                            format!("{} days unused", u.last_used_days_ago).green()
+                        };
+                        println!("• {:<28} {:<16} {}", u.name.bold(), format!("{:.1} MB", u.install_size_bytes as f64 / (1024.0 * 1024.0)).cyan(), tag);
                     }
                 }
             }
@@ -536,16 +608,73 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             "uninstall" => {
-                let target_id = id.or_else(|| ids.and_then(|s| s.split(',').next().map(|s| s.trim().to_string())))
-                    .unwrap_or_default();
-                let report = AppManager::uninstall_app(&target_id)?;
-                if json {
-                    println!("{}", serde_json::to_string_pretty(&report)?);
+                let target_ids: Vec<String> = if let Some(ref id_str) = ids {
+                    id_str.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect()
+                } else if let Some(ref single_id) = id {
+                    vec![single_id.clone()]
                 } else {
-                    println!("• {}: {}", report.name, if report.succeeded { "OK".green() } else { report.details.red() });
+                    vec![]
+                };
+
+                if target_ids.is_empty() {
+                    eprintln!("Please specify app ID(s) via --id or --ids");
+                    return Ok(());
+                }
+
+                let mut reports = Vec::new();
+                for tid in target_ids {
+                    match AppManager::uninstall_app(&tid) {
+                        Ok(rep) => reports.push(rep),
+                        Err(e) => reports.push(miri_core::models::TweakActionReport {
+                            name: format!("Uninstall {}", tid),
+                            succeeded: false,
+                            details: e.to_string(),
+                        }),
+                    }
+                }
+
+                if json {
+                    if reports.len() == 1 && id.is_some() && ids.is_none() {
+                        println!("{}", serde_json::to_string_pretty(&reports[0])?);
+                    } else {
+                        println!("{}", serde_json::to_string_pretty(&reports)?);
+                    }
+                } else {
+                    for r in reports {
+                        println!("• {}: {}", r.name, if r.succeeded { "OK".green() } else { r.details.red() });
+                    }
                 }
             }
             _ => eprintln!("Unknown apps action: {}", action),
+        },
+        Some(Commands::Snapshot { action, description, json }) => match action.as_str() {
+            "create" => {
+                match SnapshotManager::create_safety_checkpoint(&description) {
+                    Ok(snapshot_id) => {
+                        if json {
+                            println!("{}", serde_json::to_string_pretty(&snapshot_id)?);
+                        } else {
+                            println!("Snapshot checkpoint created: {}", snapshot_id.green());
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to create snapshot: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            }
+            "status" => {
+                let status = SnapshotManager::get_status();
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&status)?);
+                } else {
+                    println!("Snapshot Status:");
+                    println!("  Available: {}", if status.is_available { "YES".green() } else { "NO".red() });
+                    println!("  Provider:  {}", status.provider_name.cyan());
+                    println!("  Details:   {}", status.details);
+                }
+            }
+            _ => eprintln!("Unknown snapshot action: {}", action),
         },
         Some(Commands::Xray { path, json }) => {
             let report = SpaceXRay::scan_path(path.as_deref());

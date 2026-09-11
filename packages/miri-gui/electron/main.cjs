@@ -14,15 +14,28 @@ function findBinary() {
     "miri-cleaner",
   ];
 
+  let bestPath = null;
+  let bestMtime = 0;
   for (const p of possiblePaths) {
     if (fs.existsSync(p)) {
-      return p;
+      try {
+        const stats = fs.statSync(p);
+        if (stats.mtimeMs > bestMtime) {
+          bestMtime = stats.mtimeMs;
+          bestPath = p;
+        }
+      } catch {
+        if (!bestPath) bestPath = p;
+      }
     }
   }
-  return "miri-cleaner";
+  return bestPath || "miri-cleaner";
 }
 
 const BINARY_PATH = findBinary();
+
+// Suppress dev-mode CSP advisory in terminal (real CSP is enforced via index.html)
+process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
 
 if (process.argv.includes("--disable-gpu") || process.env.MIRI_DISABLE_GPU === "1") {
   app.disableHardwareAcceleration();
@@ -38,7 +51,7 @@ function createWindow() {
     height: 720,
     minWidth: 880,
     minHeight: 620,
-    title: "Miri Cleaner (•◡•)",
+    title: "MiriCleaner",
     icon: path.join(__dirname, "../public/mascot-icon.svg"),
     backgroundColor: "#FFF9F8",
     show: false,
@@ -55,8 +68,12 @@ function createWindow() {
     console.error(`[Miri GUI] Failed to load: ${errorCode} - ${errorDescription}`);
   });
 
-  mainWindow.webContents.on("console-message", (_event, level, message, line, sourceId) => {
-    console.log(`[Renderer] ${message} (${sourceId}:${line})`);
+  // Modern Electron WebContentsConsoleMessageEventParams signature
+  mainWindow.webContents.on("console-message", (event) => {
+    const msg = event?.message ?? "";
+    const src = event?.sourceId ?? "";
+    const line = event?.lineNumber ?? event?.line ?? 0;
+    console.log(`[Renderer] ${msg} (${src}:${line})`);
   });
 
   mainWindow.once("ready-to-show", () => {
@@ -170,6 +187,33 @@ ipcMain.handle("get_snapshot_status", async () => {
     last_snapshot: "pre-cleanup-active",
     details: "Zero-trust safety snapshots verified before destructive operations.",
   };
+});
+
+ipcMain.handle("create_manual_snapshot", async () => {
+  return new Promise((resolve, reject) => {
+    execFile(BINARY_PATH, ["snapshot", "create", "--json"], (err, stdout, stderr) => {
+      if (err) return reject(stderr || err.message);
+      try {
+        resolve(JSON.parse(stdout));
+      } catch {
+        resolve(stdout.trim());
+      }
+    });
+  });
+});
+
+ipcMain.handle("rollback_snapshot", async (event, { auditId } = {}) => {
+  return new Promise((resolve, reject) => {
+    execFile(BINARY_PATH, ["rollback", `--id=${auditId}`, "--json"], (err, stdout, stderr) => {
+      if (err) return reject(stderr || err.message);
+      try {
+        const res = JSON.parse(stdout);
+        resolve(res.message || stdout.trim());
+      } catch {
+        resolve(stdout.trim());
+      }
+    });
+  });
 });
 
 ipcMain.handle("get_windows_update_state", async () => {
@@ -295,6 +339,24 @@ ipcMain.handle("uninstall_app", async (event, { id }) => {
     });
   });
 });
+
+ipcMain.handle("uninstall_apps", async (event, { ids } = {}) => {
+  return new Promise((resolve, reject) => {
+    const idList = Array.isArray(ids) ? ids.join(",") : (ids || "");
+    execFile(BINARY_PATH, ["apps", "uninstall", `--ids=${idList}`, "--json"], (err, stdout, stderr) => {
+      if (err) return reject(stderr || err.message);
+      try {
+        resolve(JSON.parse(stdout));
+      } catch (e) {
+        resolve([{ name: "Uninstall apps", succeeded: !err, details: stdout.trim() }]);
+      }
+    });
+  });
+});
+
+ipcMain.handle("get_installed_app_usage", async () =>
+  runCliJson(["apps", "usage", "--json"])
+);
 
 ipcMain.handle("get_audit_history", async () => {
   return new Promise((resolve) => {
@@ -495,7 +557,7 @@ ipcMain.handle("show_notification", async (event, { title, body } = {}) => {
   if (!Notification.isSupported()) {
     throw new Error("Notifications are not supported on this system.");
   }
-  new Notification({ title: title || "Miri Cleaner", body: body || "" }).show();
+  new Notification({ title: title || "MiriCleaner", body: body || "" }).show();
 });
 
 ipcMain.handle("reveal_in_file_manager", async (event, { path: rawPath } = {}) => {
