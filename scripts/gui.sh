@@ -3,8 +3,8 @@ set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$DIR"
 
-# Ensure core binary is compiled
-if [ ! -f "target/release/miri-cleaner" ]; then
+# Ensure core binary is compiled and up to date
+if [ ! -f "target/release/miri-cleaner" ] || [ -n "$(find crates -newer target/release/miri-cleaner 2>/dev/null | head -n 1)" ]; then
     echo "==> Compiling Miri Cleaner Rust core engine..."
     cargo build --release -p miri-cli
 fi
