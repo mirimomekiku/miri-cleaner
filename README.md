@@ -1,17 +1,17 @@
-# Miri Cleaner
+# MiriCleaner
 
 [![Rust](https://img.shields.io/badge/Rust-1.80+-orange.svg)](https://www.rust-lang.org)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-blue.svg)](https://tauri.app)
 [![React](https://img.shields.io/badge/React-19-cyan.svg)](https://react.dev)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8.svg)](https://tailwindcss.com)
-[![Brand Color](https://img.shields.io/badge/%23FF9D9D-Coral%20Pink-ff9d9d.svg)](#)
+[![Brand Color](https://img.shields.io/badge/%23FF9D9D-Strawberry%20%2F%20Matcha%20%2F%20Citrus%20%2F%20Ocean%20%2F%20Berry-ff9d9d.svg)](#)
 [![Latest Release](https://img.shields.io/github/v/release/mirimomekiku/miri-cleaner.svg)](https://github.com/mirimomekiku/miri-cleaner/releases/latest)
 
-**Miri Cleaner** is an open-source, dual-interface system maintenance and debloating suite designed for **Fedora / Linux** and **Windows 10/11**.
+**MiriCleaner** is an open-source, dual-interface system maintenance and debloating suite designed for **Fedora / Linux** and **Windows 10/11**.
 
 Prebuilt installers (Fedora `.rpm`, Debian/Ubuntu `.deb`, portable `.AppImage`, Windows `.msi`/`.exe`) are published on the [Releases page](https://github.com/mirimomekiku/miri-cleaner/releases/latest) for every tagged version.
 
-It combines a **Duolingo-inspired playful desktop GUI** (`#FF9D9D` coral theme, a horse mascot, chunky pill-shaped tactile buttons, and one clear focal action per screen) for casual and visual workflows with a **headless CLI & Ratatui TUI** for power users, remote SSH administration, and scripts.
+It combines a **Duolingo-inspired playful desktop GUI** (5 interchangeable color palettes including Strawberry Coral, Matcha Green, Citrus Amber, Ocean Blue, and Berry Purple, a horse mascot, chunky pill-shaped tactile buttons, smooth theme-adaptive loading states, and one clear focal action per screen) for casual and visual workflows with a **headless CLI & Ratatui TUI** for power users, remote SSH administration, and scripts.
 
 ---
 
@@ -59,12 +59,14 @@ Beyond the core cleanup engine, the Tauri/React desktop app adds a few things wo
 - **Boot impact scoring**: surfaces enabled startup apps with an estimated boot-time cost and a one-tap toggle.
 - **Battery health trend**: a small sparkline tracking battery health over time on laptops (nothing shown on battery-less desktops).
 - **Right-click file actions**: Delete, Properties, and Show in File Explorer on any file/folder listed in Storage & Duplicates (heavyweight files, largest folders, Big File Finder results); deletes always go to the OS trash, never a permanent unlink.
-- **Dark mode**: a first-class light/dark/system theme choice, keeping the same brand accent colors at a muted slate palette rather than inverting colors or adding a neon look.
-- **Settings page**: theme, per-category notification toggles, and the unused-app / low-disk-space suggestion thresholds, all in one place.
+- **Playful color schemes & dark mode**: First-class light/dark/system theme choice plus 5 playful color schemes (**Strawberry Coral**, **Matcha Green**, **Citrus Amber**, **Ocean Blue**, and **Berry Purple**) that dynamically re-tint buttons, badges, mascot highlights, scrollbars, and skeleton loaders.
+- **Smooth, theme-adaptive loading states**: Skeleton placeholders smoothly sweep with the active color theme using silky continuous easing and subtle pixel accents, keeping loading feedback delightful across themes.
+- **Dedicated scan state spinner**: The Quick Clean scan action provides responsive visual feedback with an animated loading spinner, replacing rotating sparkles with a clear in-progress indicator.
+- **Refined Advanced OS Tweaks layout**: Advanced Mode organizes system optimizations into structured full-width rows with 3-item progressive disclosure and tactile `"Show XX more"` / `"Show fewer"` expand controls, keeping the interface uncluttered while providing instant access to deep system customizations.
+- **Settings page**: theme, playful color palette selection, per-category notification toggles, and the unused-app / low-disk-space suggestion thresholds, all in one place.
 - **Branded splash + first-run onboarding**: a brief animated splash on launch, followed (once, on first run) by a skippable step-by-step orientation explaining what a dry-run scan is, what the automatic safety snapshot does, and where rollback lives.
 - **Resilient error surfacing**: every scan/clean/tweak/rollback action shows a visible on-brand error banner with Retry on failure, instead of only logging to the activity console.
 - **Dynamic, locale-aware byte formatting**: sizes are never hardcoded to one unit — a 107 KB cache and a 35 GB toolchain store each render in the unit that actually fits.
-- **Pixel-themed loading states**: skeleton placeholders use a coral-tinted, stepped shimmer with restrained pixel-dust corner accents, matching the app's retro-tactile visual language.
 - **On-brand activity console**: the slide-up log drawer color-codes events by severity, supports filtering and copy-all, and matches the rest of the tactile design system instead of looking like a bolted-on terminal.
 
 ---
@@ -137,8 +139,15 @@ cargo run -p miri-cli -- tweak journal-vacuum
 # Clean developer toolchains:
 cargo run -p miri-cli -- dev-cache --all
 
-# View rollback journal:
+# Create a manual safety snapshot:
+cargo run -p miri-cli -- snapshot --description "Pre-cleanup checkpoint"
+
+# View rollback journal or restore snapshot:
 cargo run -p miri-cli -- rollback
+cargo run -p miri-cli -- rollback --id <snapshot-id>
+
+# Inspect installed app usage and reclaimable space:
+cargo run -p miri-cli -- apps --json
 
 # SMART disk health (add --elevated to retry with admin/root access):
 cargo run -p miri-cli -- disk-health --json
