@@ -137,12 +137,12 @@ export const TweaksView: React.FC = () => {
   const [bootExpanded, setBootExpanded] = useState(false);
   const [moreExpanded, setMoreExpanded] = useState(false);
   // Progressive disclosure for the large flat tweak lists (Windows Essential/
-  // Advanced, Linux Performance/GNOME Extensions can run 9-27 items) -- shows
-  // a manageable first page and reveals the rest on demand, rather than
-  // always rendering every item at once.
-  const TWEAK_LIST_PAGE_SIZE = 8;
+  // Progressive disclosure page size for long tweak categories:
+  // Shows 3 rows initially with a tactile "Show XX more" button to expand.
+  const TWEAK_LIST_PAGE_SIZE = 3;
   const [winEssentialExpanded, setWinEssentialExpanded] = useState(false);
   const [winAdvancedExpanded, setWinAdvancedExpanded] = useState(false);
+  const [linuxEssentialExpanded, setLinuxEssentialExpanded] = useState(false);
   const [linuxOptimizationExpanded, setLinuxOptimizationExpanded] = useState(false);
   const [linuxExtensionExpanded, setLinuxExtensionExpanded] = useState(false);
 
@@ -1270,12 +1270,10 @@ export const TweaksView: React.FC = () => {
           {isLoading ? (
             <ListSkeleton count={6} />
           ) : isLinux ? (
-            /* FEDORA TWEAKS GRID */
+            /* FEDORA TWEAKS ROWS */
             <div className="space-y-6">
-              <div className={`grid grid-cols-1 ${
-                linuxCategoryFilter === "all" ? "xl:grid-cols-3 md:grid-cols-2" : "grid-cols-1"
-              } gap-6 items-start text-xs`}>
-                {/* Column 1: Essential Fedora Tweaks */}
+              <div className="grid grid-cols-1 gap-6 items-start text-xs">
+                {/* Row 1: Essential Fedora Tweaks */}
                 {(linuxCategoryFilter === "all" || linuxCategoryFilter === "essential") && (
                   <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700/60">
@@ -1289,7 +1287,9 @@ export const TweaksView: React.FC = () => {
                     </div>
 
                     <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
-                      {filteredLinuxEssential.map((tweak) => {
+                      {filteredLinuxEssential
+                        .slice(0, linuxEssentialExpanded ? filteredLinuxEssential.length : TWEAK_LIST_PAGE_SIZE)
+                        .map((tweak) => {
                         const isChecked = selectedTweakIds.has(tweak.id);
 
                         return (
@@ -1355,6 +1355,21 @@ export const TweaksView: React.FC = () => {
                         );
                       })}
                     </div>
+                    {filteredLinuxEssential.length > TWEAK_LIST_PAGE_SIZE && (
+                      <button
+                        type="button"
+                        onClick={() => setLinuxEssentialExpanded((v) => !v)}
+                        aria-expanded={linuxEssentialExpanded}
+                        className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 py-2 border-t border-slate-100 dark:border-slate-700/60 mt-2 transition-colors"
+                      >
+                        <span>
+                          {linuxEssentialExpanded
+                            ? "Show fewer"
+                            : `Show ${filteredLinuxEssential.length - TWEAK_LIST_PAGE_SIZE} more`}
+                        </span>
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${linuxEssentialExpanded ? "rotate-180" : ""}`} />
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -1445,17 +1460,20 @@ export const TweaksView: React.FC = () => {
                         type="button"
                         onClick={() => setLinuxOptimizationExpanded((v) => !v)}
                         aria-expanded={linuxOptimizationExpanded}
-                        className="w-full text-center text-[11px] font-black text-indigo-600 hover:text-indigo-800 py-1.5"
+                        className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 py-2 border-t border-slate-100 dark:border-slate-700/60 mt-2 transition-colors"
                       >
-                        {linuxOptimizationExpanded
-                          ? "Show fewer"
-                          : `Show ${filteredLinuxOptimizations.length - TWEAK_LIST_PAGE_SIZE} more`}
+                        <span>
+                          {linuxOptimizationExpanded
+                            ? "Show fewer"
+                            : `Show ${filteredLinuxOptimizations.length - TWEAK_LIST_PAGE_SIZE} more`}
+                        </span>
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${linuxOptimizationExpanded ? "rotate-180" : ""}`} />
                       </button>
                     )}
                   </div>
                 )}
 
-                {/* Column 3: GNOME Shell Extensions Suite */}
+                {/* Row 3: GNOME Shell Extensions Suite */}
                 {(linuxCategoryFilter === "all" || linuxCategoryFilter === "gnome_extension") && (
                   <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700/60">
@@ -1542,11 +1560,14 @@ export const TweaksView: React.FC = () => {
                         type="button"
                         onClick={() => setLinuxExtensionExpanded((v) => !v)}
                         aria-expanded={linuxExtensionExpanded}
-                        className="w-full text-center text-[11px] font-black text-pink-600 hover:text-pink-800 py-1.5"
+                        className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 py-2 border-t border-slate-100 dark:border-slate-700/60 mt-2 transition-colors"
                       >
-                        {linuxExtensionExpanded
-                          ? "Show fewer"
-                          : `Show ${filteredLinuxExtensions.length - TWEAK_LIST_PAGE_SIZE} more`}
+                        <span>
+                          {linuxExtensionExpanded
+                            ? "Show fewer"
+                            : `Show ${filteredLinuxExtensions.length - TWEAK_LIST_PAGE_SIZE} more`}
+                        </span>
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${linuxExtensionExpanded ? "rotate-180" : ""}`} />
                       </button>
                     )}
                   </div>
@@ -1662,11 +1683,14 @@ export const TweaksView: React.FC = () => {
                     type="button"
                     onClick={() => setWinEssentialExpanded((v) => !v)}
                     aria-expanded={winEssentialExpanded}
-                    className="w-full text-center text-[11px] font-black text-indigo-600 hover:text-indigo-800 py-1.5"
+                    className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 py-2 border-t border-slate-100 dark:border-slate-700/60 mt-2 transition-colors"
                   >
-                    {winEssentialExpanded
-                      ? "Show fewer"
-                      : `Show ${filteredWinEssential.length - TWEAK_LIST_PAGE_SIZE} more`}
+                    <span>
+                      {winEssentialExpanded
+                        ? "Show fewer"
+                        : `Show ${filteredWinEssential.length - TWEAK_LIST_PAGE_SIZE} more`}
+                    </span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${winEssentialExpanded ? "rotate-180" : ""}`} />
                   </button>
                 )}
               </div>
@@ -1759,11 +1783,14 @@ export const TweaksView: React.FC = () => {
                     type="button"
                     onClick={() => setWinAdvancedExpanded((v) => !v)}
                     aria-expanded={winAdvancedExpanded}
-                    className="w-full text-center text-[11px] font-black text-amber-700 hover:text-amber-900 py-1.5"
+                    className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 py-2 border-t border-slate-100 dark:border-slate-700/60 mt-2 transition-colors"
                   >
-                    {winAdvancedExpanded
-                      ? "Show fewer"
-                      : `Show ${filteredWinAdvanced.length - TWEAK_LIST_PAGE_SIZE} more`}
+                    <span>
+                      {winAdvancedExpanded
+                        ? "Show fewer"
+                        : `Show ${filteredWinAdvanced.length - TWEAK_LIST_PAGE_SIZE} more`}
+                    </span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${winAdvancedExpanded ? "rotate-180" : ""}`} />
                   </button>
                 )}
 
