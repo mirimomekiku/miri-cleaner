@@ -7,6 +7,7 @@ import { PixelBadge } from "../ui/PixelBadge";
 import { PixelCheckbox } from "../ui/PixelCheckbox";
 import {
   Sparkles,
+  Loader2,
   Trash2,
   Globe,
   Package,
@@ -400,7 +401,11 @@ export const CasualView: React.FC = () => {
                   disabled={isScanning}
                   aria-busy={isScanning}
                 >
-                  <Sparkles className={`w-5 h-5 shrink-0 ${isScanning ? "animate-spin" : ""}`} />
+                  {isScanning ? (
+                    <Loader2 className="w-5 h-5 shrink-0 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-5 h-5 shrink-0" />
+                  )}
                   {isScanning ? "Scanning..." : "Scan Garden"}
                 </TactileButton>
               ) : (
