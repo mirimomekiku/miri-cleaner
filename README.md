@@ -59,11 +59,8 @@ Beyond the core cleanup engine, the Tauri/React desktop app adds a few things wo
 - **Boot impact scoring**: surfaces enabled startup apps with an estimated boot-time cost and a one-tap toggle.
 - **Battery health trend**: a small sparkline tracking battery health over time on laptops (nothing shown on battery-less desktops).
 - **Right-click file actions**: Delete, Properties, and Show in File Explorer on any file/folder listed in Storage & Duplicates (heavyweight files, largest folders, Big File Finder results); deletes always go to the OS trash, never a permanent unlink.
-- **Playful color schemes & dark mode**: First-class light/dark/system theme choice plus 5 playful color schemes (**Strawberry Coral**, **Matcha Green**, **Citrus Amber**, **Ocean Blue**, and **Berry Purple**) that dynamically re-tint buttons, badges, mascot highlights, scrollbars, and skeleton loaders.
-- **Smooth, theme-adaptive loading states**: Skeleton placeholders smoothly sweep with the active color theme using silky continuous easing and subtle pixel accents, keeping loading feedback delightful across themes.
-- **Dedicated scan state spinner**: The Quick Clean scan action provides responsive visual feedback with an animated loading spinner, replacing rotating sparkles with a clear in-progress indicator.
-- **Refined Advanced OS Tweaks layout**: Advanced Mode organizes system optimizations into structured full-width rows with 3-item progressive disclosure and tactile `"Show XX more"` / `"Show fewer"` expand controls, keeping the interface uncluttered while providing instant access to deep system customizations.
-- **Settings page**: theme, playful color palette selection, per-category notification toggles, and the unused-app / low-disk-space suggestion thresholds, all in one place.
+- **Dark mode**: a first-class light/dark/system theme choice, keeping the same brand accent colors at a muted slate palette rather than inverting colors or adding a neon look.
+- **Settings page**: theme, per-category notification toggles, and the unused-app / low-disk-space suggestion thresholds, all in one place.
 - **Branded splash + first-run onboarding**: a brief animated splash on launch, followed (once, on first run) by a skippable step-by-step orientation explaining what a dry-run scan is, what the automatic safety snapshot does, and where rollback lives.
 - **Resilient error surfacing**: every scan/clean/tweak/rollback action shows a visible on-brand error banner with Retry on failure, instead of only logging to the activity console.
 - **Dynamic, locale-aware byte formatting**: sizes are never hardcoded to one unit — a 107 KB cache and a 35 GB toolchain store each render in the unit that actually fits.
@@ -91,6 +88,7 @@ miri-cleaner/
 ## Getting Started
 
 ### Prerequisites
+
 - **Rust** 1.80+ (`cargo`, `rustc`)
 - **Node.js** 20+ & `npm`
 - Linux: `pkg-config`, `polkit` (optional: `snapper` or `timeshift`)
@@ -144,10 +142,6 @@ cargo run -p miri-cli -- snapshot --description "Pre-cleanup checkpoint"
 
 # View rollback journal or restore snapshot:
 cargo run -p miri-cli -- rollback
-cargo run -p miri-cli -- rollback --id <snapshot-id>
-
-# Inspect installed app usage and reclaimable space:
-cargo run -p miri-cli -- apps --json
 
 # SMART disk health (add --elevated to retry with admin/root access):
 cargo run -p miri-cli -- disk-health --json
@@ -164,15 +158,19 @@ cargo run -p miri-cli -- browser-data --json
 ## Packaging
 
 ### Fedora Linux (RPM)
+
 ```bash
 ./packaging/fedora/build-rpm.sh
 ```
+
 This packages the `miri-cleaner` binary, installs the Polkit policy (`org.freedesktop.miri-cleaner.policy`) into `/usr/share/polkit-1/actions/`, and registers the desktop launcher.
 
 ### Windows 10/11 (MSI / NSIS)
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\packaging\windows\build-windows.ps1
 ```
+
 This builds the `miri-cleaner` CLI/TUI binary, then builds and bundles the Tauri desktop GUI (`npm run tauri build` in `packages/miri-gui`), producing the real Windows desktop app installer(s) under `packages\miri-gui\src-tauri\target\release\bundle\{nsis,msi}`. A separate, optional NSIS installer for the CLI-only tool is also produced at `packaging\windows\MiriCleaner-CLI-Setup-*.exe`, with `asInvoker` zero-trust privileges.
 
 ---
@@ -180,6 +178,7 @@ This builds the `miri-cleaner` CLI/TUI binary, then builds and bundles the Tauri
 ## Safety Blocklist Guardrails
 
 The core scanner strictly refuses to delete or recurse into critical operating system directories:
+
 - **Linux**: `/boot`, `/etc`, `/usr/bin`, `/usr/lib`, `/bin`, `/sbin`, `/lib`, `/dev`, `/proc`, `/sys`, `/`
 - **Windows**: `C:\Windows\System32`, `C:\Windows\SysWOW64`, `C:\Windows\WinSxS`, `C:\Program Files`, `C:\Program Files (x86)`
 - **Symlinks**: Symlinks are never followed out of bounds during deletion.
@@ -192,22 +191,22 @@ Both universal runners (`./miri.sh` / `.\miri.ps1`) and dedicated single-command
 
 ### Master Runner
 
-| Action | Linux / macOS (`bash`) | Windows (`PowerShell`) |
-| :--- | :--- | :--- |
-| **Interactive Menu** | `./miri.sh` | `.\miri.ps1` |
-| **Launch Desktop GUI** | `./miri.sh gui` | `.\miri.ps1 gui` |
-| **Launch Terminal TUI** | `./miri.sh tui` | `.\miri.ps1 tui` |
-| **Non-Destructive Scan** | `./miri.sh scan` | `.\miri.ps1 scan` |
-| **Simulated Dry-Run Clean** | `./miri.sh clean-dry` | `.\miri.ps1 clean-dry` |
-| **Execute Safe Clean** | `./miri.sh clean` | `.\miri.ps1 clean` |
+| Action                      | Linux / macOS (`bash`)                           | Windows (`PowerShell`)                            |
+| :-------------------------- | :----------------------------------------------- | :------------------------------------------------ |
+| **Interactive Menu**        | `./miri.sh`                                      | `.\miri.ps1`                                      |
+| **Launch Desktop GUI**      | `./miri.sh gui`                                  | `.\miri.ps1 gui`                                  |
+| **Launch Terminal TUI**     | `./miri.sh tui`                                  | `.\miri.ps1 tui`                                  |
+| **Non-Destructive Scan**    | `./miri.sh scan`                                 | `.\miri.ps1 scan`                                 |
+| **Simulated Dry-Run Clean** | `./miri.sh clean-dry`                            | `.\miri.ps1 clean-dry`                            |
+| **Execute Safe Clean**      | `./miri.sh clean`                                | `.\miri.ps1 clean`                                |
 | **Disable Windows Updates** | `./miri.sh tweak windows-update --state disable` | `.\miri.ps1 tweak windows-update --state disable` |
 | **Restore Windows Updates** | `./miri.sh tweak windows-update --state restore` | `.\miri.ps1 tweak windows-update --state restore` |
-| **Prune Fedora DNF Cache** | `./miri.sh tweak dnf-cache` | N/A |
-| **Vacuum Systemd Journal** | `./miri.sh tweak journal-vacuum` | N/A |
-| **Prune Dev Toolchains** | `./miri.sh dev-cache --all` | `.\miri.ps1 dev-cache --all` |
-| **View Audit / Rollback** | `./miri.sh rollback` | `.\miri.ps1 rollback` |
-| **Run Unit Tests** | `./miri.sh test` | `.\miri.ps1 test` |
-| **Build Package (RPM/MSI)** | `./miri.sh package` | `.\miri.ps1 package` |
+| **Prune Fedora DNF Cache**  | `./miri.sh tweak dnf-cache`                      | N/A                                               |
+| **Vacuum Systemd Journal**  | `./miri.sh tweak journal-vacuum`                 | N/A                                               |
+| **Prune Dev Toolchains**    | `./miri.sh dev-cache --all`                      | `.\miri.ps1 dev-cache --all`                      |
+| **View Audit / Rollback**   | `./miri.sh rollback`                             | `.\miri.ps1 rollback`                             |
+| **Run Unit Tests**          | `./miri.sh test`                                 | `.\miri.ps1 test`                                 |
+| **Build Package (RPM/MSI)** | `./miri.sh package`                              | `.\miri.ps1 package`                              |
 
 ### Dedicated Single-Command Scripts (`scripts/`)
 

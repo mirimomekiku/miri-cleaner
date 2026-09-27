@@ -137,12 +137,12 @@ export const TweaksView: React.FC = () => {
   const [bootExpanded, setBootExpanded] = useState(false);
   const [moreExpanded, setMoreExpanded] = useState(false);
   // Progressive disclosure for the large flat tweak lists (Windows Essential/
-  // Progressive disclosure page size for long tweak categories:
-  // Shows 3 rows initially with a tactile "Show XX more" button to expand.
-  const TWEAK_LIST_PAGE_SIZE = 3;
+  // Advanced, Linux Performance/GNOME Extensions can run 9-27 items) -- shows
+  // a manageable first page and reveals the rest on demand, rather than
+  // always rendering every item at once.
+  const TWEAK_LIST_PAGE_SIZE = 8;
   const [winEssentialExpanded, setWinEssentialExpanded] = useState(false);
   const [winAdvancedExpanded, setWinAdvancedExpanded] = useState(false);
-  const [linuxEssentialExpanded, setLinuxEssentialExpanded] = useState(false);
   const [linuxOptimizationExpanded, setLinuxOptimizationExpanded] = useState(false);
   const [linuxExtensionExpanded, setLinuxExtensionExpanded] = useState(false);
 
@@ -151,30 +151,30 @@ export const TweaksView: React.FC = () => {
     setIsLoading(true);
     const p1 = isWindows
       ? Promise.all([
-          bridge.getWindowsUpdateState().then(setWinUpdateState).catch(() => {}),
-          bridge.getWindowsVersionInfo().then(setWinVersionInfo).catch(() => {}),
-          bridge.getWindowsTweaks().then((tweaks) => {
-            setWinTweaks(tweaks);
-            const defaultSelected = new Set(
-              tweaks
-                .filter((t) => t.category === "essential" && t.is_applicable && t.id !== "bitlocker")
-                .map((t) => t.id)
-            );
-            setSelectedTweakIds(defaultSelected);
-          }).catch(() => {}),
-        ])
+        bridge.getWindowsUpdateState().then(setWinUpdateState).catch(() => { }),
+        bridge.getWindowsVersionInfo().then(setWinVersionInfo).catch(() => { }),
+        bridge.getWindowsTweaks().then((tweaks) => {
+          setWinTweaks(tweaks);
+          const defaultSelected = new Set(
+            tweaks
+              .filter((t) => t.category === "essential" && t.is_applicable && t.id !== "bitlocker")
+              .map((t) => t.id)
+          );
+          setSelectedTweakIds(defaultSelected);
+        }).catch(() => { }),
+      ])
       : Promise.resolve();
 
     const p2 = isLinux
       ? bridge.getLinuxTweaks().then((tweaks) => {
-          setLinuxTweaks(tweaks);
-          const defaultSelected = new Set(
-            tweaks
-              .filter((t) => t.category === "essential" && !t.is_applied)
-              .map((t) => t.id)
-          );
-          setSelectedTweakIds(defaultSelected);
-        }).catch(() => {})
+        setLinuxTweaks(tweaks);
+        const defaultSelected = new Set(
+          tweaks
+            .filter((t) => t.category === "essential" && !t.is_applied)
+            .map((t) => t.id)
+        );
+        setSelectedTweakIds(defaultSelected);
+      }).catch(() => { })
       : Promise.resolve();
 
     const p3 = bridge.getDnsInfo().then((info) => {
@@ -182,9 +182,9 @@ export const TweaksView: React.FC = () => {
       if (info.current_preset && info.current_preset !== "custom") {
         setSelectedDns(info.current_preset);
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
-    const p4 = bridge.getAutostart().then(setAutostartItems).catch(() => {});
+    const p4 = bridge.getAutostart().then(setAutostartItems).catch(() => { });
 
     Promise.allSettled([p1, p2, p3, p4]).finally(() => {
       setIsLoading(false);
@@ -366,9 +366,8 @@ export const TweaksView: React.FC = () => {
     } else {
       openDangerModal({
         title: "Apply Selected Windows Tweaks",
-        description: `You are about to apply ${ids.length} system tweaks. ${
-          createRestorePoint ? "A System Restore Point checkpoint will be created first." : ""
-        }`,
+        description: `You are about to apply ${ids.length} system tweaks. ${createRestorePoint ? "A System Restore Point checkpoint will be created first." : ""
+          }`,
         requiresElevation: true,
         riskLevel: "moderate",
         confirmWord: "APPLY",
@@ -502,633 +501,627 @@ export const TweaksView: React.FC = () => {
         isLoading ? (
           <TweaksSkeleton />
         ) : (
-        <div className="space-y-6">
-          {/* ============================================================= */}
-          {/* ONE HERO MODULE -- lesson-screen grammar: a single dominant   */}
-          {/* focal card, the mascot as emotional anchor, one big pill      */}
-          {/* primary action. Essentials-applied / active-DNS / boot-impact */}
-          {/* collapse into a slim stat strip instead of stacking as        */}
-          {/* separate parallel cards.                                     */}
-          {/* ============================================================= */}
-          <HeroCard
-            accent="miri"
-            mascot={<Mascot mood={errorAction.error ? "alert" : isProcessing ? "cleaning" : "happy"} size="lg" />}
-            badgeLabel={isLinux ? "Fedora Linux" : "Windows 10/11"}
-            badgeVariant="pink"
-            badgeSubtitle={
-              isLinux
-                ? (scanResult?.system_info.os_name || "Fedora Linux 43")
-                : (winVersionInfo?.display_name || "Windows 10/11")
-            }
-            heading={isLinux ? "Fedora System Optimizations" : "Windows 10/11 Presets & Tweaks"}
-            description={
-              isLinux
-                ? "Safe 1-click post-install enhancements: faster DNF, multimedia codecs, Flathub, and boot speedups."
-                : "Tune Windows performance, stop telemetry, eliminate search bloat, and protect your privacy."
-            }
-          >
-            {/* Slim consolidated stat strip -- essentials applied, active DNS,
+          <div className="space-y-6">
+            {/* ============================================================= */}
+            {/* ONE HERO MODULE -- lesson-screen grammar: a single dominant   */}
+            {/* focal card, the mascot as emotional anchor, one big pill      */}
+            {/* primary action. Essentials-applied / active-DNS / boot-impact */}
+            {/* collapse into a slim stat strip instead of stacking as        */}
+            {/* separate parallel cards.                                     */}
+            {/* ============================================================= */}
+            <HeroCard
+              accent="miri"
+              mascot={<Mascot mood={errorAction.error ? "alert" : isProcessing ? "cleaning" : "happy"} size="lg" />}
+              badgeLabel={isLinux ? "Fedora Linux" : "Windows 10/11"}
+              badgeVariant="pink"
+              badgeSubtitle={
+                isLinux
+                  ? (scanResult?.system_info.os_name || "Fedora Linux 43")
+                  : (winVersionInfo?.display_name || "Windows 10/11")
+              }
+              heading={isLinux ? "Fedora System Optimizations" : "Windows 10/11 Presets & Tweaks"}
+              description={
+                isLinux
+                  ? "Safe 1-click post-install enhancements: faster DNF, multimedia codecs, Flathub, and boot speedups."
+                  : "Tune Windows performance, stop telemetry, eliminate search bloat, and protect your privacy."
+              }
+            >
+              {/* Slim consolidated stat strip -- essentials applied, active DNS,
                 and boot impact as one lightweight row instead of three parallel cards. */}
-            <div className="flex items-center justify-center flex-wrap gap-x-8 gap-y-3 pt-1">
-              <StatTile
-                value={
-                  <>
-                    {isLinux ? linuxAppliedEssentialCount : winTweaks.filter((t) => t.is_enabled).length}
-                    <span className="text-slate-400 dark:text-slate-500">/{isLinux ? linuxEssentialTweaks.length : winEssentialTweaks.length}</span>
-                  </>
-                }
-                label="Essentials Applied"
-                valueClassName="text-miri-500 font-pixel"
-              />
-
-              {dnsInfo && (
+              <div className="flex items-center justify-center flex-wrap gap-x-8 gap-y-3 pt-1">
                 <StatTile
-                  value={dnsInfo.display_name}
-                  label="Active DNS"
-                  valueClassName="text-slate-800 dark:text-slate-200 truncate max-w-[10rem]"
+                  value={
+                    <>
+                      {isLinux ? linuxAppliedEssentialCount : winTweaks.filter((t) => t.is_enabled).length}
+                      <span className="text-slate-400 dark:text-slate-500">/{isLinux ? linuxEssentialTweaks.length : winEssentialTweaks.length}</span>
+                    </>
+                  }
+                  label="Essentials Applied"
+                  valueClassName="text-miri-500 font-pixel"
                 />
-              )}
 
+                {dnsInfo && (
+                  <StatTile
+                    value={dnsInfo.display_name}
+                    label="Active DNS"
+                    valueClassName="text-slate-800 dark:text-slate-200 truncate max-w-[10rem]"
+                  />
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setBootExpanded((v) => !v)}
+                  aria-expanded={bootExpanded}
+                  className="text-center group"
+                >
+                  <div className="text-2xl font-black text-amber-600 tabular-nums flex items-center gap-1 justify-center">
+                    ~{animatedBootSeconds.toFixed(1)}s
+                    <ChevronDown className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform ${bootExpanded ? "rotate-180" : ""}`} />
+                  </div>
+                  <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider group-hover:text-slate-700 dark:group-hover:text-slate-300">
+                    {bootExpanded ? "Hide Boot Impact" : `Boot Impact (${enabledAutostartItems.length} apps)`}
+                  </div>
+                </button>
+              </div>
+
+              {/* Boot impact detail tucked behind expansion, per the lesson-screen brief */}
+              <div className={`collapsible-rows ${bootExpanded ? "is-expanded" : ""}`}>
+                <div className="collapsible-inner">
+                  <div className="pt-4 text-left space-y-2">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
+                      Apps that launch automatically when you sign in. Seconds shown are
+                      illustrative estimates, not measured boot telemetry.
+                    </p>
+                    {autostartItems.length === 0 ? (
+                      <div className="text-center py-6 text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-slate-700">
+                        No startup applications detected.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {autostartItems.map((item) => {
+                          const impactStyle =
+                            item.impact === "high"
+                              ? "bg-amber-100 text-amber-800 border-amber-200"
+                              : item.impact === "medium"
+                                ? "bg-sky-100 text-sky-800 border-sky-200"
+                                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700";
+                          return (
+                            <div
+                              key={item.id}
+                              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <PixelCheckbox
+                                  checked={item.enabled}
+                                  onChange={() => handleToggleAutostart(item)}
+                                  label={`Toggle ${item.name} at startup`}
+                                  disabled={togglingAutostartId === item.id}
+                                />
+                                <div className="min-w-0">
+                                  <div className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{item.name}</div>
+                                  <div className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate">{item.command}</div>
+                                </div>
+                              </div>
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${impactStyle}`}
+                              >
+                                +{BOOT_IMPACT_SECONDS[item.impact].toFixed(1)}s
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ONE big pill primary action */}
+              <div className="flex flex-col items-center gap-3 pt-2">
+                <TactileButton
+                  variant="primary"
+                  size="hero"
+                  pill
+                  onClick={handleApplyTweaks}
+                  disabled={isProcessing || selectedTweakIds.size === 0}
+                  aria-busy={isProcessing}
+                >
+                  <Sparkles className={`w-5 h-5 shrink-0 ${isProcessing ? "animate-spin" : ""}`} />
+                  {isProcessing ? "Applying..." : `Apply Selected Tweaks (${selectedTweakIds.size})`}
+                </TactileButton>
+
+                {/* Secondary actions -- visually subordinate to the one primary CTA */}
+                <div className="flex items-center gap-4 flex-wrap justify-center text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={handleSelectAllEssential}
+                    className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline decoration-dotted underline-offset-4"
+                  >
+                    Select Essential
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    disabled={selectedTweakIds.size === 0}
+                    className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline decoration-dotted underline-offset-4 disabled:opacity-50"
+                  >
+                    Clear Selection
+                  </button>
+                  {isWindows && (
+                    <label className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer">
+                      <PixelCheckbox
+                        checked={createRestorePoint}
+                        onChange={setCreateRestorePoint}
+                        label="Create System Restore Point"
+                      />
+                      Create Restore Point first
+                    </label>
+                  )}
+                </div>
+              </div>
+            </HeroCard>
+
+            {/* ============================================================= */}
+            {/* PRIMARY CHECKLIST -- essential tweaks status, always visible  */}
+            {/* (mirrors the always-shown scan checklist in Casual View).     */}
+            {/* ============================================================= */}
+            {isLinux ? (
+              <div className="card-duo space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">Essential Repos &amp; Codecs</h3>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    {linuxAppliedEssentialCount} of {linuxEssentialTweaks.length} Applied
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
+                  Applies the 5 core post-install optimizations: enables RPM Fusion (Free &amp; Non-Free), speeds up DNF with parallel downloads &amp; fastest mirror, configures Flathub, and installs full FFmpeg &amp; multimedia codecs.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+                  {linuxEssentialTweaks.map((t) => (
+                    <div
+                      key={t.id}
+                      className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 text-xs"
+                    >
+                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate pr-2">{t.name}</span>
+                      <span
+                        className={`shrink-0 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${t.is_applied
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-slate-200 text-slate-700 dark:text-slate-300"
+                          }`}
+                      >
+                        {t.is_applied ? "Applied ✓" : "Pending"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="card-duo space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">Windows 10/11 Essential Tweaks Preset</h3>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                    <Shield className="w-3 h-3 text-emerald-600" /> Recommended &amp; Safe
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
+                  Applies the {winEssentialTweaks.length} essential tweaks: turns off telemetry and timeline tracking,
+                  disables Bing search results in Start Menu, stops sponsored OEM apps, and speeds up File Explorer.
+                </p>
+              </div>
+            )}
+
+            {/* ============================================================= */}
+            {/* MORE OPTIONS -- secondary content tucked behind one toggle:   */}
+            {/* extensions/update profiles, DNS switcher, update shield, and  */}
+            {/* platform-unavailable notices. Nothing is removed here, only   */}
+            {/* deferred behind a disclosure so the hero stays dominant.      */}
+            {/* ============================================================= */}
+            <div className="px-2">
               <button
                 type="button"
-                onClick={() => setBootExpanded((v) => !v)}
-                aria-expanded={bootExpanded}
-                className="text-center group"
+                onClick={() => setMoreExpanded((v) => !v)}
+                aria-expanded={moreExpanded}
+                className="w-full flex items-center justify-between gap-2 text-xs font-black text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 py-1"
               >
-                <div className="text-2xl font-black text-amber-600 tabular-nums flex items-center gap-1 justify-center">
-                  ~{animatedBootSeconds.toFixed(1)}s
-                  <ChevronDown className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform ${bootExpanded ? "rotate-180" : ""}`} />
-                </div>
-                <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider group-hover:text-slate-700 dark:group-hover:text-slate-300">
-                  {bootExpanded ? "Hide Boot Impact" : `Boot Impact (${enabledAutostartItems.length} apps)`}
-                </div>
+                <span>{moreExpanded ? "Hide More Options" : "More Options & Advanced Presets"}</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${moreExpanded ? "rotate-180" : ""}`} />
               </button>
             </div>
 
-            {/* Boot impact detail tucked behind expansion, per the lesson-screen brief */}
-            <div className={`collapsible-rows ${bootExpanded ? "is-expanded" : ""}`}>
+            <div className={`collapsible-rows ${moreExpanded ? "is-expanded" : ""}`}>
               <div className="collapsible-inner">
-                <div className="pt-4 text-left space-y-2">
-                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
-                    Apps that launch automatically when you sign in. Seconds shown are
-                    illustrative estimates, not measured boot telemetry.
-                  </p>
-                  {autostartItems.length === 0 ? (
-                    <div className="text-center py-6 text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-slate-700">
-                      No startup applications detected.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {autostartItems.map((item) => {
-                        const impactStyle =
-                          item.impact === "high"
-                            ? "bg-amber-100 text-amber-800 border-amber-200"
-                            : item.impact === "medium"
-                            ? "bg-sky-100 text-sky-800 border-sky-200"
-                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700";
-                        return (
-                          <div
-                            key={item.id}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700"
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <PixelCheckbox
-                                checked={item.enabled}
-                                onChange={() => handleToggleAutostart(item)}
-                                label={`Toggle ${item.name} at startup`}
-                                disabled={togglingAutostartId === item.id}
-                              />
-                              <div className="min-w-0">
-                                <div className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{item.name}</div>
-                                <div className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate">{item.command}</div>
-                              </div>
+                <div className="space-y-6 pt-1">
+                  {isLinux ? (
+                    <>
+                      {/* GNOME Shell Extensions Suite Card (Casual Mode) */}
+                      <div className="card-duo space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
+                                GNOME Shell Extensions Suite
+                              </h3>
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-pink-100 text-pink-800 border border-pink-200 flex items-center gap-1">
+                                <Puzzle className="w-3 h-3 text-pink-600" /> Recommended Setup
+                              </span>
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                {linuxAppliedExtCount} of {linuxExtensions.length} Active
+                              </span>
                             </div>
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${impactStyle}`}
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+                              Curated desktop enhancements for Fedora GNOME Shell: AppIndicator system tray icons, Dash to Dock, Blur My Shell frosted glass, Vitals telemetry, Caffeine sleep inhibitor, Pop Shell auto-tiling, Just Perfection, and native Extension Manager.
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-3 shrink-0">
+                            <TactileButton
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedTweakIds((prev) => {
+                                  const next = new Set(prev);
+                                  linuxExtensions.filter((t) => !t.is_applied).forEach((t) => next.add(t.id));
+                                  return next;
+                                });
+                              }}
                             >
-                              +{BOOT_IMPACT_SECONDS[item.impact].toFixed(1)}s
+                              Select Uninstalled
+                            </TactileButton>
+                            <TactileButton
+                              variant="primary"
+                              size="md"
+                              onClick={handleApplyTweaks}
+                              disabled={isProcessing || !linuxExtensions.some((t) => selectedTweakIds.has(t.id))}
+                            >
+                              <Sparkles className="w-4 h-4 text-slate-900 dark:text-slate-100" />
+                              Install Selected Extensions ({linuxExtensions.filter((t) => selectedTweakIds.has(t.id)).length})
+                            </TactileButton>
+                          </div>
+                        </div>
+
+                        {/* Status checklist */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+                          {linuxExtensions.map((t) => {
+                            const isChecked = selectedTweakIds.has(t.id);
+                            return (
+                              <div
+                                key={t.id}
+                                role="checkbox"
+                                aria-checked={isChecked}
+                                aria-label={`Toggle ${t.name}`}
+                                tabIndex={0}
+                                onClick={() => toggleTweak(t.id)}
+                                onKeyDown={(e) => {
+                                  if (e.key === " " || e.key === "Enter") {
+                                    e.preventDefault();
+                                    toggleTweak(t.id);
+                                  }
+                                }}
+                                className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${isChecked
+                                    ? "bg-pink-50/70 border-pink-300"
+                                    : "bg-slate-50 dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700"
+                                  }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                  <PixelCheckbox checked={isChecked} presentational />
+                                  <span className="font-bold text-slate-800 dark:text-slate-200 truncate text-xs">
+                                    {t.name.replace("GNOME Extension - ", "")}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <span
+                                    className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${t.is_applied
+                                        ? "bg-pink-100 text-pink-800 border border-pink-200"
+                                        : "bg-slate-200 text-slate-700 dark:text-slate-300"
+                                      }`}
+                                  >
+                                    {t.is_applied ? "Active ✓" : "Available"}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    aria-label={`Details for ${t.name}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveInfoModal({
+                                        id: t.id,
+                                        name: t.name,
+                                        category: "GNOME Shell Extension",
+                                        description: t.description,
+                                        danger_level: t.danger_level,
+                                        requiresElevation: t.requires_root,
+                                        is_applied: t.is_applied,
+                                        is_applicable: t.is_applicable,
+                                        command: t.command,
+                                      });
+                                    }}
+                                    className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-200 shrink-0"
+                                  >
+                                    <HelpCircle className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Windows Preset Card (Greyed out if running on Fedora) */}
+                      <div className="card-duo space-y-3 border-2 border-slate-200/60 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/50 opacity-60 rounded-3xl p-5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-base font-black text-slate-700 dark:text-slate-300">
+                                Windows 10/11 Essential Tweaks Preset
+                              </h3>
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-200 text-slate-600 dark:text-slate-400">
+                                Windows Only
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl">
+                              Essential telemetry, Bing search, and privacy suite. Unavailable because current host is Fedora Linux.
+                            </p>
+                          </div>
+                          <button
+                            disabled
+                            className="px-3 py-2 rounded-xl text-xs font-black bg-slate-200 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 shrink-0"
+                          >
+                            Unavailable on Fedora
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* Windows Update Profiles Suite (Matches Screenshot) */
+                    <div className="card-duo space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                              Windows Update Profiles
+                            </h3>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              Windows 10/11
                             </span>
                           </div>
-                        );
-                      })}
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Choose how Windows receives updates. Each profile replaces the Windows Update settings.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-sans">
+                        {/* Profile 1: Recommended */}
+                        <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${winUpdateState?.active_profile === "recommended"
+                            ? "border-emerald-500 bg-emerald-50/30 shadow-md ring-2 ring-emerald-500/20"
+                            : "border-emerald-200/80 bg-white dark:bg-slate-800 hover:border-emerald-400"
+                          }`}>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-base font-black text-slate-900 dark:text-slate-100">Recommended</h4>
+                              {winUpdateState?.active_profile === "recommended" && (
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                  Active ✓
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                              Balanced security and stability
+                            </p>
+
+                            <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1.5 list-disc pl-4 leading-relaxed">
+                              <li>Defers feature updates for 365 days</li>
+                              <li>Defers quality updates for 4 days</li>
+                              <li>Excludes drivers from quality updates</li>
+                              <li>Prevents automatic restarts while a user is signed in</li>
+                            </ul>
+
+                            <p className="text-[11px] italic text-slate-500 dark:text-slate-400 pt-1">
+                              Available on Windows Pro, Enterprise, and Education editions.
+                            </p>
+                          </div>
+
+                          <div className="pt-4">
+                            <TactileButton
+                              variant="primary"
+                              size="sm"
+                              className="w-full justify-center font-black"
+                              onClick={() => handleApplyUpdateProfile("recommended")}
+                              disabled={isProcessing || !isWindows}
+                            >
+                              Apply Recommended
+                            </TactileButton>
+                          </div>
+                        </div>
+
+                        {/* Profile 2: Windows Default */}
+                        <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${winUpdateState?.active_profile === "default" || (!winUpdateState?.active_profile && !winUpdateState?.fully_disabled)
+                            ? "border-indigo-400 bg-indigo-50/30 shadow-md ring-2 ring-indigo-400/20"
+                            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300"
+                          }`}>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-base font-black text-slate-900 dark:text-slate-100">Windows Default</h4>
+                              {(winUpdateState?.active_profile === "default" || (!winUpdateState?.active_profile && !winUpdateState?.fully_disabled)) && (
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300">
+                                  Active ✓
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                              Return control to Windows
+                            </p>
+
+                            <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1.5 list-disc pl-4 leading-relaxed">
+                              <li>Removes Windows Update policies applied previously</li>
+                              <li>Restores update service startup settings</li>
+                              <li>Re-enables update scheduled tasks</li>
+                            </ul>
+
+                            <p className="text-[11px] italic text-slate-500 dark:text-slate-400 pt-1">
+                              Use this to undo the Recommended or Disable profile.
+                            </p>
+                          </div>
+
+                          <div className="pt-4">
+                            <TactileButton
+                              variant="secondary"
+                              size="sm"
+                              className="w-full justify-center font-black"
+                              onClick={() => handleApplyUpdateProfile("default")}
+                              disabled={isProcessing || !isWindows}
+                            >
+                              Restore Defaults
+                            </TactileButton>
+                          </div>
+                        </div>
+
+                        {/* Profile 3: Disable Updates */}
+                        <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${winUpdateState?.active_profile === "disable" || winUpdateState?.fully_disabled
+                            ? "border-red-500 bg-red-50/30 shadow-md ring-2 ring-red-500/20"
+                            : "border-red-200 bg-white dark:bg-slate-800 hover:border-red-400"
+                          }`}>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-base font-black text-red-600">Disable Updates</h4>
+                              {(winUpdateState?.active_profile === "disable" || winUpdateState?.fully_disabled) && (
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300">
+                                  Active ✓
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs font-bold text-red-500">
+                              Advanced use only
+                            </p>
+
+                            <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1.5 list-disc pl-4 leading-relaxed">
+                              <li>Disables automatic update policy</li>
+                              <li>Stops update services and scheduled tasks</li>
+                              <li>Clears downloaded update files</li>
+                            </ul>
+
+                            <p className="text-[11px] italic font-semibold text-red-500 pt-1">
+                              Security updates will not be installed while this profile is active.
+                            </p>
+                          </div>
+
+                          <div className="pt-4">
+                            <TactileButton
+                              variant="danger"
+                              size="sm"
+                              className="w-full justify-center font-black"
+                              onClick={() => handleApplyUpdateProfile("disable")}
+                              disabled={isProcessing || !isWindows}
+                            >
+                              Disable Updates
+                            </TactileButton>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bottom Notification Banner */}
+                      <div className="p-3 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-2xl text-center text-xs font-semibold text-slate-600 dark:text-slate-400">
+                        Changes apply system-wide. Restart Windows after switching profiles. Use Restore Defaults to undo update policies.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Secure DNS Preset Card with Auto-Detection (shared) */}
+                  <div className="card-duo flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold shrink-0">
+                        <Globe className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">Secure DNS Switcher</h4>
+                          {dnsInfo && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3 text-indigo-500" />
+                              Active: {dnsInfo.display_name}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Speed up DNS queries and block ads with encrypted, privacy-first DNS resolvers.
+                          {dnsInfo?.servers && dnsInfo.servers.length > 0 && ` (${dnsInfo.servers.join(", ")})`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 flex-wrap">
+                      <select
+                        value={selectedDns}
+                        onChange={(e) => setSelectedDns(e.target.value)}
+                        aria-label="Select DNS preset"
+                        className="text-xs font-bold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900/40 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 outline-none focus:border-indigo-400 cursor-pointer"
+                      >
+                        <option value="default">Default (ISP / DHCP Assigned)</option>
+                        <option value="cloudflare">Cloudflare (1.1.1.1 — Fast & Private)</option>
+                        <option value="google">Google Public (8.8.8.8)</option>
+                        <option value="quad9">Quad9 (9.9.9.9 — Malware Shield)</option>
+                        <option value="adguard">AdGuard (Ad-Blocking DNS)</option>
+                      </select>
+
+                      <TactileButton
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleApplyDns}
+                        disabled={isProcessing}
+                      >
+                        Apply DNS
+                      </TactileButton>
+                    </div>
+                  </div>
+
+                  {/* Windows Update Shield (Only shown if Windows) */}
+                  {isWindows && (
+                    <div className="card-duo transition-all space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
+                              Windows Update Shield (4 Tiers)
+                            </h3>
+                            {winUpdateState?.fully_disabled ? (
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-red-100 text-red-800 border border-red-200">
+                                Updates Disabled
+                              </span>
+                            ) : (
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                Default Active
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+                            Blocks automatic reboots, forced updates, and telemetry across Services, Scheduled Tasks, Metered Connections, and Group Policy.
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <TactileButton
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleToggleWindowsUpdate(true)}
+                            disabled={isProcessing || winUpdateState?.fully_disabled}
+                          >
+                            Disable Updates
+                          </TactileButton>
+                          <TactileButton
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleToggleWindowsUpdate(false)}
+                            disabled={isProcessing || !winUpdateState?.fully_disabled}
+                          >
+                            Restore Updates
+                          </TactileButton>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-
-            {/* ONE big pill primary action */}
-            <div className="flex flex-col items-center gap-3 pt-2">
-              <TactileButton
-                variant="primary"
-                size="hero"
-                pill
-                onClick={handleApplyTweaks}
-                disabled={isProcessing || selectedTweakIds.size === 0}
-                aria-busy={isProcessing}
-              >
-                <Sparkles className={`w-5 h-5 shrink-0 ${isProcessing ? "animate-spin" : ""}`} />
-                {isProcessing ? "Applying..." : `Apply Selected Tweaks (${selectedTweakIds.size})`}
-              </TactileButton>
-
-              {/* Secondary actions -- visually subordinate to the one primary CTA */}
-              <div className="flex items-center gap-4 flex-wrap justify-center text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={handleSelectAllEssential}
-                  className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline decoration-dotted underline-offset-4"
-                >
-                  Select Essential
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClearAll}
-                  disabled={selectedTweakIds.size === 0}
-                  className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline decoration-dotted underline-offset-4 disabled:opacity-50"
-                >
-                  Clear Selection
-                </button>
-                {isWindows && (
-                  <label className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer">
-                    <PixelCheckbox
-                      checked={createRestorePoint}
-                      onChange={setCreateRestorePoint}
-                      label="Create System Restore Point"
-                    />
-                    Create Restore Point first
-                  </label>
-                )}
-              </div>
-            </div>
-          </HeroCard>
-
-          {/* ============================================================= */}
-          {/* PRIMARY CHECKLIST -- essential tweaks status, always visible  */}
-          {/* (mirrors the always-shown scan checklist in Casual View).     */}
-          {/* ============================================================= */}
-          {isLinux ? (
-            <div className="card-duo space-y-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">Essential Repos &amp; Codecs</h3>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  {linuxAppliedEssentialCount} of {linuxEssentialTweaks.length} Applied
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
-                Applies the 5 core post-install optimizations: enables RPM Fusion (Free &amp; Non-Free), speeds up DNF with parallel downloads &amp; fastest mirror, configures Flathub, and installs full FFmpeg &amp; multimedia codecs.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
-                {linuxEssentialTweaks.map((t) => (
-                  <div
-                    key={t.id}
-                    className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 text-xs"
-                  >
-                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate pr-2">{t.name}</span>
-                    <span
-                      className={`shrink-0 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${
-                        t.is_applied
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-slate-200 text-slate-700 dark:text-slate-300"
-                      }`}
-                    >
-                      {t.is_applied ? "Applied ✓" : "Pending"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="card-duo space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">Windows 10/11 Essential Tweaks Preset</h3>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                  <Shield className="w-3 h-3 text-emerald-600" /> Recommended &amp; Safe
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
-                Applies the {winEssentialTweaks.length} essential tweaks: turns off telemetry and timeline tracking,
-                disables Bing search results in Start Menu, stops sponsored OEM apps, and speeds up File Explorer.
-              </p>
-            </div>
-          )}
-
-          {/* ============================================================= */}
-          {/* MORE OPTIONS -- secondary content tucked behind one toggle:   */}
-          {/* extensions/update profiles, DNS switcher, update shield, and  */}
-          {/* platform-unavailable notices. Nothing is removed here, only   */}
-          {/* deferred behind a disclosure so the hero stays dominant.      */}
-          {/* ============================================================= */}
-          <div className="px-2">
-            <button
-              type="button"
-              onClick={() => setMoreExpanded((v) => !v)}
-              aria-expanded={moreExpanded}
-              className="w-full flex items-center justify-between gap-2 text-xs font-black text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 py-1"
-            >
-              <span>{moreExpanded ? "Hide More Options" : "More Options & Advanced Presets"}</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${moreExpanded ? "rotate-180" : ""}`} />
-            </button>
           </div>
-
-          <div className={`collapsible-rows ${moreExpanded ? "is-expanded" : ""}`}>
-            <div className="collapsible-inner">
-              <div className="space-y-6 pt-1">
-                {isLinux ? (
-                  <>
-                    {/* GNOME Shell Extensions Suite Card (Casual Mode) */}
-                    <div className="card-duo space-y-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
-                              GNOME Shell Extensions Suite
-                            </h3>
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-pink-100 text-pink-800 border border-pink-200 flex items-center gap-1">
-                              <Puzzle className="w-3 h-3 text-pink-600" /> Recommended Setup
-                            </span>
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
-                              {linuxAppliedExtCount} of {linuxExtensions.length} Active
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
-                            Curated desktop enhancements for Fedora GNOME Shell: AppIndicator system tray icons, Dash to Dock, Blur My Shell frosted glass, Vitals telemetry, Caffeine sleep inhibitor, Pop Shell auto-tiling, Just Perfection, and native Extension Manager.
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-3 shrink-0">
-                          <TactileButton
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedTweakIds((prev) => {
-                                const next = new Set(prev);
-                                linuxExtensions.filter((t) => !t.is_applied).forEach((t) => next.add(t.id));
-                                return next;
-                              });
-                            }}
-                          >
-                            Select Uninstalled
-                          </TactileButton>
-                          <TactileButton
-                            variant="primary"
-                            size="md"
-                            onClick={handleApplyTweaks}
-                            disabled={isProcessing || !linuxExtensions.some((t) => selectedTweakIds.has(t.id))}
-                          >
-                            <Sparkles className="w-4 h-4 text-slate-900 dark:text-slate-100" />
-                            Install Selected Extensions ({linuxExtensions.filter((t) => selectedTweakIds.has(t.id)).length})
-                          </TactileButton>
-                        </div>
-                      </div>
-
-                      {/* Status checklist */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-700/60">
-                        {linuxExtensions.map((t) => {
-                          const isChecked = selectedTweakIds.has(t.id);
-                          return (
-                            <div
-                              key={t.id}
-                              role="checkbox"
-                              aria-checked={isChecked}
-                              aria-label={`Toggle ${t.name}`}
-                              tabIndex={0}
-                              onClick={() => toggleTweak(t.id)}
-                              onKeyDown={(e) => {
-                                if (e.key === " " || e.key === "Enter") {
-                                  e.preventDefault();
-                                  toggleTweak(t.id);
-                                }
-                              }}
-                              className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
-                                isChecked
-                                  ? "bg-pink-50/70 border-pink-300"
-                                  : "bg-slate-50 dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                                <PixelCheckbox checked={isChecked} presentational />
-                                <span className="font-bold text-slate-800 dark:text-slate-200 truncate text-xs">
-                                  {t.name.replace("GNOME Extension - ", "")}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <span
-                                  className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${
-                                    t.is_applied
-                                      ? "bg-pink-100 text-pink-800 border border-pink-200"
-                                      : "bg-slate-200 text-slate-700 dark:text-slate-300"
-                                  }`}
-                                >
-                                  {t.is_applied ? "Active ✓" : "Available"}
-                                </span>
-                                <button
-                                  type="button"
-                                  aria-label={`Details for ${t.name}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveInfoModal({
-                                      id: t.id,
-                                      name: t.name,
-                                      category: "GNOME Shell Extension",
-                                      description: t.description,
-                                      danger_level: t.danger_level,
-                                      requiresElevation: t.requires_root,
-                                      is_applied: t.is_applied,
-                                      is_applicable: t.is_applicable,
-                                      command: t.command,
-                                    });
-                                  }}
-                                  className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-200 shrink-0"
-                                >
-                                  <HelpCircle className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Windows Preset Card (Greyed out if running on Fedora) */}
-                    <div className="card-duo space-y-3 border-2 border-slate-200/60 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/50 opacity-60 rounded-3xl p-5">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-base font-black text-slate-700 dark:text-slate-300">
-                              Windows 10/11 Essential Tweaks Preset
-                            </h3>
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-200 text-slate-600 dark:text-slate-400">
-                              Windows Only
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl">
-                            Essential telemetry, Bing search, and privacy suite. Unavailable because current host is Fedora Linux.
-                          </p>
-                        </div>
-                        <button
-                          disabled
-                          className="px-3 py-2 rounded-xl text-xs font-black bg-slate-200 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 shrink-0"
-                        >
-                          Unavailable on Fedora
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  /* Windows Update Profiles Suite (Matches Screenshot) */
-                  <div className="card-duo space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                            Windows Update Profiles
-                          </h3>
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
-                            Windows 10/11
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Choose how Windows receives updates. Each profile replaces the Windows Update settings.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-sans">
-                      {/* Profile 1: Recommended */}
-                      <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${
-                        winUpdateState?.active_profile === "recommended"
-                          ? "border-emerald-500 bg-emerald-50/30 shadow-md ring-2 ring-emerald-500/20"
-                          : "border-emerald-200/80 bg-white dark:bg-slate-800 hover:border-emerald-400"
-                      }`}>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-base font-black text-slate-900 dark:text-slate-100">Recommended</h4>
-                            {winUpdateState?.active_profile === "recommended" && (
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                Active ✓
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                            Balanced security and stability
-                          </p>
-
-                          <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1.5 list-disc pl-4 leading-relaxed">
-                            <li>Defers feature updates for 365 days</li>
-                            <li>Defers quality updates for 4 days</li>
-                            <li>Excludes drivers from quality updates</li>
-                            <li>Prevents automatic restarts while a user is signed in</li>
-                          </ul>
-
-                          <p className="text-[11px] italic text-slate-500 dark:text-slate-400 pt-1">
-                            Available on Windows Pro, Enterprise, and Education editions.
-                          </p>
-                        </div>
-
-                        <div className="pt-4">
-                          <TactileButton
-                            variant="primary"
-                            size="sm"
-                            className="w-full justify-center font-black"
-                            onClick={() => handleApplyUpdateProfile("recommended")}
-                            disabled={isProcessing || !isWindows}
-                          >
-                            Apply Recommended
-                          </TactileButton>
-                        </div>
-                      </div>
-
-                      {/* Profile 2: Windows Default */}
-                      <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${
-                        winUpdateState?.active_profile === "default" || (!winUpdateState?.active_profile && !winUpdateState?.fully_disabled)
-                          ? "border-indigo-400 bg-indigo-50/30 shadow-md ring-2 ring-indigo-400/20"
-                          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300"
-                      }`}>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-base font-black text-slate-900 dark:text-slate-100">Windows Default</h4>
-                            {(winUpdateState?.active_profile === "default" || (!winUpdateState?.active_profile && !winUpdateState?.fully_disabled)) && (
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300">
-                                Active ✓
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                            Return control to Windows
-                          </p>
-
-                          <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1.5 list-disc pl-4 leading-relaxed">
-                            <li>Removes Windows Update policies applied previously</li>
-                            <li>Restores update service startup settings</li>
-                            <li>Re-enables update scheduled tasks</li>
-                          </ul>
-
-                          <p className="text-[11px] italic text-slate-500 dark:text-slate-400 pt-1">
-                            Use this to undo the Recommended or Disable profile.
-                          </p>
-                        </div>
-
-                        <div className="pt-4">
-                          <TactileButton
-                            variant="secondary"
-                            size="sm"
-                            className="w-full justify-center font-black"
-                            onClick={() => handleApplyUpdateProfile("default")}
-                            disabled={isProcessing || !isWindows}
-                          >
-                            Restore Defaults
-                          </TactileButton>
-                        </div>
-                      </div>
-
-                      {/* Profile 3: Disable Updates */}
-                      <div className={`rounded-2xl p-5 border-2 flex flex-col justify-between transition-all ${
-                        winUpdateState?.active_profile === "disable" || winUpdateState?.fully_disabled
-                          ? "border-red-500 bg-red-50/30 shadow-md ring-2 ring-red-500/20"
-                          : "border-red-200 bg-white dark:bg-slate-800 hover:border-red-400"
-                      }`}>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-base font-black text-red-600">Disable Updates</h4>
-                            {(winUpdateState?.active_profile === "disable" || winUpdateState?.fully_disabled) && (
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300">
-                                Active ✓
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs font-bold text-red-500">
-                            Advanced use only
-                          </p>
-
-                          <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1.5 list-disc pl-4 leading-relaxed">
-                            <li>Disables automatic update policy</li>
-                            <li>Stops update services and scheduled tasks</li>
-                            <li>Clears downloaded update files</li>
-                          </ul>
-
-                          <p className="text-[11px] italic font-semibold text-red-500 pt-1">
-                            Security updates will not be installed while this profile is active.
-                          </p>
-                        </div>
-
-                        <div className="pt-4">
-                          <TactileButton
-                            variant="danger"
-                            size="sm"
-                            className="w-full justify-center font-black"
-                            onClick={() => handleApplyUpdateProfile("disable")}
-                            disabled={isProcessing || !isWindows}
-                          >
-                            Disable Updates
-                          </TactileButton>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom Notification Banner */}
-                    <div className="p-3 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-2xl text-center text-xs font-semibold text-slate-600 dark:text-slate-400">
-                      Changes apply system-wide. Restart Windows after switching profiles. Use Restore Defaults to undo update policies.
-                    </div>
-                  </div>
-                )}
-
-                {/* Secure DNS Preset Card with Auto-Detection (shared) */}
-                <div className="card-duo flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold shrink-0">
-                      <Globe className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">Secure DNS Switcher</h4>
-                        {dnsInfo && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3 text-indigo-500" />
-                            Active: {dnsInfo.display_name}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Speed up DNS queries and block ads with encrypted, privacy-first DNS resolvers.
-                        {dnsInfo?.servers && dnsInfo.servers.length > 0 && ` (${dnsInfo.servers.join(", ")})`}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0 flex-wrap">
-                    <select
-                      value={selectedDns}
-                      onChange={(e) => setSelectedDns(e.target.value)}
-                      aria-label="Select DNS preset"
-                      className="text-xs font-bold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900/40 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 outline-none focus:border-indigo-400 cursor-pointer"
-                    >
-                      <option value="default">Default (ISP / DHCP Assigned)</option>
-                      <option value="cloudflare">Cloudflare (1.1.1.1 — Fast & Private)</option>
-                      <option value="google">Google Public (8.8.8.8)</option>
-                      <option value="quad9">Quad9 (9.9.9.9 — Malware Shield)</option>
-                      <option value="adguard">AdGuard (Ad-Blocking DNS)</option>
-                    </select>
-
-                    <TactileButton
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleApplyDns}
-                      disabled={isProcessing}
-                    >
-                      Apply DNS
-                    </TactileButton>
-                  </div>
-                </div>
-
-                {/* Windows Update Shield (Only shown if Windows) */}
-                {isWindows && (
-                  <div className="card-duo transition-all space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
-                            Windows Update Shield (4 Tiers)
-                          </h3>
-                          {winUpdateState?.fully_disabled ? (
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-red-100 text-red-800 border border-red-200">
-                              Updates Disabled
-                            </span>
-                          ) : (
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200">
-                              Default Active
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
-                          Blocks automatic reboots, forced updates, and telemetry across Services, Scheduled Tasks, Metered Connections, and Group Policy.
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <TactileButton
-                          variant="danger"
-                          size="sm"
-                          onClick={() => handleToggleWindowsUpdate(true)}
-                          disabled={isProcessing || winUpdateState?.fully_disabled}
-                        >
-                          Disable Updates
-                        </TactileButton>
-                        <TactileButton
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleToggleWindowsUpdate(false)}
-                          disabled={isProcessing || !winUpdateState?.fully_disabled}
-                        >
-                          Restore Updates
-                        </TactileButton>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
         )
       )}
 
@@ -1193,44 +1186,40 @@ export const TweaksView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setLinuxCategoryFilter("all")}
-                      className={`px-2.5 py-1 rounded-lg transition-all ${
-                        linuxCategoryFilter === "all"
+                      className={`px-2.5 py-1 rounded-lg transition-all ${linuxCategoryFilter === "all"
                           ? "bg-white dark:bg-slate-800 text-indigo-700 shadow-sm border border-slate-200 dark:border-slate-700"
                           : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-                      }`}
+                        }`}
                     >
                       All ({linuxTweaks.length})
                     </button>
                     <button
                       type="button"
                       onClick={() => setLinuxCategoryFilter("essential")}
-                      className={`px-2.5 py-1 rounded-lg transition-all ${
-                        linuxCategoryFilter === "essential"
+                      className={`px-2.5 py-1 rounded-lg transition-all ${linuxCategoryFilter === "essential"
                           ? "bg-white dark:bg-slate-800 text-indigo-700 shadow-sm border border-slate-200 dark:border-slate-700"
                           : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-                      }`}
+                        }`}
                     >
                       Essential ({linuxEssentialTweaks.length})
                     </button>
                     <button
                       type="button"
                       onClick={() => setLinuxCategoryFilter("optimization")}
-                      className={`px-2.5 py-1 rounded-lg transition-all ${
-                        linuxCategoryFilter === "optimization"
+                      className={`px-2.5 py-1 rounded-lg transition-all ${linuxCategoryFilter === "optimization"
                           ? "bg-white dark:bg-slate-800 text-indigo-700 shadow-sm border border-slate-200 dark:border-slate-700"
                           : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-                      }`}
+                        }`}
                     >
                       Performance ({linuxOptimizations.length})
                     </button>
                     <button
                       type="button"
                       onClick={() => setLinuxCategoryFilter("gnome_extension")}
-                      className={`px-2.5 py-1 rounded-lg transition-all ${
-                        linuxCategoryFilter === "gnome_extension"
+                      className={`px-2.5 py-1 rounded-lg transition-all ${linuxCategoryFilter === "gnome_extension"
                           ? "bg-white dark:bg-slate-800 text-indigo-700 shadow-sm border border-slate-200 dark:border-slate-700"
                           : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-                      }`}
+                        }`}
                     >
                       GNOME Ext ({linuxExtensions.length})
                     </button>
@@ -1272,8 +1261,9 @@ export const TweaksView: React.FC = () => {
           ) : isLinux ? (
             /* FEDORA TWEAKS ROWS */
             <div className="space-y-6">
-              <div className="grid grid-cols-1 gap-6 items-start text-xs">
-                {/* Row 1: Essential Fedora Tweaks */}
+              <div className={`grid grid-cols-1 ${linuxCategoryFilter === "all" ? "xl:grid-cols-3 md:grid-cols-2" : "grid-cols-1"
+                } gap-6 items-start text-xs`}>
+                {/* Column 1: Essential Fedora Tweaks */}
                 {(linuxCategoryFilter === "all" || linuxCategoryFilter === "essential") && (
                   <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-700/60 shadow-duo space-y-4">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700/60">
@@ -1290,70 +1280,68 @@ export const TweaksView: React.FC = () => {
                       {filteredLinuxEssential
                         .slice(0, linuxEssentialExpanded ? filteredLinuxEssential.length : TWEAK_LIST_PAGE_SIZE)
                         .map((tweak) => {
-                        const isChecked = selectedTweakIds.has(tweak.id);
+                          const isChecked = selectedTweakIds.has(tweak.id);
 
-                        return (
-                          <div
-                            key={tweak.id}
-                            role="checkbox"
-                            aria-checked={isChecked}
-                            aria-label={`Toggle ${tweak.name}`}
-                            tabIndex={0}
-                            onClick={() => toggleTweak(tweak.id)}
-                            onKeyDown={(e) => {
-                              if (e.key === " " || e.key === "Enter") {
-                                e.preventDefault();
-                                toggleTweak(tweak.id);
-                              }
-                            }}
-                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
-                              isChecked
-                                ? "bg-indigo-50/50 border-indigo-200"
-                                : "bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-100 dark:border-slate-700/60"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                              <PixelCheckbox checked={isChecked} presentational />
-                              <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
-                                {tweak.name}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span
-                                className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
-                                  tweak.is_applied
-                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                          return (
+                            <div
+                              key={tweak.id}
+                              role="checkbox"
+                              aria-checked={isChecked}
+                              aria-label={`Toggle ${tweak.name}`}
+                              tabIndex={0}
+                              onClick={() => toggleTweak(tweak.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === " " || e.key === "Enter") {
+                                  e.preventDefault();
+                                  toggleTweak(tweak.id);
+                                }
+                              }}
+                              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${isChecked
+                                  ? "bg-indigo-50/50 border-indigo-200"
+                                  : "bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-100 dark:border-slate-700/60"
                                 }`}
-                              >
-                                {tweak.is_applied ? "Applied ✓" : "Not Applied"}
-                              </span>
-                              <button
-                                type="button"
-                                aria-label={`Details for ${tweak.name}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveInfoModal({
-                                    id: tweak.id,
-                                    name: tweak.name,
-                                    category: "Essential Setup",
-                                    description: tweak.description,
-                                    danger_level: tweak.danger_level,
-                                    requiresElevation: tweak.requires_root,
-                                    is_applied: tweak.is_applied,
-                                    is_applicable: tweak.is_applicable,
-                                    command: tweak.command,
-                                  });
-                                }}
-                                className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 shrink-0"
-                              >
-                                <HelpCircle className="w-4 h-4" />
-                              </button>
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                <PixelCheckbox checked={isChecked} presentational />
+                                <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
+                                  {tweak.name}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span
+                                  className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${tweak.is_applied
+                                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                                    }`}
+                                >
+                                  {tweak.is_applied ? "Applied ✓" : "Not Applied"}
+                                </span>
+                                <button
+                                  type="button"
+                                  aria-label={`Details for ${tweak.name}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveInfoModal({
+                                      id: tweak.id,
+                                      name: tweak.name,
+                                      category: "Essential Setup",
+                                      description: tweak.description,
+                                      danger_level: tweak.danger_level,
+                                      requiresElevation: tweak.requires_root,
+                                      is_applied: tweak.is_applied,
+                                      is_applicable: tweak.is_applicable,
+                                      command: tweak.command,
+                                    });
+                                  }}
+                                  className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 shrink-0"
+                                >
+                                  <HelpCircle className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
                     </div>
                     {filteredLinuxEssential.length > TWEAK_LIST_PAGE_SIZE && (
                       <button
@@ -1390,84 +1378,79 @@ export const TweaksView: React.FC = () => {
                       {filteredLinuxOptimizations
                         .slice(0, linuxOptimizationExpanded ? filteredLinuxOptimizations.length : TWEAK_LIST_PAGE_SIZE)
                         .map((tweak) => {
-                        const isChecked = selectedTweakIds.has(tweak.id);
+                          const isChecked = selectedTweakIds.has(tweak.id);
 
-                        return (
-                          <div
-                            key={tweak.id}
-                            role="checkbox"
-                            aria-checked={isChecked}
-                            aria-label={`Toggle ${tweak.name}`}
-                            tabIndex={0}
-                            onClick={() => toggleTweak(tweak.id)}
-                            onKeyDown={(e) => {
-                              if (e.key === " " || e.key === "Enter") {
-                                e.preventDefault();
-                                toggleTweak(tweak.id);
-                              }
-                            }}
-                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
-                              isChecked
-                                ? "bg-indigo-50/50 border-indigo-200"
-                                : "bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-100 dark:border-slate-700/60"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                              <PixelCheckbox checked={isChecked} presentational />
-                              <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
-                                {tweak.name}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span
-                                className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
-                                  tweak.is_applied
-                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                          return (
+                            <div
+                              key={tweak.id}
+                              role="checkbox"
+                              aria-checked={isChecked}
+                              aria-label={`Toggle ${tweak.name}`}
+                              tabIndex={0}
+                              onClick={() => toggleTweak(tweak.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === " " || e.key === "Enter") {
+                                  e.preventDefault();
+                                  toggleTweak(tweak.id);
+                                }
+                              }}
+                              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${isChecked
+                                  ? "bg-indigo-50/50 border-indigo-200"
+                                  : "bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-100 dark:border-slate-700/60"
                                 }`}
-                              >
-                                {tweak.is_applied ? "Applied ✓" : "Not Applied"}
-                              </span>
-                              <button
-                                type="button"
-                                aria-label={`Details for ${tweak.name}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveInfoModal({
-                                    id: tweak.id,
-                                    name: tweak.name,
-                                    category: "System Optimization",
-                                    description: tweak.description,
-                                    danger_level: tweak.danger_level,
-                                    requiresElevation: tweak.requires_root,
-                                    is_applied: tweak.is_applied,
-                                    is_applicable: tweak.is_applicable,
-                                    command: tweak.command,
-                                  });
-                                }}
-                                className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 shrink-0"
-                              >
-                                <HelpCircle className="w-4 h-4" />
-                              </button>
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                <PixelCheckbox checked={isChecked} presentational />
+                                <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
+                                  {tweak.name}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span
+                                  className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${tweak.is_applied
+                                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                                    }`}
+                                >
+                                  {tweak.is_applied ? "Applied ✓" : "Not Applied"}
+                                </span>
+                                <button
+                                  type="button"
+                                  aria-label={`Details for ${tweak.name}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveInfoModal({
+                                      id: tweak.id,
+                                      name: tweak.name,
+                                      category: "System Optimization",
+                                      description: tweak.description,
+                                      danger_level: tweak.danger_level,
+                                      requiresElevation: tweak.requires_root,
+                                      is_applied: tweak.is_applied,
+                                      is_applicable: tweak.is_applicable,
+                                      command: tweak.command,
+                                    });
+                                  }}
+                                  className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 shrink-0"
+                                >
+                                  <HelpCircle className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
                     </div>
                     {filteredLinuxOptimizations.length > TWEAK_LIST_PAGE_SIZE && (
                       <button
                         type="button"
                         onClick={() => setLinuxOptimizationExpanded((v) => !v)}
                         aria-expanded={linuxOptimizationExpanded}
-                        className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 py-2 border-t border-slate-100 dark:border-slate-700/60 mt-2 transition-colors"
+                        className="w-full text-center text-[11px] font-black text-indigo-600 hover:text-indigo-800 py-1.5"
                       >
-                        <span>
-                          {linuxOptimizationExpanded
-                            ? "Show fewer"
-                            : `Show ${filteredLinuxOptimizations.length - TWEAK_LIST_PAGE_SIZE} more`}
-                        </span>
-                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${linuxOptimizationExpanded ? "rotate-180" : ""}`} />
+                        {linuxOptimizationExpanded
+                          ? "Show fewer"
+                          : `Show ${filteredLinuxOptimizations.length - TWEAK_LIST_PAGE_SIZE} more`}
                       </button>
                     )}
                   </div>
@@ -1490,84 +1473,79 @@ export const TweaksView: React.FC = () => {
                       {filteredLinuxExtensions
                         .slice(0, linuxExtensionExpanded ? filteredLinuxExtensions.length : TWEAK_LIST_PAGE_SIZE)
                         .map((tweak) => {
-                        const isChecked = selectedTweakIds.has(tweak.id);
+                          const isChecked = selectedTweakIds.has(tweak.id);
 
-                        return (
-                          <div
-                            key={tweak.id}
-                            role="checkbox"
-                            aria-checked={isChecked}
-                            aria-label={`Toggle ${tweak.name}`}
-                            tabIndex={0}
-                            onClick={() => toggleTweak(tweak.id)}
-                            onKeyDown={(e) => {
-                              if (e.key === " " || e.key === "Enter") {
-                                e.preventDefault();
-                                toggleTweak(tweak.id);
-                              }
-                            }}
-                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
-                              isChecked
-                                ? "bg-pink-50/50 border-pink-200"
-                                : "bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-100 dark:border-slate-700/60"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                              <PixelCheckbox checked={isChecked} presentational />
-                              <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
-                                {tweak.name}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span
-                                className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
-                                  tweak.is_applied
-                                    ? "bg-pink-100 text-pink-800 border border-pink-200"
-                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                          return (
+                            <div
+                              key={tweak.id}
+                              role="checkbox"
+                              aria-checked={isChecked}
+                              aria-label={`Toggle ${tweak.name}`}
+                              tabIndex={0}
+                              onClick={() => toggleTweak(tweak.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === " " || e.key === "Enter") {
+                                  e.preventDefault();
+                                  toggleTweak(tweak.id);
+                                }
+                              }}
+                              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl transition-all cursor-pointer select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${isChecked
+                                  ? "bg-pink-50/50 border-pink-200"
+                                  : "bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-100 dark:border-slate-700/60"
                                 }`}
-                              >
-                                {tweak.is_applied ? "Active ✓" : "Available"}
-                              </span>
-                              <button
-                                type="button"
-                                aria-label={`Details for ${tweak.name}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveInfoModal({
-                                    id: tweak.id,
-                                    name: tweak.name,
-                                    category: "GNOME Extension",
-                                    description: tweak.description,
-                                    danger_level: tweak.danger_level,
-                                    requiresElevation: tweak.requires_root,
-                                    is_applied: tweak.is_applied,
-                                    is_applicable: tweak.is_applicable,
-                                    command: tweak.command,
-                                  });
-                                }}
-                                className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 shrink-0"
-                              >
-                                <HelpCircle className="w-4 h-4" />
-                              </button>
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                <PixelCheckbox checked={isChecked} presentational />
+                                <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
+                                  {tweak.name}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span
+                                  className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${tweak.is_applied
+                                      ? "bg-pink-100 text-pink-800 border border-pink-200"
+                                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                                    }`}
+                                >
+                                  {tweak.is_applied ? "Active ✓" : "Available"}
+                                </span>
+                                <button
+                                  type="button"
+                                  aria-label={`Details for ${tweak.name}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveInfoModal({
+                                      id: tweak.id,
+                                      name: tweak.name,
+                                      category: "GNOME Extension",
+                                      description: tweak.description,
+                                      danger_level: tweak.danger_level,
+                                      requiresElevation: tweak.requires_root,
+                                      is_applied: tweak.is_applied,
+                                      is_applicable: tweak.is_applicable,
+                                      command: tweak.command,
+                                    });
+                                  }}
+                                  className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 shrink-0"
+                                >
+                                  <HelpCircle className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
                     </div>
                     {filteredLinuxExtensions.length > TWEAK_LIST_PAGE_SIZE && (
                       <button
                         type="button"
                         onClick={() => setLinuxExtensionExpanded((v) => !v)}
                         aria-expanded={linuxExtensionExpanded}
-                        className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 py-2 border-t border-slate-100 dark:border-slate-700/60 mt-2 transition-colors"
+                        className="w-full text-center text-[11px] font-black text-pink-600 hover:text-pink-800 py-1.5"
                       >
-                        <span>
-                          {linuxExtensionExpanded
-                            ? "Show fewer"
-                            : `Show ${filteredLinuxExtensions.length - TWEAK_LIST_PAGE_SIZE} more`}
-                        </span>
-                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${linuxExtensionExpanded ? "rotate-180" : ""}`} />
+                        {linuxExtensionExpanded
+                          ? "Show fewer"
+                          : `Show ${filteredLinuxExtensions.length - TWEAK_LIST_PAGE_SIZE} more`}
                       </button>
                     )}
                   </div>
@@ -1616,81 +1594,77 @@ export const TweaksView: React.FC = () => {
                   {filteredWinEssential
                     .slice(0, winEssentialExpanded ? filteredWinEssential.length : TWEAK_LIST_PAGE_SIZE)
                     .map((tweak) => {
-                    const isChecked = selectedTweakIds.has(tweak.id);
-                    const isWin11Only = tweak.min_windows_version === 11;
-                    const isUnsupported = !tweak.is_applicable;
+                      const isChecked = selectedTweakIds.has(tweak.id);
+                      const isWin11Only = tweak.min_windows_version === 11;
+                      const isUnsupported = !tweak.is_applicable;
 
-                    return (
-                      <div
-                        key={tweak.id}
-                        role="checkbox"
-                        aria-checked={isChecked}
-                        aria-disabled={isUnsupported}
-                        aria-label={`Toggle ${tweak.name}`}
-                        tabIndex={isUnsupported ? -1 : 0}
-                        onClick={() => !isUnsupported && toggleTweak(tweak.id)}
-                        onKeyDown={(e) => {
-                          if (!isUnsupported && (e.key === " " || e.key === "Enter")) {
-                            e.preventDefault();
-                            toggleTweak(tweak.id);
-                          }
-                        }}
-                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
-                          isChecked
-                            ? "bg-indigo-50/60 hover:bg-indigo-50"
-                            : "hover:bg-slate-50 dark:hover:bg-slate-700"
-                        } ${isUnsupported ? "opacity-40 cursor-not-allowed" : ""}`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                          <PixelCheckbox checked={isChecked} disabled={isUnsupported} presentational />
-                          <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
-                            {tweak.name}
-                          </span>
-                          {isWin11Only && (
-                            <span className="shrink-0 text-[10px] font-sans font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                              Win 11
-                            </span>
-                          )}
-                        </div>
-
-                        <button
-                          type="button"
-                          aria-label={`Details for ${tweak.name}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveInfoModal({
-                              id: tweak.id,
-                              name: tweak.name,
-                              category: "Essential Tweaks",
-                              description: tweak.description,
-                              danger_level: tweak.danger_level,
-                              requiresElevation: tweak.requires_admin,
-                              is_applicable: tweak.is_applicable,
-                              command: tweak.command,
-                              min_windows_version: tweak.min_windows_version,
-                            });
+                      return (
+                        <div
+                          key={tweak.id}
+                          role="checkbox"
+                          aria-checked={isChecked}
+                          aria-disabled={isUnsupported}
+                          aria-label={`Toggle ${tweak.name}`}
+                          tabIndex={isUnsupported ? -1 : 0}
+                          onClick={() => !isUnsupported && toggleTweak(tweak.id)}
+                          onKeyDown={(e) => {
+                            if (!isUnsupported && (e.key === " " || e.key === "Enter")) {
+                              e.preventDefault();
+                              toggleTweak(tweak.id);
+                            }
                           }}
-                          className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 shrink-0"
+                          className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${isChecked
+                              ? "bg-indigo-50/60 hover:bg-indigo-50"
+                              : "hover:bg-slate-50 dark:hover:bg-slate-700"
+                            } ${isUnsupported ? "opacity-40 cursor-not-allowed" : ""}`}
                         >
-                          <HelpCircle className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    );
-                  })}
+                          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                            <PixelCheckbox checked={isChecked} disabled={isUnsupported} presentational />
+                            <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
+                              {tweak.name}
+                            </span>
+                            {isWin11Only && (
+                              <span className="shrink-0 text-[10px] font-sans font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                Win 11
+                              </span>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            aria-label={`Details for ${tweak.name}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveInfoModal({
+                                id: tweak.id,
+                                name: tweak.name,
+                                category: "Essential Tweaks",
+                                description: tweak.description,
+                                danger_level: tweak.danger_level,
+                                requiresElevation: tweak.requires_admin,
+                                is_applicable: tweak.is_applicable,
+                                command: tweak.command,
+                                min_windows_version: tweak.min_windows_version,
+                              });
+                            }}
+                            className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 shrink-0"
+                          >
+                            <HelpCircle className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
                 </div>
                 {filteredWinEssential.length > TWEAK_LIST_PAGE_SIZE && (
                   <button
                     type="button"
                     onClick={() => setWinEssentialExpanded((v) => !v)}
                     aria-expanded={winEssentialExpanded}
-                    className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 py-2 border-t border-slate-100 dark:border-slate-700/60 mt-2 transition-colors"
+                    className="w-full text-center text-[11px] font-black text-indigo-600 hover:text-indigo-800 py-1.5"
                   >
-                    <span>
-                      {winEssentialExpanded
-                        ? "Show fewer"
-                        : `Show ${filteredWinEssential.length - TWEAK_LIST_PAGE_SIZE} more`}
-                    </span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${winEssentialExpanded ? "rotate-180" : ""}`} />
+                    {winEssentialExpanded
+                      ? "Show fewer"
+                      : `Show ${filteredWinEssential.length - TWEAK_LIST_PAGE_SIZE} more`}
                   </button>
                 )}
               </div>
@@ -1711,86 +1685,82 @@ export const TweaksView: React.FC = () => {
                   {filteredWinAdvanced
                     .slice(0, winAdvancedExpanded ? filteredWinAdvanced.length : TWEAK_LIST_PAGE_SIZE)
                     .map((tweak) => {
-                    const isChecked = selectedTweakIds.has(tweak.id);
-                    const isWin11Only = tweak.min_windows_version === 11;
-                    const isUnsupported = !tweak.is_applicable;
+                      const isChecked = selectedTweakIds.has(tweak.id);
+                      const isWin11Only = tweak.min_windows_version === 11;
+                      const isUnsupported = !tweak.is_applicable;
 
-                    return (
-                      <div
-                        key={tweak.id}
-                        role="checkbox"
-                        aria-checked={isChecked}
-                        aria-disabled={isUnsupported}
-                        aria-label={`Toggle ${tweak.name}`}
-                        tabIndex={isUnsupported ? -1 : 0}
-                        onClick={() => !isUnsupported && toggleTweak(tweak.id)}
-                        onKeyDown={(e) => {
-                          if (!isUnsupported && (e.key === " " || e.key === "Enter")) {
-                            e.preventDefault();
-                            toggleTweak(tweak.id);
-                          }
-                        }}
-                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
-                          isChecked
-                            ? "bg-amber-50/60 hover:bg-amber-50"
-                            : "hover:bg-slate-50 dark:hover:bg-slate-700"
-                        } ${isUnsupported ? "opacity-40 cursor-not-allowed" : ""}`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                          <PixelCheckbox checked={isChecked} disabled={isUnsupported} presentational />
-                          <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
-                            {tweak.name}
-                          </span>
-                          {isWin11Only && (
-                            <span className="shrink-0 text-[10px] font-sans font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                              Win 11
+                      return (
+                        <div
+                          key={tweak.id}
+                          role="checkbox"
+                          aria-checked={isChecked}
+                          aria-disabled={isUnsupported}
+                          aria-label={`Toggle ${tweak.name}`}
+                          tabIndex={isUnsupported ? -1 : 0}
+                          onClick={() => !isUnsupported && toggleTweak(tweak.id)}
+                          onKeyDown={(e) => {
+                            if (!isUnsupported && (e.key === " " || e.key === "Enter")) {
+                              e.preventDefault();
+                              toggleTweak(tweak.id);
+                            }
+                          }}
+                          className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${isChecked
+                              ? "bg-amber-50/60 hover:bg-amber-50"
+                              : "hover:bg-slate-50 dark:hover:bg-slate-700"
+                            } ${isUnsupported ? "opacity-40 cursor-not-allowed" : ""}`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                            <PixelCheckbox checked={isChecked} disabled={isUnsupported} presentational />
+                            <span className="truncate text-slate-800 dark:text-slate-200 font-medium">
+                              {tweak.name}
                             </span>
-                          )}
-                        </div>
+                            {isWin11Only && (
+                              <span className="shrink-0 text-[10px] font-sans font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                Win 11
+                              </span>
+                            )}
+                          </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {tweak.danger_level !== "safe" && (
-                            <RiskPill level={tweak.danger_level} />
-                          )}
-                          <button
-                            type="button"
-                            aria-label={`Details for ${tweak.name}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveInfoModal({
-                                id: tweak.id,
-                                name: tweak.name,
-                                category: "Advanced Tweaks",
-                                description: tweak.description,
-                                danger_level: tweak.danger_level,
-                                requiresElevation: tweak.requires_admin,
-                                is_applicable: tweak.is_applicable,
-                                command: tweak.command,
-                                min_windows_version: tweak.min_windows_version,
-                              });
-                            }}
-                            className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700"
-                          >
-                            <HelpCircle className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {tweak.danger_level !== "safe" && (
+                              <RiskPill level={tweak.danger_level} />
+                            )}
+                            <button
+                              type="button"
+                              aria-label={`Details for ${tweak.name}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveInfoModal({
+                                  id: tweak.id,
+                                  name: tweak.name,
+                                  category: "Advanced Tweaks",
+                                  description: tweak.description,
+                                  danger_level: tweak.danger_level,
+                                  requiresElevation: tweak.requires_admin,
+                                  is_applicable: tweak.is_applicable,
+                                  command: tweak.command,
+                                  min_windows_version: tweak.min_windows_version,
+                                });
+                              }}
+                              className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700"
+                            >
+                              <HelpCircle className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
                 {filteredWinAdvanced.length > TWEAK_LIST_PAGE_SIZE && (
                   <button
                     type="button"
                     onClick={() => setWinAdvancedExpanded((v) => !v)}
                     aria-expanded={winAdvancedExpanded}
-                    className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 py-2 border-t border-slate-100 dark:border-slate-700/60 mt-2 transition-colors"
+                    className="w-full text-center text-[11px] font-black text-amber-700 hover:text-amber-900 py-1.5"
                   >
-                    <span>
-                      {winAdvancedExpanded
-                        ? "Show fewer"
-                        : `Show ${filteredWinAdvanced.length - TWEAK_LIST_PAGE_SIZE} more`}
-                    </span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${winAdvancedExpanded ? "rotate-180" : ""}`} />
+                    {winAdvancedExpanded
+                      ? "Show fewer"
+                      : `Show ${filteredWinAdvanced.length - TWEAK_LIST_PAGE_SIZE} more`}
                   </button>
                 )}
 
@@ -1821,11 +1791,10 @@ export const TweaksView: React.FC = () => {
                           }
                         );
                       }}
-                      className={`text-xs font-black px-3 py-2 rounded-xl border transition-all ${
-                        isShutUp10Installed
+                      className={`text-xs font-black px-3 py-2 rounded-xl border transition-all ${isShutUp10Installed
                           ? "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 border-slate-300"
                           : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 opacity-50 cursor-not-allowed"
-                      }`}
+                        }`}
                     >
                       O&O ShutUp10++ - Run
                     </button>

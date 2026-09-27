@@ -292,6 +292,9 @@
     rgb(var(--miri-400-rgb, 255 157 157) / 0.06) 100%
   );
 }
+.dark .skeleton-pixel {
+  background-color: rgba(51, 65, 85, 0.7);
+}
 
 /* Restrained pixel-dust accents on skeleton "cards" -- echoes the mascot's
    sparkle motif, kept static and low-opacity so it reads as texture, not
